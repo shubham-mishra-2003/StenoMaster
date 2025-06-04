@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import { Toaster } from "@/components/ui/Toaster";
+import { Toaster as Sonner } from "@/components/ui/sonner";
+import { TooltipProvider } from "@/components/ui/tooltip";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -14,7 +17,8 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "StenoLearn",
-  description: "SAAS platform for stenography students and typing tests.",
+  description:
+    "Educational platform for stenography students and typing tests.",
   manifest: "/manifest.json",
 };
 
@@ -24,13 +28,17 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-        suppressHydrationWarning
-      >
-        {children}
-      </body>
-    </html>
+    <TooltipProvider>
+      <Toaster />
+      <Sonner />
+      <html lang="en">
+        <body
+          className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+          suppressHydrationWarning
+        >
+          {children}
+        </body>
+      </html>
+    </TooltipProvider>
   );
 }

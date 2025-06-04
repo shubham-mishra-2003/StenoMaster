@@ -1,7 +1,7 @@
 {
-  "name": "StenoSnap",
-  "short_name": "StenoSnap",
-  "description": "For shorthand students",
+  "name": "StenoLearn",
+  "short_name": "StenoLearn",
+  "description": "Educational platform for stenography students and typing tests.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",
