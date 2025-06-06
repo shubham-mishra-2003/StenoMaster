@@ -4,6 +4,7 @@ import "./globals.css";
 import { Toaster } from "@/components/ui/Toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { ThemeProvider } from "@/hooks/ThemeProvider";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -19,6 +20,7 @@ export const metadata: Metadata = {
   title: "StenoLearn",
   description:
     "Educational platform for stenography students and typing tests.",
+  icons: "/logo.png",
   manifest: "/manifest.json",
 };
 
@@ -28,17 +30,18 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <html lang="en">
-        <body
-          className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-          suppressHydrationWarning
-        >
-          {children}
-        </body>
-      </html>
-    </TooltipProvider>
+    <html lang="en" suppressHydrationWarning>
+      <body
+        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+      >
+        <ThemeProvider>
+          <TooltipProvider>
+            <Toaster />
+            <Sonner />
+            {children}
+          </TooltipProvider>
+        </ThemeProvider>
+      </body>
+    </html>
   );
 }

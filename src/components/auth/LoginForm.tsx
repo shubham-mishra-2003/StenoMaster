@@ -123,7 +123,7 @@ const LoginForm = () => {
   };
 
   return (
-    <Card className="w-full max-w-md mx-auto glass-card border-0 bg-gradient-to-br from-card/90 to-card/70 backdrop-blur-xl shadow-2xl">
+    <Card className="w-full max-w-md mx-auto glass-card max-h-full flex overflow-auto border-0 bg-gradient-to-br from-card/90 to-card/70 backdrop-blur-xl shadow-2xl">
       <CardHeader className="text-center pb-6">
         <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
           <GraduationCap className="h-8 w-8 text-white" />

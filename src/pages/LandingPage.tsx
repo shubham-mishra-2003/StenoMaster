@@ -50,7 +50,7 @@ const LandingPage = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/80 to-purple-50/80 dark:from-slate-900 dark:via-blue-950/30 dark:to-purple-950/30">
+    <div className="min-h-screen text-white dark:text-black bg-gradient-to-br from-slate-50 via-blue-50/80 to-purple-50/80 dark:from-slate-900 dark:via-blue-950/30 dark:to-purple-950/30">
       {/* Navigation */}
       <nav className="border-b border-border/50 bg-gradient-to-r from-white/90 via-blue-50/50 to-purple-50/50 dark:from-gray-900/90 dark:via-blue-950/50 dark:to-purple-950/50 backdrop-blur-xl sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -71,7 +71,7 @@ const LandingPage = () => {
                     Login
                   </Button>
                 </DialogTrigger>
-                <DialogContent className="max-w-sm sm:max-w-md mx-4 bg-gradient-to-br from-white/95 via-blue-50/90 to-purple-50/95 dark:from-gray-900/95 dark:via-blue-950/90 dark:to-purple-950/95 backdrop-blur-xl border-0 shadow-2xl">
+                <DialogContent className="max-h-[90vh] max-w-sm sm:max-w-md mx-4 bg-gradient-to-br from-white/95 via-blue-50/90 to-purple-50/95 dark:from-gray-900/95 dark:via-blue-950/90 dark:to-purple-950/95 backdrop-blur-xl border-0 shadow-2xl">
                   <DialogHeader>
                     <DialogTitle className="text-xl bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600 bg-clip-text text-transparent font-bold text-center">
                       Welcome Back
