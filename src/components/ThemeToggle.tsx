@@ -24,7 +24,7 @@ export function ThemeToggle() {
       size="sm"
       onClick={toggleTheme}
       className={`h-9 w-9 p-0 relative z-50 cursor-pointer ${
-        colorScheme == "dark" ? "bg-black/70" : "bg-slate-200"
+        colorScheme == "dark" ? "bg-slate-900/70 hover:bg-black/60" : "bg-slate-200 hover:bg-slate-300"
       }`}
       aria-label="Toggle theme"
     >

@@ -135,7 +135,7 @@ const LoginForm = () => {
   };
 
   return (
-    <Card className="w-full max-w-md mx-auto glass-card max-h-full flex overflow-auto border-0 bg-gradient-to-br from-card/90 to-card/70 backdrop-blur-xl shadow-2xl">
+    <Card className="w-full flex overflow-auto h-full max-w-md mx-auto glass-card max-h-full border-0 bg-gradient-to-br from-card/90 to-card/70 backdrop-blur-xl shadow-2xl">
       <CardHeader className="text-center pb-6">
         <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
           <GraduationCap className="h-8 w-8 text-white" />
@@ -213,8 +213,18 @@ const LoginForm = () => {
           <TabsContent value="teacher">
             <Tabs defaultValue="login" className="w-full">
               <TabsList className="grid w-full grid-cols-2 mb-4 bg-muted/50">
-                <TabsTrigger value="login">Sign In</TabsTrigger>
-                <TabsTrigger value="signup">Sign Up</TabsTrigger>
+                <TabsTrigger
+                  className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-purple-500 data-[state=active]:text-white"
+                  value="login"
+                >
+                  Sign In
+                </TabsTrigger>
+                <TabsTrigger
+                  className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-purple-500 data-[state=active]:text-white"
+                  value="signup"
+                >
+                  Sign Up
+                </TabsTrigger>
               </TabsList>
 
               <TabsContent value="login">
@@ -331,7 +341,7 @@ const LoginForm = () => {
                   </div>
                   <Button
                     type="submit"
-                    className="w-full bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600 text-white font-medium"
+                    className="gradient-button w-full"
                   >
                     <UserPlus className="h-4 w-4 mr-2" />
                     Create Teacher Account

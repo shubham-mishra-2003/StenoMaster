@@ -110,7 +110,7 @@ const LandingPage = () => {
                   </Button>
                 </DialogTrigger>
                 <DialogContent
-                  className={`max-h-[90vh] max-w-sm sm:max-w-md mx-4 bg-gradient-to-br backdrop-blur-xl border-0 shadow-2xl ${
+                  className={`max-h-[90vh] flex flex-col max-w-[90%] sm:max-w-md bg-gradient-to-br backdrop-blur-xl border-0 shadow-2xl ${
                     colorScheme == "dark"
                       ? "modal-gradient-dark-bg"
                       : "modal-gradient-light-bg"
@@ -153,7 +153,7 @@ const LandingPage = () => {
               </p>
               <Button
                 size="lg"
-                className="text-base sm:text-lg px-6 sm:px-8 py-3 bg-gradient-to-r from-blue-500 via-purple-500 to-indigo-500 hover:from-blue-600 hover:via-purple-600 hover:to-indigo-600 text-white shadow-lg hover:shadow-xl transition-all duration-300"
+                className="gradient-button"
                 onClick={() => setIsLoginOpen(true)}
               >
                 Get Started
@@ -257,7 +257,7 @@ const LandingPage = () => {
               </p>
               <Button
                 size="lg"
-                className="text-base sm:text-lg px-6 sm:px-8 py-3 bg-gradient-to-r from-blue-500 via-purple-500 to-indigo-500 hover:from-blue-600 hover:via-purple-600 hover:to-indigo-600 text-white shadow-lg hover:shadow-xl transition-all duration-300"
+                className="gradient-button"
                 onClick={() => setIsLoginOpen(true)}
               >
                 Login to Your Account

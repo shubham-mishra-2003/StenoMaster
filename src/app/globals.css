@@ -1,8 +1,12 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
-::-webkit-scrollbar {
+*::-webkit-scrollbar {
   display: none;
+}
+
+.gradient-button {
+  @apply text-base sm:text-lg px-6 sm:px-8 py-3 shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer bg-gradient-to-r from-blue-500 via-purple-500 to-indigo-500 hover:from-blue-600 hover:via-purple-600 hover:to-indigo-600 text-white;
 }
 
 .text-light {
