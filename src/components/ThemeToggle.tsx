@@ -23,7 +23,7 @@ export function ThemeToggle() {
       variant="ghost"
       size="sm"
       onClick={toggleTheme}
-      className={`h-9 w-9 p-0 relative z-50 ${
+      className={`h-9 w-9 p-0 relative z-50 cursor-pointer ${
         colorScheme == "dark" ? "bg-black/70" : "bg-slate-200"
       }`}
       aria-label="Toggle theme"

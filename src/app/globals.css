@@ -1,10 +1,37 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
-::-webkit-scrollbar{
+::-webkit-scrollbar {
   display: none;
 }
 
+.text-light {
+  @apply bg-white shadow-md rounded-lg p-6;
+}
+
+.text-dark {
+  @apply bg-slate-50;
+}
+
+.dark-gradient-button {
+  @apply from-blue-500 via-purple-500 to-indigo-500 hover:from-blue-600 hover:via-purple-600 hover:to-indigo-600 text-white;
+}
+
+.light-gradient-button {
+  @apply from-blue-200 via-purple-200 to-indigo-200 hover:from-blue-300 hover:via-purple-300 hover:to-indigo-300 text-blue-900;
+}
+
+.modal-gradient-dark-bg {
+  @apply from-gray-900/95 via-blue-950/90 to-purple-950/95;
+}
+
+.modal-gradient-light-bg {
+  @apply from-white/95 via-blue-50/90 to-purple-50/95;
+}
+
+.gradient-text {
+  @apply bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600 bg-clip-text text-transparent;
+}
 
 /* 
 @custom-variant dark (&:is(.dark *));
