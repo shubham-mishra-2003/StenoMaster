@@ -8,8 +8,33 @@ import { useAuth } from "@/hooks/useAuth";
 import { User } from "@/types";
 import { toast } from "@/hooks/use-toast";
 import { LogIn, UserPlus, GraduationCap, BookOpen } from "lucide-react";
+import { useTheme } from "@/hooks/ThemeProvider";
 
 const LoginForm = () => {
+  const userTypesNav = [
+    {
+      name: "Student",
+      value: "student",
+      icon: BookOpen,
+    },
+    {
+      name: "Teacher",
+      value: "teacher",
+      icon: GraduationCap,
+    },
+  ];
+
+  const authenticationOptions = [
+    {
+      name: "Login",
+      value: "login",
+    },
+    {
+      name: "Register",
+      value: "register",
+    },
+  ];
+
   const { login } = useAuth();
   const [studentCredentials, setStudentCredentials] = useState({
     id: "",
@@ -134,6 +159,8 @@ const LoginForm = () => {
     });
   };
 
+  const { colorScheme } = useTheme();
+
   return (
     <Card className="w-full flex overflow-auto h-full max-w-md mx-auto glass-card max-h-full border-0 bg-gradient-to-br from-card/90 to-card/70 backdrop-blur-xl shadow-2xl">
       <CardHeader className="text-center pb-6">
@@ -144,28 +171,25 @@ const LoginForm = () => {
           StenoLearn
         </CardTitle>
         <p className="text-muted-foreground">
-          Welcome back! Please sign in to continue.
+          Welcome! Please authorize to continue.
         </p>
       </CardHeader>
       <CardContent>
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-2 mb-6 bg-muted/50">
-            <TabsTrigger
-              value="student"
-              className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-purple-500 data-[state=active]:text-white"
-            >
-              <BookOpen className="h-4 w-4 mr-2" />
-              Student
-            </TabsTrigger>
-            <TabsTrigger
-              value="teacher"
-              className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-purple-500 data-[state=active]:text-white"
-            >
-              <GraduationCap className="h-4 w-4 mr-2" />
-              Teacher
-            </TabsTrigger>
+          <TabsList className="grid w-full grid-cols-2 gap-2">
+            {userTypesNav.map((nav, index) => (
+              <TabsTrigger
+                key={index}
+                value={nav.value}
+                className={`cursor-pointer data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-purple-500 data-[state=active]:text-white ${
+                  colorScheme == "dark" ? "bg-slate-900" : "bg-slate-300/80"
+                }`}
+              >
+                <nav.icon className="h-4 w-4 mr-2" />
+                {nav.name}
+              </TabsTrigger>
+            ))}
           </TabsList>
-
           <TabsContent value="student">
             <form onSubmit={handleStudentLogin} className="space-y-4">
               <div className="space-y-2">
@@ -200,10 +224,7 @@ const LoginForm = () => {
                   className="bg-background/50 border-muted focus:border-blue-500 transition-colors"
                 />
               </div>
-              <Button
-                type="submit"
-                className="w-full bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white font-medium"
-              >
+              <Button type="submit" className="gradient-button w-full">
                 <LogIn className="h-4 w-4 mr-2" />
                 Sign In as Student
               </Button>
@@ -212,21 +233,19 @@ const LoginForm = () => {
 
           <TabsContent value="teacher">
             <Tabs defaultValue="login" className="w-full">
-              <TabsList className="grid w-full grid-cols-2 mb-4 bg-muted/50">
-                <TabsTrigger
-                  className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-purple-500 data-[state=active]:text-white"
-                  value="login"
-                >
-                  Sign In
-                </TabsTrigger>
-                <TabsTrigger
-                  className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-purple-500 data-[state=active]:text-white"
-                  value="signup"
-                >
-                  Sign Up
-                </TabsTrigger>
+              <TabsList className="grid w-full grid-cols-2 mb-4 gap-2">
+                {authenticationOptions.map((nav, index) => (
+                  <TabsTrigger
+                    key={index}
+                    className={`cursor-pointer data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-purple-500 data-[state=active]:text-white ${
+                      colorScheme == "dark" ? "bg-slate-900" : "bg-slate-300/80"
+                    }`}
+                    value={nav.value}
+                  >
+                    {nav.name}
+                  </TabsTrigger>
+                ))}
               </TabsList>
-
               <TabsContent value="login">
                 <form onSubmit={handleTeacherLogin} className="space-y-4">
                   <div className="space-y-2">
@@ -261,17 +280,14 @@ const LoginForm = () => {
                       className="bg-background/50 border-muted focus:border-blue-500 transition-colors"
                     />
                   </div>
-                  <Button
-                    type="submit"
-                    className="w-full bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white font-medium"
-                  >
+                  <Button type="submit" className="gradient-button w-full">
                     <LogIn className="h-4 w-4 mr-2" />
                     Sign In as Teacher
                   </Button>
                 </form>
               </TabsContent>
 
-              <TabsContent value="signup">
+              <TabsContent value="register">
                 <form onSubmit={handleTeacherSignup} className="space-y-4">
                   <div className="space-y-2">
                     <Label htmlFor="signup-name">Full Name</Label>
@@ -339,10 +355,7 @@ const LoginForm = () => {
                       className="bg-background/50 border-muted focus:border-blue-500 transition-colors"
                     />
                   </div>
-                  <Button
-                    type="submit"
-                    className="gradient-button w-full"
-                  >
+                  <Button type="submit" className="gradient-button w-full">
                     <UserPlus className="h-4 w-4 mr-2" />
                     Create Teacher Account
                   </Button>

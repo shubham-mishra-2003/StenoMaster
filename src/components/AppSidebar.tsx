@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import {
@@ -24,6 +23,7 @@ import {
   UserPlus,
 } from "lucide-react";
 import QuickActionModal from "./modals/QuickActionModal";
+import Image from "next/image";
 
 interface AppSidebarProps {
   activeTab: string;
@@ -32,7 +32,10 @@ interface AppSidebarProps {
 
 const AppSidebar = ({ activeTab, onTabChange }: AppSidebarProps) => {
   const { user } = useAuth();
-  const [quickActionModal, setQuickActionModal] = useState<{ isOpen: boolean; action: string }>({
+  const [quickActionModal, setQuickActionModal] = useState<{
+    isOpen: boolean;
+    action: string;
+  }>({
     isOpen: false,
     action: "",
   });
@@ -119,15 +122,16 @@ const AppSidebar = ({ activeTab, onTabChange }: AppSidebarProps) => {
   ];
 
   const items = user?.type === "teacher" ? teacherItems : studentItems;
-  const quickActions = user?.type === "teacher" ? teacherQuickActions : studentQuickActions;
+  const quickActions =
+    user?.type === "teacher" ? teacherQuickActions : studentQuickActions;
 
   return (
     <>
       <Sidebar className="border-r border-gray-200/50 dark:border-gray-800/50 bg-gradient-to-b from-white via-blue-50/30 to-purple-50/30 dark:from-gray-900 dark:via-blue-950/30 dark:to-purple-950/30">
         <SidebarHeader className="p-4 sm:p-6 border-b border-gray-200/50 dark:border-gray-800/50">
           <div className="flex items-center space-x-2 sm:space-x-3">
-            <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-blue-500 via-purple-500 to-indigo-500 rounded-lg flex items-center justify-center shadow-lg">
-              <GraduationCap className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
+            <div className="w-12 h-12 bg-gradient-to-br from-blue-500 via-purple-500 to-indigo-500 rounded-lg flex items-center justify-center shadow-lg">
+              <Image src="/logo.png" alt="Logo" width={50} height={35} />
             </div>
             <div className="hidden sm:block">
               <h2 className="text-lg font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600 bg-clip-text text-transparent">
@@ -154,14 +158,17 @@ const AppSidebar = ({ activeTab, onTabChange }: AppSidebarProps) => {
                       onClick={() => onTabChange(item.url)}
                       className={`
                         w-full justify-start px-3 py-2 rounded-lg transition-all duration-200
-                        ${activeTab === item.url 
-                          ? 'bg-gradient-to-r from-blue-500 via-purple-500 to-indigo-500 text-white shadow-lg' 
-                          : 'hover:bg-gradient-to-r hover:from-blue-50 hover:via-purple-50 hover:to-indigo-50 dark:hover:from-blue-950/50 dark:hover:via-purple-950/50 dark:hover:to-indigo-950/50'
+                        ${
+                          activeTab === item.url
+                            ? "bg-gradient-to-r from-blue-500 via-purple-500 to-indigo-500 text-white shadow-lg"
+                            : "hover:bg-gradient-to-r hover:from-blue-50 hover:via-purple-50 hover:to-indigo-50 dark:hover:from-blue-950/50 dark:hover:via-purple-950/50 dark:hover:to-indigo-950/50"
                         }
                       `}
                     >
                       <item.icon className="h-4 w-4 flex-shrink-0" />
-                      <span className="hidden sm:inline ml-2 text-sm font-medium">{item.title}</span>
+                      <span className="hidden sm:inline ml-2 text-sm font-medium">
+                        {item.title}
+                      </span>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                 ))}
@@ -182,7 +189,9 @@ const AppSidebar = ({ activeTab, onTabChange }: AppSidebarProps) => {
                       className="w-full justify-start px-3 py-2 rounded-lg transition-all duration-200 hover:bg-gradient-to-r hover:from-green-50 hover:via-emerald-50 hover:to-teal-50 dark:hover:from-green-950/50 dark:hover:via-emerald-950/50 dark:hover:to-teal-950/50 hover:shadow-md"
                     >
                       <action.icon className="h-4 w-4 flex-shrink-0 text-green-600 dark:text-green-400" />
-                      <span className="hidden sm:inline ml-2 text-sm font-medium">{action.title}</span>
+                      <span className="hidden sm:inline ml-2 text-sm font-medium">
+                        {action.title}
+                      </span>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                 ))}
