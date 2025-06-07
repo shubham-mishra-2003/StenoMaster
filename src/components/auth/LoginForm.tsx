@@ -67,7 +67,7 @@ const LoginForm = () => {
     // Mock authentication - in real app, verify against backend
     const user: User = {
       id: studentCredentials.id,
-      name: `Student ${studentCredentials.id}`,
+      name: `${studentCredentials.id}`,
       email: `${studentCredentials.id}@student.stenolearn.com`,
       type: "student",
     };
