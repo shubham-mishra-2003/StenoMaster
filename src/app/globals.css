@@ -6,11 +6,11 @@
 }
 
 .text-light {
-  @apply bg-white shadow-md rounded-lg p-6;
+  @apply bg-gradient-to-r bg-clip-text text-transparent from-gray-900 to-gray-700;
 }
 
 .text-dark {
-  @apply bg-slate-50;
+  @apply bg-gradient-to-r bg-clip-text text-transparent from-blue-200 to-gray-100;
 }
 
 .dark-gradient-button {

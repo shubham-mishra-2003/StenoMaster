@@ -135,7 +135,7 @@ const LandingPage = () => {
           <div className="relative">
             <div className="absolute inset-0 bg-gradient-to-r from-blue-600/20 via-purple-600/20 to-indigo-600/20 blur-3xl"></div>
             <div className="relative">
-              <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold mb-6 bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600 bg-clip-text text-transparent leading-tight">
+              <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold mb-6 gradient-text leading-tight">
                 Master Stenography
                 <br />
                 <span className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl">
@@ -143,10 +143,8 @@ const LandingPage = () => {
                 </span>
               </h2>
               <p
-                className={`text-lg sm:text-xl mb-8 max-w-3xl mx-auto leading-relaxed ${
-                  colorScheme == "dark"
-                    ? "text-slate-100/70"
-                    : "text-slate-900/70"
+                className={`text-lg sm:text-xl mb-8 max-w-4xl mx-auto font-bold leading-relaxed ${
+                  colorScheme == "dark" ? "text-dark" : "text-light"
                 }`}
               >
                 A comprehensive platform for learning stenography with real-time
@@ -178,7 +176,11 @@ const LandingPage = () => {
             <h3 className="text-2xl sm:text-3xl font-bold mb-4 gradient-text">
               Why Choose StenoLearn?
             </h3>
-            <p className="text-lg sm:text-xl text-muted-foreground">
+            <p
+              className={`text-lg sm:text-xl ${
+                colorScheme == "dark" ? "text-dark" : "text-light"
+              }`}
+            >
               Everything you need to excel in stenography education
             </p>
           </div>
@@ -189,7 +191,11 @@ const LandingPage = () => {
               return (
                 <Card
                   key={index}
-                  className="relative overflow-hidden bg-gradient-to-br from-white/80 via-white/60 to-white/40 dark:from-gray-900/80 dark:via-gray-800/60 dark:to-gray-700/40 backdrop-blur-xl border-0 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1 group"
+                  className={`relative overflow-hidden bg-gradient-to-br backdrop-blur-xl border-0 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1 group ${
+                    colorScheme == "dark"
+                      ? "from-gray-900/80 via-gray-800/60 to-gray-700/40"
+                      : "from-white/80 via-white/60 to-white/40"
+                  }`}
                 >
                   <div
                     className={`absolute inset-0 bg-gradient-to-br ${feature.gradient} opacity-5 group-hover:opacity-10 transition-opacity duration-300`}
@@ -201,13 +207,21 @@ const LandingPage = () => {
                       >
                         <Icon className="h-6 w-6 text-white" />
                       </div>
-                      <CardTitle className="text-lg sm:text-xl bg-gradient-to-r from-gray-900 to-gray-700 dark:from-gray-100 dark:to-gray-300 bg-clip-text text-transparent">
+                      <CardTitle
+                        className={`text-lg sm:text-xl ${
+                          colorScheme == "dark" ? "text-dark" : "text-light"
+                        }`}
+                      >
                         {feature.title}
                       </CardTitle>
                     </div>
                   </CardHeader>
                   <CardContent className="relative z-10">
-                    <p className="text-muted-foreground leading-relaxed">
+                    <p
+                      className={`leading-relaxed ${
+                        colorScheme == "dark" ? "text-dark" : "text-light"
+                      }`}
+                    >
                       {feature.description}
                     </p>
                   </CardContent>
@@ -221,13 +235,23 @@ const LandingPage = () => {
       {/* CTA Section */}
       <section className="py-12 sm:py-16 lg:py-20 px-4 sm:px-6 lg:px-8">
         <div className="max-w-4xl mx-auto text-center">
-          <Card className="relative overflow-hidden bg-gradient-to-br from-white/80 via-blue-50/60 to-purple-50/60 dark:from-gray-900/80 dark:via-blue-950/60 dark:to-purple-950/60 backdrop-blur-xl border-0 shadow-2xl">
+          <Card
+            className={`relative overflow-hidden bg-gradient-to-br backdrop-blur-xl border-0 shadow-2xl ${
+              colorScheme == "dark"
+                ? "from-gray-900/80 via-blue-950/60 to-purple-950/60"
+                : "from-white/80 via-blue-50/60 to-purple-50/60"
+            }`}
+          >
             <div className="absolute inset-0 bg-gradient-to-r from-blue-500/10 via-purple-500/10 to-indigo-500/10"></div>
             <CardContent className="py-12 sm:py-16 relative z-10">
               <h3 className="text-2xl sm:text-3xl font-bold mb-4 bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600 bg-clip-text text-transparent">
                 Ready to Start Learning?
               </h3>
-              <p className="text-lg sm:text-xl text-muted-foreground mb-8 leading-relaxed">
+              <p
+                className={`text-lg sm:text-xl mb-8 leading-relaxed ${
+                  colorScheme == "dark" ? "text-dark" : "text-light"
+                }`}
+              >
                 Join thousands of students and teachers already using StenoLearn
                 to master stenography
               </p>
@@ -244,9 +268,19 @@ const LandingPage = () => {
       </section>
 
       {/* Footer */}
-      <footer className="border-t border-border/50 py-6 sm:py-8 px-4 sm:px-6 lg:px-8 bg-gradient-to-r from-white/60 via-blue-50/40 to-purple-50/40 dark:from-gray-900/60 dark:via-blue-950/40 dark:to-purple-950/40 backdrop-blur-sm">
+      <footer
+        className={`border-t border-border/50 py-6 sm:py-8 px-4 sm:px-6 lg:px-8 bg-gradient-to-r backdrop-blur-sm ${
+          colorScheme == "dark"
+            ? "from-gray-900/60 via-blue-950/40 to-purple-950/40"
+            : "from-white/60 via-blue-50/40 to-purple-50/40"
+        }`}
+      >
         <div className="max-w-7xl mx-auto text-center">
-          <p className="text-muted-foreground">
+          <p
+            className={`${
+              colorScheme == "dark" ? "text-dark" : "text-light"
+            } font-bold`}
+          >
             © 2024 StenoLearn. Built for educational excellence.
           </p>
         </div>

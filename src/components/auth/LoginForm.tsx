@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,19 +11,25 @@ import { LogIn, UserPlus, GraduationCap, BookOpen } from "lucide-react";
 
 const LoginForm = () => {
   const { login } = useAuth();
-  const [studentCredentials, setStudentCredentials] = useState({ id: "", password: "" });
-  const [teacherCredentials, setTeacherCredentials] = useState({ email: "", password: "" });
-  const [teacherSignup, setTeacherSignup] = useState({ 
-    name: "", 
-    email: "", 
-    password: "", 
-    confirmPassword: "" 
+  const [studentCredentials, setStudentCredentials] = useState({
+    id: "",
+    password: "",
+  });
+  const [teacherCredentials, setTeacherCredentials] = useState({
+    email: "",
+    password: "",
+  });
+  const [teacherSignup, setTeacherSignup] = useState({
+    name: "",
+    email: "",
+    password: "",
+    confirmPassword: "",
   });
   const [activeTab, setActiveTab] = useState("student");
 
   const handleStudentLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!studentCredentials.id.trim() || !studentCredentials.password.trim()) {
       toast({
         title: "Error",
@@ -51,8 +56,11 @@ const LoginForm = () => {
 
   const handleTeacherLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!teacherCredentials.email.trim() || !teacherCredentials.password.trim()) {
+
+    if (
+      !teacherCredentials.email.trim() ||
+      !teacherCredentials.password.trim()
+    ) {
       toast({
         title: "Error",
         description: "Please enter both email and password.",
@@ -78,9 +86,13 @@ const LoginForm = () => {
 
   const handleTeacherSignup = (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!teacherSignup.name.trim() || !teacherSignup.email.trim() || 
-        !teacherSignup.password.trim() || !teacherSignup.confirmPassword.trim()) {
+
+    if (
+      !teacherSignup.name.trim() ||
+      !teacherSignup.email.trim() ||
+      !teacherSignup.password.trim() ||
+      !teacherSignup.confirmPassword.trim()
+    ) {
       toast({
         title: "Error",
         description: "Please fill in all fields.",
@@ -131,16 +143,24 @@ const LoginForm = () => {
         <CardTitle className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
           StenoLearn
         </CardTitle>
-        <p className="text-muted-foreground">Welcome back! Please sign in to continue.</p>
+        <p className="text-muted-foreground">
+          Welcome back! Please sign in to continue.
+        </p>
       </CardHeader>
       <CardContent>
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="grid w-full grid-cols-2 mb-6 bg-muted/50">
-            <TabsTrigger value="student" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-purple-500 data-[state=active]:text-white">
+            <TabsTrigger
+              value="student"
+              className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-purple-500 data-[state=active]:text-white"
+            >
               <BookOpen className="h-4 w-4 mr-2" />
               Student
             </TabsTrigger>
-            <TabsTrigger value="teacher" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-purple-500 data-[state=active]:text-white">
+            <TabsTrigger
+              value="teacher"
+              className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-purple-500 data-[state=active]:text-white"
+            >
               <GraduationCap className="h-4 w-4 mr-2" />
               Teacher
             </TabsTrigger>
@@ -155,7 +175,12 @@ const LoginForm = () => {
                   type="text"
                   placeholder="Enter your student ID"
                   value={studentCredentials.id}
-                  onChange={(e) => setStudentCredentials(prev => ({ ...prev, id: e.target.value }))}
+                  onChange={(e) =>
+                    setStudentCredentials((prev) => ({
+                      ...prev,
+                      id: e.target.value,
+                    }))
+                  }
                   className="bg-background/50 border-muted focus:border-blue-500 transition-colors"
                 />
               </div>
@@ -166,11 +191,19 @@ const LoginForm = () => {
                   type="password"
                   placeholder="Enter your password"
                   value={studentCredentials.password}
-                  onChange={(e) => setStudentCredentials(prev => ({ ...prev, password: e.target.value }))}
+                  onChange={(e) =>
+                    setStudentCredentials((prev) => ({
+                      ...prev,
+                      password: e.target.value,
+                    }))
+                  }
                   className="bg-background/50 border-muted focus:border-blue-500 transition-colors"
                 />
               </div>
-              <Button type="submit" className="w-full bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white font-medium">
+              <Button
+                type="submit"
+                className="w-full bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white font-medium"
+              >
                 <LogIn className="h-4 w-4 mr-2" />
                 Sign In as Student
               </Button>
@@ -193,7 +226,12 @@ const LoginForm = () => {
                       type="email"
                       placeholder="Enter your email"
                       value={teacherCredentials.email}
-                      onChange={(e) => setTeacherCredentials(prev => ({ ...prev, email: e.target.value }))}
+                      onChange={(e) =>
+                        setTeacherCredentials((prev) => ({
+                          ...prev,
+                          email: e.target.value,
+                        }))
+                      }
                       className="bg-background/50 border-muted focus:border-blue-500 transition-colors"
                     />
                   </div>
@@ -204,11 +242,19 @@ const LoginForm = () => {
                       type="password"
                       placeholder="Enter your password"
                       value={teacherCredentials.password}
-                      onChange={(e) => setTeacherCredentials(prev => ({ ...prev, password: e.target.value }))}
+                      onChange={(e) =>
+                        setTeacherCredentials((prev) => ({
+                          ...prev,
+                          password: e.target.value,
+                        }))
+                      }
                       className="bg-background/50 border-muted focus:border-blue-500 transition-colors"
                     />
                   </div>
-                  <Button type="submit" className="w-full bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white font-medium">
+                  <Button
+                    type="submit"
+                    className="w-full bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white font-medium"
+                  >
                     <LogIn className="h-4 w-4 mr-2" />
                     Sign In as Teacher
                   </Button>
@@ -224,7 +270,12 @@ const LoginForm = () => {
                       type="text"
                       placeholder="Enter your full name"
                       value={teacherSignup.name}
-                      onChange={(e) => setTeacherSignup(prev => ({ ...prev, name: e.target.value }))}
+                      onChange={(e) =>
+                        setTeacherSignup((prev) => ({
+                          ...prev,
+                          name: e.target.value,
+                        }))
+                      }
                       className="bg-background/50 border-muted focus:border-blue-500 transition-colors"
                     />
                   </div>
@@ -235,7 +286,12 @@ const LoginForm = () => {
                       type="email"
                       placeholder="Enter your email"
                       value={teacherSignup.email}
-                      onChange={(e) => setTeacherSignup(prev => ({ ...prev, email: e.target.value }))}
+                      onChange={(e) =>
+                        setTeacherSignup((prev) => ({
+                          ...prev,
+                          email: e.target.value,
+                        }))
+                      }
                       className="bg-background/50 border-muted focus:border-blue-500 transition-colors"
                     />
                   </div>
@@ -246,22 +302,37 @@ const LoginForm = () => {
                       type="password"
                       placeholder="Create a password (min. 6 characters)"
                       value={teacherSignup.password}
-                      onChange={(e) => setTeacherSignup(prev => ({ ...prev, password: e.target.value }))}
+                      onChange={(e) =>
+                        setTeacherSignup((prev) => ({
+                          ...prev,
+                          password: e.target.value,
+                        }))
+                      }
                       className="bg-background/50 border-muted focus:border-blue-500 transition-colors"
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="signup-confirm-password">Confirm Password</Label>
+                    <Label htmlFor="signup-confirm-password">
+                      Confirm Password
+                    </Label>
                     <Input
                       id="signup-confirm-password"
                       type="password"
                       placeholder="Confirm your password"
                       value={teacherSignup.confirmPassword}
-                      onChange={(e) => setTeacherSignup(prev => ({ ...prev, confirmPassword: e.target.value }))}
+                      onChange={(e) =>
+                        setTeacherSignup((prev) => ({
+                          ...prev,
+                          confirmPassword: e.target.value,
+                        }))
+                      }
                       className="bg-background/50 border-muted focus:border-blue-500 transition-colors"
                     />
                   </div>
-                  <Button type="submit" className="w-full bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600 text-white font-medium">
+                  <Button
+                    type="submit"
+                    className="w-full bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600 text-white font-medium"
+                  >
                     <UserPlus className="h-4 w-4 mr-2" />
                     Create Teacher Account
                   </Button>
