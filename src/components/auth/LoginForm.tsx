@@ -63,8 +63,7 @@ const LoginForm = () => {
       });
       return;
     }
-
-    // Mock authentication - in real app, verify against backend
+    
     const user: User = {
       id: studentCredentials.id,
       name: `${studentCredentials.id}`,

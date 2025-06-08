@@ -32,8 +32,8 @@ interface AppSidebarProps {
 }
 
 const AppSidebar = ({ activeTab, onTabChange }: AppSidebarProps) => {
-  const { user } = useAuth();
   const { colorScheme } = useTheme();
+  const { user } = useAuth();
   const [quickActionModal, setQuickActionModal] = useState<{
     isOpen: boolean;
     action: string;
@@ -47,80 +47,28 @@ const AppSidebar = ({ activeTab, onTabChange }: AppSidebarProps) => {
   };
 
   const teacherItems = [
-    {
-      title: "Overview",
-      url: "overview",
-      icon: BarChart3,
-    },
-    {
-      title: "Classes",
-      url: "classes",
-      icon: Users,
-    },
-    {
-      title: "Assignments",
-      url: "assignments",
-      icon: BookOpen,
-    },
-    {
-      title: "Student Scores",
-      url: "scores",
-      icon: Target,
-    },
+    { title: "Overview", url: "overview", icon: BarChart3 },
+    { title: "Classes", url: "classes", icon: Users },
+    { title: "Assignments", url: "assignments", icon: BookOpen },
+    { title: "Student Scores", url: "scores", icon: Target },
   ];
 
   const studentItems = [
-    {
-      title: "Assignments",
-      url: "assignments",
-      icon: BookOpen,
-    },
-    {
-      title: "Practice",
-      url: "practice",
-      icon: GraduationCap,
-    },
-    {
-      title: "Speed Test",
-      url: "typing-test",
-      icon: Zap,
-    },
-    {
-      title: "Progress",
-      url: "progress",
-      icon: BarChart3,
-    },
+    { title: "Assignments", url: "assignments", icon: BookOpen },
+    { title: "Practice", url: "practice", icon: GraduationCap },
+    { title: "Speed Test", url: "typing-test", icon: Zap },
+    { title: "Progress", url: "progress", icon: BarChart3 },
   ];
 
   const teacherQuickActions = [
-    {
-      title: "New Class",
-      action: "classes",
-      icon: Plus,
-    },
-    {
-      title: "Add Student",
-      action: "students",
-      icon: UserPlus,
-    },
-    {
-      title: "New Assignment",
-      action: "assignments",
-      icon: BookOpen,
-    },
+    { title: "New Class", action: "classes", icon: Plus },
+    { title: "Add Student", action: "students", icon: UserPlus },
+    { title: "New Assignment", action: "assignments", icon: BookOpen },
   ];
 
   const studentQuickActions = [
-    {
-      title: "Speed Test",
-      action: "speed-test",
-      icon: Zap,
-    },
-    {
-      title: "Practice",
-      action: "assignments",
-      icon: Target,
-    },
+    { title: "Speed Test", action: "speed-test", icon: Zap },
+    { title: "Practice", action: "assignments", icon: Target },
   ];
 
   const items = user?.type === "teacher" ? teacherItems : studentItems;
@@ -130,10 +78,14 @@ const AppSidebar = ({ activeTab, onTabChange }: AppSidebarProps) => {
   return (
     <>
       <Sidebar
-        className={`border-r border-gray-200/50 bg-gradient-to-b ${
+        className={`border-r ${
           colorScheme === "dark"
-            ? "from-gray-900 via-blue-950/30 to-purple-950/30"
-            : "from-white via-blue-50/30 to-purple-50/30"
+            ? "border-gray-800/50 bg-gray-900"
+            : "border-gray-200/50 bg-white"
+        } data-[mobile=true]:bg-gradient-to-b ${
+          colorScheme === "dark"
+            ? "data-[mobile=true]:from-gray-900 data-[mobile=true]:via-blue-950/90 data-[mobile=true]:to-purple-950/90"
+            : "data-[mobile=true]:from-white data-[mobile=true]:via-blue-50/90 data-[mobile=true]:to-purple-50/90"
         }`}
       >
         <SidebarHeader
@@ -143,7 +95,7 @@ const AppSidebar = ({ activeTab, onTabChange }: AppSidebarProps) => {
         >
           <div className="flex items-center space-x-2 sm:space-x-3">
             <Image src="/logo.png" alt="Logo" width={50} height={35} />
-            <div className="hidden sm:block">
+            <div className="block">
               <h2 className="text-lg font-bold gradient-text">StenoLearn</h2>
               <p
                 className={`text-xs ${
@@ -155,6 +107,7 @@ const AppSidebar = ({ activeTab, onTabChange }: AppSidebarProps) => {
             </div>
           </div>
         </SidebarHeader>
+
         <SidebarContent className="px-2 sm:px-4">
           <SidebarGroup>
             <SidebarGroupLabel
@@ -172,20 +125,20 @@ const AppSidebar = ({ activeTab, onTabChange }: AppSidebarProps) => {
                       isActive={activeTab === item.url}
                       onClick={() => onTabChange(item.url)}
                       className={`
-                        w-full cursor-pointer justify-start px-3 py-2 rounded-lg transition-all duration-200
-                        ${
-                          activeTab === item.url
-                            ? "gradient-button shadow-lg"
-                            : `hover:bg-gradient-to-r ${
-                                colorScheme === "dark"
-                                  ? "hover:from-blue-600/50 hover:via-purple-600/50 hover:to-indigo-950/50"
-                                  : "hover:from-blue-200 hover:via-purple-200 hover:to-indigo-50"
-                              }`
-                        }
-                      `}
+                         w-full cursor-pointer justify-start px-3 py-2 rounded-lg transition-all duration-200
+                         ${
+                           activeTab === item.url
+                             ? "gradient-button shadow-lg"
+                             : `bg-gradient-to-r ${
+                                 colorScheme === "dark"
+                                   ? "hover:from-blue-600/50 hover:via-purple-600/50 hover:to-indigo-950/50"
+                                   : "hover:from-blue-200 hover:via-purple-200 hover:to-indigo-50"
+                               }`
+                         }
+                       `}
                     >
                       <item.icon className="h-4 w-4 flex-shrink-0" />
-                      <span className="hidden sm:inline ml-2 text-sm font-medium">
+                      <span className="ml-2 text-sm font-medium">
                         {item.title}
                       </span>
                     </SidebarMenuButton>
@@ -211,8 +164,8 @@ const AppSidebar = ({ activeTab, onTabChange }: AppSidebarProps) => {
                       onClick={() => handleQuickAction(action.action)}
                       className={`w-full justify-start px-3 py-2 rounded-lg transition-all duration-200 hover:bg-gradient-to-r ${
                         colorScheme === "dark"
-                          ? "hover:from-green-950/50 hover:via-emerald-950/50 hover:to-teal-950/50"
-                          : "hover:from-green-50 hover:via-emerald-50 hover:to-teal-50"
+                          ? "hover:from-green-950/90 hover:via-emerald-950/90 hover:to-teal-950/90"
+                          : "hover:from-green-50/90 hover:via-emerald-50/90 hover:to-teal-50/90"
                       } hover:shadow-md`}
                     >
                       <action.icon
@@ -222,7 +175,7 @@ const AppSidebar = ({ activeTab, onTabChange }: AppSidebarProps) => {
                             : "text-green-600"
                         }`}
                       />
-                      <span className="hidden sm:inline ml-2 text-sm font-medium">
+                      <span className="ml-2 text-sm font-medium">
                         {action.title}
                       </span>
                     </SidebarMenuButton>
@@ -243,7 +196,7 @@ const AppSidebar = ({ activeTab, onTabChange }: AppSidebarProps) => {
               colorScheme === "dark" ? "text-gray-400" : "text-gray-600"
             } text-center sm:text-left`}
           >
-            <span className="hidden sm:inline">Welcome, </span>
+            <span className="inline">Welcome, </span>
             <span className="font-medium gradient-text">{user?.name}</span>
           </div>
         </SidebarFooter>
