@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -7,6 +6,7 @@ import { Clock, Target, RotateCcw } from "lucide-react";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "@/hooks/use-toast";
+import { useTheme } from "@/hooks/ThemeProvider";
 
 const sampleTexts = [
   "The quick brown fox jumps over the lazy dog. This sentence contains every letter of the alphabet at least once.",
@@ -28,6 +28,7 @@ interface TypingTestResult {
 }
 
 const TypingTest = () => {
+  const { colorScheme } = useTheme();
   const [currentText, setCurrentText] = useState(sampleTexts[0]);
   const [typedText, setTypedText] = useState("");
   const [startTime, setStartTime] = useState<Date | null>(null);
@@ -127,12 +128,12 @@ const TypingTest = () => {
       
       if (index < typedText.length) {
         if (typedText[index] === char) {
-          className += "bg-green-200 dark:bg-green-800 text-green-800 dark:text-green-200";
+          className += colorScheme === "dark" ? "bg-green-800 text-green-200" : "bg-green-200 text-green-800";
         } else {
-          className += "bg-red-200 dark:bg-red-800 text-red-800 dark:text-red-200";
+          className += colorScheme === "dark" ? "bg-red-800 text-red-200" : "bg-red-200 text-red-800";
         }
       } else if (index === typedText.length) {
-        className += "bg-blue-200 dark:bg-blue-800";
+        className += colorScheme === "dark" ? "bg-blue-800" : "bg-blue-200";
       } else {
         className += "text-muted-foreground";
       }
@@ -151,26 +152,27 @@ const TypingTest = () => {
 
   return (
     <div className="space-y-6">
-      <Card>
-        <CardHeader>
+      <Card className={`relative overflow-hidden backdrop-blur-xl border-0 shadow-lg ${colorScheme === "dark" ? 'modal-gradient-dark-bg' : 'modal-gradient-light-bg'}`}>
+        <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 via-purple-500/5 to-indigo-500/5"></div>
+        <CardHeader className="relative z-10">
           <div className="flex items-center justify-between">
-            <CardTitle className="flex items-center gap-2">
+            <CardTitle className="flex items-center gap-2 gradient-text">
               <Target className="h-5 w-5" />
               Typing Speed Test
             </CardTitle>
-            <Button variant="outline" onClick={handleReset}>
+            <Button variant="outline" className={`gradient-button ${colorScheme === "dark" ? 'dark-gradient-button' : 'light-gradient-button'}`} onClick={handleReset}>
               <RotateCcw className="h-4 w-4 mr-2" />
               New Test
             </Button>
           </div>
         </CardHeader>
-        <CardContent className="space-y-6">
+        <CardContent className="space-y-6 relative z-10">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="flex items-center gap-2 p-3 bg-muted rounded-lg">
               <Clock className="h-4 w-4 text-muted-foreground" />
               <div>
                 <p className="text-sm text-muted-foreground">Time</p>
-                <p className="font-mono text-lg">
+                <p className={`font-mono text-lg ${colorScheme === "dark" ? 'text-dark' : 'text-light'}`}>
                   {Math.floor(timeElapsed / 60)}:{(timeElapsed % 60).toString().padStart(2, '0')}
                 </p>
               </div>
@@ -180,7 +182,7 @@ const TypingTest = () => {
               <Target className="h-4 w-4 text-muted-foreground" />
               <div>
                 <p className="text-sm text-muted-foreground">WPM</p>
-                <p className="font-mono text-lg">{currentWPM}</p>
+                <p className={`font-mono text-lg ${colorScheme === "dark" ? 'text-dark' : 'text-light'}`}>{currentWPM}</p>
               </div>
             </div>
             
@@ -188,7 +190,7 @@ const TypingTest = () => {
               <Target className="h-4 w-4 text-muted-foreground" />
               <div>
                 <p className="text-sm text-muted-foreground">Accuracy</p>
-                <p className="font-mono text-lg">{currentAccuracy}%</p>
+                <p className={`font-mono text-lg ${colorScheme === "dark" ? 'text-dark' : 'text-light'}`}>{currentAccuracy}%</p>
               </div>
             </div>
           </div>
@@ -196,7 +198,7 @@ const TypingTest = () => {
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <span className="text-sm text-muted-foreground">Progress</span>
-              <span className="text-sm text-muted-foreground">{Math.round(progress)}%</span>
+              <span className={`text-sm text-muted-foreground ${colorScheme === "dark" ? 'text-dark' : 'text-light'}`}>{Math.round(progress)}%</span>
             </div>
             <Progress value={progress} className="w-full" />
           </div>
@@ -220,15 +222,15 @@ const TypingTest = () => {
             
             <div className="flex gap-2">
               {!isStarted ? (
-                <Button onClick={handleStart} className="w-full">
+                <Button onClick={handleStart} className={`w-full gradient-button ${colorScheme === "dark" ? 'dark-gradient-button' : 'light-gradient-button'}`}>
                   Start Test
                 </Button>
               ) : isCompleted ? (
-                <Button onClick={handleReset} className="w-full">
+                <Button onClick={handleReset} className={`w-full gradient-button ${colorScheme === "dark" ? 'dark-gradient-button' : 'light-gradient-button'}`}>
                   Take Another Test
                 </Button>
               ) : (
-                <Button variant="outline" onClick={handleReset} className="w-full">
+                <Button variant="outline" onClick={handleReset} className={`w-full gradient-button ${colorScheme === "dark" ? 'dark-gradient-button' : 'light-gradient-button'}`}>
                   Reset Test
                 </Button>
               )}
@@ -238,21 +240,22 @@ const TypingTest = () => {
       </Card>
 
       {testResults.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Recent Test Results</CardTitle>
+        <Card className={`relative overflow-hidden backdrop-blur-xl border-0 shadow-lg ${colorScheme === "dark" ? 'modal-gradient-dark-bg' : 'modal-gradient-light-bg'}`}>
+          <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 via-purple-500/5 to-indigo-500/5"></div>
+          <CardHeader className="relative z-10">
+            <CardTitle className="gradient-text">Recent Test Results</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="relative z-10">
             <div className="space-y-3">
               {testResults.slice(-5).reverse().map((result) => (
                 <div key={result.id} className="flex items-center justify-between p-3 border rounded-lg">
                   <div>
-                    <p className="font-medium">{result.wpm} WPM</p>
-                    <p className="text-sm text-muted-foreground">
+                    <p className={`font-medium ${colorScheme === "dark" ? 'text-dark' : 'text-light'}`}>{result.wpm} WPM</p>
+                    <p className={`text-sm text-muted-foreground ${colorScheme === "dark" ? 'text-dark' : 'text-light'}`}>
                       {result.accuracy}% accuracy in {result.timeElapsed}s
                     </p>
                   </div>
-                  <p className="text-xs text-muted-foreground">
+                  <p className={`text-xs text-muted-foreground ${colorScheme === "dark" ? 'text-dark' : 'text-light'}`}>
                     {new Date(result.completedAt).toLocaleDateString()}
                   </p>
                 </div>
