@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -11,8 +10,10 @@ import { Class, Student } from "@/types";
 import { Plus, Users, Trash2 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import StudentManagement from "./StudentManagement";
+import { useTheme } from "@/hooks/ThemeProvider";
 
 const ClassManagement = () => {
+  const { colorScheme } = useTheme();
   const [classes, setClasses] = useLocalStorage<Class[]>("stenolearn-classes", []);
   const [students] = useLocalStorage<Student[]>("stenolearn-students", []);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
@@ -64,22 +65,24 @@ const ClassManagement = () => {
     <div className="space-y-4 sm:space-y-6 p-2 sm:p-4 lg:p-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600 bg-clip-text text-transparent">
+          <h2 className="text-xl sm:text-2xl font-bold gradient-text">
             Class Management
           </h2>
-          <p className="text-sm sm:text-base text-muted-foreground">Create and manage your classes</p>
+          <p className={`text-sm sm:text-base ${colorScheme === "dark" ? 'text-dark' : 'text-light'}`}>
+            Create and manage your classes
+          </p>
         </div>
         
         <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
           <DialogTrigger asChild>
-            <Button className="bg-gradient-to-r from-blue-500 via-purple-500 to-indigo-500 hover:from-blue-600 hover:via-purple-600 hover:to-indigo-600 text-white shadow-lg hover:shadow-xl transition-all duration-300">
+            <Button className={`gradient-button ${colorScheme === "dark" ? 'dark-gradient-button' : 'light-gradient-button'}`}>
               <Plus className="h-4 w-4 mr-2" />
               Create Class
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-sm sm:max-w-md mx-4 bg-gradient-to-br from-white/95 via-blue-50/90 to-purple-50/95 dark:from-gray-900/95 dark:via-blue-950/90 dark:to-purple-950/95 backdrop-blur-xl border-0 shadow-2xl">
+          <DialogContent className={`max-w-sm sm:max-w-md mx-4 backdrop-blur-xl border-0 shadow-2xl ${colorScheme === "dark" ? 'modal-gradient-dark-bg' : 'modal-gradient-light-bg'}`}>
             <DialogHeader>
-              <DialogTitle className="text-lg sm:text-xl bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600 bg-clip-text text-transparent font-bold">
+              <DialogTitle className="text-lg sm:text-xl gradient-text font-bold">
                 Create New Class
               </DialogTitle>
             </DialogHeader>
@@ -91,7 +94,7 @@ const ClassManagement = () => {
                   placeholder="Enter class name"
                   value={newClassName}
                   onChange={(e) => setNewClassName(e.target.value)}
-                  className="bg-white/60 dark:bg-gray-800/60 border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-blue-500"
+                  className={`bg-white/60 border-gray-200 focus:ring-2 focus:ring-blue-500 ${colorScheme === "dark" ? 'dark:bg-gray-800/60 dark:border-gray-700' : ''}`}
                   onKeyPress={(e) => e.key === 'Enter' && handleCreateClass()}
                 />
               </div>
@@ -99,13 +102,13 @@ const ClassManagement = () => {
                 <Button 
                   variant="outline" 
                   onClick={() => setIsCreateDialogOpen(false)}
-                  className="flex-1 border-gray-300 hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-800"
+                  className={`flex-1 border-gray-300 hover:bg-gray-50 ${colorScheme === "dark" ? 'dark:border-gray-600 dark:hover:bg-gray-800' : ''}`}
                 >
                   Cancel
                 </Button>
                 <Button 
                   onClick={handleCreateClass}
-                  className="flex-1 bg-gradient-to-r from-blue-500 via-purple-500 to-indigo-500 hover:from-blue-600 hover:via-purple-600 hover:to-indigo-600 text-white shadow-lg hover:shadow-xl transition-all duration-300"
+                  className={`flex-1 gradient-button ${colorScheme === "dark" ? 'dark-gradient-button' : 'light-gradient-button'}`}
                 >
                   Create Class
                 </Button>
@@ -122,12 +125,12 @@ const ClassManagement = () => {
           return (
             <Card 
               key={classItem.id} 
-              className="relative overflow-hidden bg-gradient-to-br from-white/80 via-white/60 to-white/40 dark:from-gray-900/80 dark:via-gray-800/60 dark:to-gray-700/40 backdrop-blur-xl border-0 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1"
+              className={`relative overflow-hidden backdrop-blur-xl border-0 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1 ${colorScheme === "dark" ? 'modal-gradient-dark-bg' : 'modal-gradient-light-bg'}`}
             >
               <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 via-purple-500/5 to-indigo-500/5"></div>
               <CardHeader className="relative z-10">
                 <div className="flex items-center justify-between">
-                  <CardTitle className="text-base sm:text-lg bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600 bg-clip-text text-transparent">
+                  <CardTitle className="text-base sm:text-lg gradient-text">
                     {classItem.name}
                   </CardTitle>
                   <Button
@@ -143,7 +146,7 @@ const ClassManagement = () => {
               <CardContent className="space-y-4 relative z-10">
                 <div className="flex items-center space-x-2">
                   <Users className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm text-muted-foreground">
+                  <span className={`text-sm text-muted-foreground ${colorScheme === "dark" ? 'text-dark' : 'text-light'}`}>
                     {classStudents.length} student{classStudents.length !== 1 ? 's' : ''}
                   </span>
                 </div>
@@ -151,7 +154,7 @@ const ClassManagement = () => {
                 <div className="flex items-center space-x-2">
                   <Badge 
                     variant="secondary" 
-                    className="bg-gradient-to-r from-blue-50 to-purple-50 text-blue-700 dark:from-blue-950 dark:to-purple-950 dark:text-blue-300"
+                    className={`${colorScheme === "dark" ? 'bg-gradient-to-r from-blue-950 to-purple-950 text-blue-300' : 'bg-gradient-to-r from-blue-50 to-purple-50 text-blue-700'}`}
                   >
                     {classItem.assignments.length} assignment{classItem.assignments.length !== 1 ? 's' : ''}
                   </Badge>
@@ -159,7 +162,7 @@ const ClassManagement = () => {
 
                 <Button
                   variant="outline"
-                  className="w-full border-blue-200 hover:bg-gradient-to-r hover:from-blue-50 hover:to-purple-50 dark:border-blue-800 dark:hover:from-blue-950 dark:hover:to-purple-950 transition-all duration-300"
+                  className={`w-full border-blue-200 transition-all duration-300 ${colorScheme === "dark" ? 'dark:border-blue-800 dark:hover:from-blue-950 dark:hover:to-purple-950' : 'hover:from-blue-50 hover:to-purple-50'}`}
                   onClick={() => setSelectedClass(classItem)}
                 >
                   Manage Students
@@ -171,21 +174,21 @@ const ClassManagement = () => {
       </div>
 
       {classes.length === 0 && (
-        <Card className="relative overflow-hidden bg-gradient-to-br from-white/80 via-white/60 to-white/40 dark:from-gray-900/80 dark:via-gray-800/60 dark:to-gray-700/40 backdrop-blur-xl border-0 shadow-lg">
+        <Card className={`relative overflow-hidden backdrop-blur-xl border-0 shadow-lg ${colorScheme === "dark" ? 'modal-gradient-dark-bg' : 'modal-gradient-light-bg'}`}>
           <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 via-purple-500/5 to-indigo-500/5"></div>
           <CardContent className="flex flex-col items-center justify-center py-12 relative z-10">
-            <div className="w-16 h-16 bg-gradient-to-br from-blue-500 via-purple-500 to-indigo-500 rounded-full flex items-center justify-center mb-4 shadow-lg">
+            <div className={`w-16 h-16 rounded-full flex items-center justify-center mb-4 shadow-lg ${colorScheme === "dark" ? 'dark-gradient-button' : 'light-gradient-button'}`}>
               <Users className="h-8 w-8 text-white" />
             </div>
-            <h3 className="text-lg font-semibold mb-2 bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600 bg-clip-text text-transparent">
+            <h3 className="text-lg font-semibold mb-2 gradient-text">
               No classes yet
             </h3>
-            <p className="text-muted-foreground text-center mb-4 max-w-sm">
+            <p className={`text-muted-foreground text-center mb-4 max-w-sm ${colorScheme === "dark" ? 'text-dark' : 'text-light'}`}>
               Get started by creating your first class
             </p>
             <Button 
               onClick={() => setIsCreateDialogOpen(true)}
-              className="bg-gradient-to-r from-blue-500 via-purple-500 to-indigo-500 hover:from-blue-600 hover:via-purple-600 hover:to-indigo-600 text-white shadow-lg hover:shadow-xl transition-all duration-300"
+              className={`gradient-button ${colorScheme === "dark" ? 'dark-gradient-button' : 'light-gradient-button'}`}
             >
               <Plus className="h-4 w-4 mr-2" />
               Create Your First Class
