@@ -1,3 +1,4 @@
+"use client";
 import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -85,7 +86,7 @@ const StudentDashboard = ({ activeTab, onTabChange }: StudentDashboardProps) => 
                       {stat.title}
                     </CardTitle>
                     <div className={`p-2 rounded-lg bg-gradient-to-br ${stat.color} shadow-lg`}>
-                      <Icon className="h-3 w-3 sm:h-4 sm:w-4 text-white" />
+                      <Icon className="h-3 w-3 sm:h-4 sm:w-4 text-white"  />
                     </div>
                   </CardHeader>
                   <CardContent className="relative z-10">

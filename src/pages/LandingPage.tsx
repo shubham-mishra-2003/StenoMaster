@@ -1,3 +1,4 @@
+"use client";
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -23,6 +24,7 @@ import Image from "next/image";
 
 const LandingPage = () => {
   const [isLoginOpen, setIsLoginOpen] = useState(false);
+  const { colorScheme } = useTheme();
 
   const features = [
     {
@@ -68,19 +70,17 @@ const LandingPage = () => {
     },
   ];
 
-  const { colorScheme } = useTheme();
-
   return (
     <div
       className={`min-h-screen text-white dark:text-black bg-gradient-to-br ${
-        colorScheme == "dark"
+        colorScheme === "dark"
           ? "from-slate-900 via-blue-950/30 to-purple-950/30"
           : "from-slate-50 via-blue-50/80 to-purple-50/80"
       }`}
     >
       <nav
-        className={`border-b border-border/50 bg-gradient-to-r backdrop-blur-xl sticky top-0 z-50 ${
-          colorScheme == "dark"
+        className={`border-b border-purple-300 bg-gradient-to-r backdrop-blur-xl sticky top-0 z-50 ${
+          colorScheme === "dark"
             ? "from-gray-900/90 via-blue-950/50 to-purple-950/50"
             : "from-white/90 via-blue-50/50 to-purple-50/50"
         }`}
@@ -101,9 +101,9 @@ const LandingPage = () => {
                 <DialogTrigger asChild>
                   <Button
                     className={`bg-gradient-to-r shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer ${
-                      colorScheme == "dark"
-                        ? "dark-gradient-button"
-                        : "light-gradient-button"
+                      colorScheme === "dark"
+                        ? "from-gray-700 to-gray-900"
+                        : "from-blue-500 to-indigo-500"
                     }`}
                   >
                     Login
@@ -111,14 +111,14 @@ const LandingPage = () => {
                 </DialogTrigger>
                 <DialogContent
                   className={`max-h-[90vh] flex flex-col max-w-[90%] sm:max-w-md bg-gradient-to-br backdrop-blur-xl border-0 shadow-2xl ${
-                    colorScheme == "dark"
-                      ? "modal-gradient-dark-bg"
-                      : "modal-gradient-light-bg"
+                    colorScheme === "dark"
+                      ? "from-gray-900/80 via-blue-950/60 to-purple-950/60"
+                      : "from-white/80 via-blue-50/60 to-purple-50/60"
                   }`}
                 >
                   <DialogHeader>
                     <DialogTitle className="text-xl gradient-text font-bold text-center">
-                      Welcome Back
+                      Welcome!
                     </DialogTitle>
                   </DialogHeader>
                   <LoginForm />
@@ -144,7 +144,7 @@ const LandingPage = () => {
               </h2>
               <p
                 className={`text-lg sm:text-xl mb-8 max-w-4xl mx-auto font-bold leading-relaxed ${
-                  colorScheme == "dark" ? "text-dark" : "text-light"
+                  colorScheme === "dark" ? "text-gray-200" : "text-gray-800"
                 }`}
               >
                 A comprehensive platform for learning stenography with real-time
@@ -153,7 +153,7 @@ const LandingPage = () => {
               </p>
               <Button
                 size="lg"
-                className="gradient-button"
+                className="bg-gradient-to-r from-blue-500 to-indigo-500"
                 onClick={() => setIsLoginOpen(true)}
               >
                 Get Started
@@ -166,7 +166,7 @@ const LandingPage = () => {
       {/* Features Section */}
       <section
         className={`py-12 sm:py-16 lg:py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-r backdrop-blur-sm ${
-          colorScheme == "dark"
+          colorScheme === "dark"
             ? "from-gray-900/60 via-blue-950/40 to-purple-950/40"
             : "from-white/60 via-blue-50/40 to-purple-50/40"
         }`}
@@ -178,7 +178,7 @@ const LandingPage = () => {
             </h3>
             <p
               className={`text-lg sm:text-xl ${
-                colorScheme == "dark" ? "text-dark" : "text-light"
+                colorScheme === "dark" ? "text-gray-200" : "text-gray-800"
               }`}
             >
               Everything you need to excel in stenography education
@@ -192,7 +192,7 @@ const LandingPage = () => {
                 <Card
                   key={index}
                   className={`relative overflow-hidden bg-gradient-to-br backdrop-blur-xl border-0 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1 group ${
-                    colorScheme == "dark"
+                    colorScheme === "dark"
                       ? "from-gray-900/80 via-gray-800/60 to-gray-700/40"
                       : "from-white/80 via-white/60 to-white/40"
                   }`}
@@ -205,11 +205,15 @@ const LandingPage = () => {
                       <div
                         className={`p-3 rounded-lg bg-gradient-to-br ${feature.gradient} shadow-lg group-hover:shadow-xl transition-shadow duration-300`}
                       >
-                        <Icon className="h-6 w-6 text-white" />
+                        <Icon
+                          className={`h-6 w-6 ${
+                            colorScheme === "dark" ? "text-white" : "text-gray-500"
+                          }`}
+                        />
                       </div>
                       <CardTitle
                         className={`text-lg sm:text-xl ${
-                          colorScheme == "dark" ? "text-dark" : "text-light"
+                          colorScheme === "dark" ? "text-gray-200" : "text-gray-800"
                         }`}
                       >
                         {feature.title}
@@ -219,7 +223,7 @@ const LandingPage = () => {
                   <CardContent className="relative z-10">
                     <p
                       className={`leading-relaxed ${
-                        colorScheme == "dark" ? "text-dark" : "text-light"
+                        colorScheme === "dark" ? "text-gray-200" : "text-gray-800"
                       }`}
                     >
                       {feature.description}
@@ -237,7 +241,7 @@ const LandingPage = () => {
         <div className="max-w-4xl mx-auto text-center">
           <Card
             className={`relative overflow-hidden bg-gradient-to-br backdrop-blur-xl border-0 shadow-2xl ${
-              colorScheme == "dark"
+              colorScheme === "dark"
                 ? "from-gray-900/80 via-blue-950/60 to-purple-950/60"
                 : "from-white/80 via-blue-50/60 to-purple-50/60"
             }`}
@@ -249,7 +253,7 @@ const LandingPage = () => {
               </h3>
               <p
                 className={`text-lg sm:text-xl mb-8 leading-relaxed ${
-                  colorScheme == "dark" ? "text-dark" : "text-light"
+                  colorScheme === "dark" ? "text-gray-200" : "text-gray-800"
                 }`}
               >
                 Join thousands of students and teachers already using StenoLearn
@@ -257,7 +261,7 @@ const LandingPage = () => {
               </p>
               <Button
                 size="lg"
-                className="gradient-button"
+                className="bg-gradient-to-r from-blue-500 to-indigo-500"
                 onClick={() => setIsLoginOpen(true)}
               >
                 Login to Your Account
@@ -266,25 +270,6 @@ const LandingPage = () => {
           </Card>
         </div>
       </section>
-
-      {/* Footer */}
-      <footer
-        className={`border-t border-border/50 py-6 sm:py-8 px-4 sm:px-6 lg:px-8 bg-gradient-to-r backdrop-blur-sm ${
-          colorScheme == "dark"
-            ? "from-gray-900/60 via-blue-950/40 to-purple-950/40"
-            : "from-white/60 via-blue-50/40 to-purple-50/40"
-        }`}
-      >
-        <div className="max-w-7xl mx-auto text-center">
-          <p
-            className={`${
-              colorScheme == "dark" ? "text-dark" : "text-light"
-            } font-bold`}
-          >
-            © 2024 StenoLearn. Built for educational excellence.
-          </p>
-        </div>
-      </footer>
     </div>
   );
 };

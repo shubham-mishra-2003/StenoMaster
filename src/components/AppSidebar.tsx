@@ -10,7 +10,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarHeader,
-  SidebarFooter,
+  SidebarFooter
 } from "@/components/ui/sidebar";
 import {
   BookOpen,
@@ -20,7 +20,7 @@ import {
   Target,
   Plus,
   GraduationCap,
-  UserPlus,
+  UserPlus
 } from "lucide-react";
 import QuickActionModal from "./modals/QuickActionModal";
 import Image from "next/image";
@@ -39,7 +39,7 @@ const AppSidebar = ({ activeTab, onTabChange }: AppSidebarProps) => {
     action: string;
   }>({
     isOpen: false,
-    action: "",
+    action: ""
   });
 
   const handleQuickAction = (action: string) => {
@@ -50,25 +50,25 @@ const AppSidebar = ({ activeTab, onTabChange }: AppSidebarProps) => {
     { title: "Overview", url: "overview", icon: BarChart3 },
     { title: "Classes", url: "classes", icon: Users },
     { title: "Assignments", url: "assignments", icon: BookOpen },
-    { title: "Student Scores", url: "scores", icon: Target },
+    { title: "Student Scores", url: "scores", icon: Target }
   ];
 
   const studentItems = [
     { title: "Assignments", url: "assignments", icon: BookOpen },
     { title: "Practice", url: "practice", icon: GraduationCap },
     { title: "Speed Test", url: "typing-test", icon: Zap },
-    { title: "Progress", url: "progress", icon: BarChart3 },
+    { title: "Progress", url: "progress", icon: BarChart3 }
   ];
 
   const teacherQuickActions = [
     { title: "New Class", action: "classes", icon: Plus },
     { title: "Add Student", action: "students", icon: UserPlus },
-    { title: "New Assignment", action: "assignments", icon: BookOpen },
+    { title: "New Assignment", action: "assignments", icon: BookOpen }
   ];
 
   const studentQuickActions = [
     { title: "Speed Test", action: "speed-test", icon: Zap },
-    { title: "Practice", action: "assignments", icon: Target },
+    { title: "Practice", action: "assignments", icon: Target }
   ];
 
   const items = user?.type === "teacher" ? teacherItems : studentItems;
@@ -89,14 +89,12 @@ const AppSidebar = ({ activeTab, onTabChange }: AppSidebarProps) => {
         }`}
       >
         <SidebarHeader
-          className={`p-4 sm:p-6 border-b ${
-            colorScheme === "dark" ? "border-gray-800/50" : "border-gray-200/50"
-          }`}
+          className={"p-2 sm:p-3 border-b border-b border-b-purple-300"}
         >
-          <div className="flex items-center space-x-2 sm:space-x-3">
-            <Image src="/logo.png" alt="Logo" width={50} height={35} />
+          <div className="flex items-center justify-center space-x-1 sm:space-x-2">
+            <Image src="/logo.png" alt="Logo" width={46} height={32} />
             <div className="block">
-              <h2 className="text-lg font-bold gradient-text">StenoLearn</h2>
+              <h2 className="text-md font-bold gradient-text">StenoLearn</h2>
               <p
                 className={`text-xs ${
                   colorScheme === "dark" ? "text-gray-400" : "text-gray-600"
@@ -187,14 +185,12 @@ const AppSidebar = ({ activeTab, onTabChange }: AppSidebarProps) => {
         </SidebarContent>
 
         <SidebarFooter
-          className={`p-3 sm:p-4 border-t ${
-            colorScheme === "dark" ? "border-gray-800/50" : "border-gray-200/50"
-          }`}
+          className={"p-7 sm:p-5 border-t border-border/50"}
         >
           <div
-            className={`text-xs ${
+            className={`text-lg ${
               colorScheme === "dark" ? "text-gray-400" : "text-gray-600"
-            } text-center sm:text-left`}
+            } text-center`}
           >
             <span className="inline">Welcome, </span>
             <span className="font-medium gradient-text">{user?.name}</span>

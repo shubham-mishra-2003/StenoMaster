@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -8,7 +7,7 @@ import { BookOpen, Play, Clock, FileText } from "lucide-react";
 
 interface AssignmentListProps {
   assignments: Assignment[];
-  onStartPractice: () => void;
+  onStartPractice: (assignmentId: string) => void;
 }
 
 const AssignmentList = ({ assignments, onStartPractice }: AssignmentListProps) => {
@@ -58,7 +57,7 @@ const AssignmentList = ({ assignments, onStartPractice }: AssignmentListProps) =
                 <span>Created {new Date(assignment.createdAt).toLocaleDateString()}</span>
               </div>
 
-              <Button onClick={onStartPractice} className="w-full">
+              <Button onClick={() => onStartPractice(assignment.id)} className="w-full">
                 <Play className="h-4 w-4 mr-2" />
                 Start Practice
               </Button>

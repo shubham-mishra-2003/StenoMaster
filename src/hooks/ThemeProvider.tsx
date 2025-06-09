@@ -1,5 +1,4 @@
 "use client";
-
 import React, { createContext, useContext, useEffect, useState } from "react";
 
 interface ThemeContextProps {
@@ -13,43 +12,40 @@ const ThemeContext = createContext<ThemeContextProps | undefined>(undefined);
 export const ThemeProvider: React.FC<{
   children: React.ReactNode;
 }> = ({ children }) => {
-  const [theme, setThemeState] = useState<"light" | "dark" | "system">(
-    "system"
-  );
-  const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    setLoading(false);
-  }, []);
+  const [theme, setThemeState] = useState<"light" | "dark" | "system">("system");
 
   const getSystemColorScheme = (): "light" | "dark" => {
     if (typeof window !== "undefined") {
       const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
       return mediaQuery.matches ? "dark" : "light";
     }
-    return "dark";
+    return "dark"; // Default for SSR
   };
 
   const [colorScheme, setColorScheme] = useState<"light" | "dark">(
     getSystemColorScheme()
   );
 
-  const setTheme = async (newTheme: "light" | "dark" | "system") => {
+  const setTheme = (newTheme: "light" | "dark" | "system") => {
     setThemeState(newTheme);
-    if (newTheme === "system") {
-      await localStorage.removeItem("theme");
-    } else {
-      await localStorage.setItem("theme", newTheme);
+    if (typeof window !== "undefined") {
+      if (newTheme === "system") {
+        localStorage.removeItem("theme");
+      } else {
+        localStorage.setItem("theme", newTheme);
+      }
     }
   };
 
   useEffect(() => {
-    const loadTheme = async () => {
-      const savedTheme = await localStorage.getItem("theme");
-      if (savedTheme) {
-        setThemeState(savedTheme as "light" | "dark");
-      } else {
-        setThemeState("system");
+    const loadTheme = () => {
+      if (typeof window !== "undefined") {
+        const savedTheme = localStorage.getItem("theme");
+        if (savedTheme) {
+          setThemeState(savedTheme as "light" | "dark");
+        } else {
+          setThemeState("system");
+        }
       }
     };
     loadTheme();
@@ -62,7 +58,6 @@ export const ThemeProvider: React.FC<{
     };
 
     mediaQuery.addEventListener("change", handleMediaChange);
-
     return () => {
       mediaQuery.removeEventListener("change", handleMediaChange);
     };
@@ -79,10 +74,6 @@ export const ThemeProvider: React.FC<{
         finalColorScheme === "dark" ? "#e2e8f0" : "#314158";
     }
   }, [finalColorScheme]);
-
-  if (loading) {
-    return "Loading...";
-  }
 
   return (
     <ThemeContext.Provider

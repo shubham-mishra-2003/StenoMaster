@@ -123,7 +123,7 @@ const DashboardLayout = ({
       >
         <AppSidebar activeTab={activeTab} onTabChange={onTabChange} />
         <SidebarInset className="flex-1">
-          <nav className="border-b border-border/50 bg-card/80 backdrop-blur-sm sticky top-0 z-10">
+          <nav className="border-b border-b-purple-300 bg-card/80 backdrop-blur-sm sticky top-0 z-10">
             <div className="flex justify-between items-center h-16 px-4 lg:px-6">
               <div className="flex items-center space-x-4">
                 <SidebarTrigger
