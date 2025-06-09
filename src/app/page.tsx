@@ -1,20 +1,9 @@
-"use client";
-
-import { AuthProvider } from "@/hooks/useAuth";
-import React from "react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import Index from "@/pages/Index";
-
-const queryClient = new QueryClient();
+import React from 'react'
 
 const page = () => {
   return (
-    <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <Index />
-      </AuthProvider>
-    </QueryClientProvider>
-  );
-};
+    <div className='text-9xl text-blue-950'>page</div>
+  )
+}
 
-export default page;
+export default page
