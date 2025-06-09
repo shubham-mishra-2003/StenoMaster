@@ -13,8 +13,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "StenoLearn",
+  title: "StenoMaster",
   description: "SAAS platform for stenography students and typing tests.",
+  icons: "/logo.png",
   manifest: "/manifest.json",
 };
 

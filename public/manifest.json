@@ -1,6 +1,6 @@
 {
-  "name": "StenoLearn",
-  "short_name": "StenoLearn",
+  "name": "StenoMaster",
+  "short_name": "StenoMaster",
   "description": "Educational platform for stenography students and typing tests.",
   "start_url": "/",
   "display": "standalone",
