@@ -21,6 +21,7 @@ import {
 import { ThemeToggle } from "@/components/ThemeToggle";
 import LoginForm from "@/components/LoginForm";
 import { useTheme } from "@/hooks/ThemeProvider";
+import Image from "next/image";
 
 interface LandingPageProps {
   initialShowLogin?: boolean;
@@ -95,9 +96,7 @@ const page: React.FC<LandingPageProps> = ({ initialShowLogin = false }) => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center space-x-3">
-              <div className="w-8 h-8 bg-gradient-to-br from-blue-500 via-purple-500 to-indigo-500 rounded-lg flex items-center justify-center shadow-lg">
-                <GraduationCap className="h-5 w-5 text-white" />
-              </div>
+              <Image src="/logo.png" alt="logo" height={50} width={50} />
               <h1 className="text-xl sm:text-2xl font-bold gradient-text">
                 StenoMaster
               </h1>
@@ -109,14 +108,14 @@ const page: React.FC<LandingPageProps> = ({ initialShowLogin = false }) => {
                   <Button className="gradient-button">Login</Button>
                 </DialogTrigger>
                 <DialogContent
-                  className={`max-w-sm sm:max-w-md mx-4 ${
-                    colorScheme === "dark"
-                      ? "gradient-card-dark"
-                      : "gradient-card-light"
-                  } backdrop-blur-xl border-0 shadow-2xl`}
+                  className={
+                    colorScheme == "dark"
+                      ? "max-w-sm sm:max-w-md mx-4 bg-gradient-to-br from-gray-900/95 via-blue-950/90 to-purple-950/95 backdrop-blur-xl border-0 shadow-2xl"
+                      : "max-w-sm sm:max-w-md mx-4 bg-gradient-to-br from-white/95 via-blue-50/90 to-purple-50/95 backdrop-blur-xl border-0 shadow-2xl"
+                  }
                 >
                   <DialogHeader>
-                    <DialogTitle className="text-xl gradient-text font-bold text-center">
+                    <DialogTitle className="text-xl bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600 bg-clip-text text-transparent font-bold text-center">
                       Welcome Back
                     </DialogTitle>
                   </DialogHeader>
@@ -153,21 +152,10 @@ const page: React.FC<LandingPageProps> = ({ initialShowLogin = false }) => {
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
                 <Button
                   size="lg"
-                  className="gradient-button"
+                  className="gradient-button w-full sm:w-[30%] font-bold"
                   onClick={() => setIsLoginOpen(true)}
                 >
                   Get Started
-                </Button>
-                <Button
-                  variant="outline"
-                  size="lg"
-                  className={`text-base sm:text-lg px-6 sm:px-8 py-3 border-2 border-gradient-to-r from-blue-500 to-purple-500 hover:bg-gradient-to-r ${
-                    colorScheme === "dark"
-                      ? "hover:from-blue-950 hover:to-purple-950"
-                      : "hover:from-blue-50 hover:to-purple-50"
-                  } transition-all duration-300`}
-                >
-                  Learn More
                 </Button>
               </div>
             </div>
@@ -177,11 +165,11 @@ const page: React.FC<LandingPageProps> = ({ initialShowLogin = false }) => {
 
       {/* Features Section */}
       <section
-        className={`py-12 sm:py-16 lg:py-20 px-4 sm:px-6 lg:px-8 ${
-          colorScheme === "dark"
-            ? "gradient-section-dark"
-            : "gradient-section-light"
-        } backdrop-blur-sm`}
+        className={`py-12 sm:py-16 lg:py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-r backdrop-blur-sm ${
+          colorScheme == "dark"
+            ? "from-gray-900/60 via-blue-950/40 to-purple-950/40"
+            : "from-white/60 via-blue-50/40 to-purple-50/40"
+        }`}
       >
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-12 sm:mb-16">
@@ -189,8 +177,8 @@ const page: React.FC<LandingPageProps> = ({ initialShowLogin = false }) => {
               Why Choose StenoMaster?
             </h3>
             <p
-              className={`text-lg sm:text-xl ${
-                colorScheme === "dark" ? "text-white" : "text-black"
+              className={`text-lg font-medium sm:text-xl ${
+                colorScheme === "dark" ? "text-dark" : "text-light"
               }`}
             >
               Everything you need to excel in stenography education
@@ -203,11 +191,11 @@ const page: React.FC<LandingPageProps> = ({ initialShowLogin = false }) => {
               return (
                 <Card
                   key={index}
-                  className={`relative overflow-hidden ${
-                    colorScheme === "dark"
-                      ? "gradient-card-dark"
-                      : "gradient-card-light"
-                  } backdrop-blur-xl border-0 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1 group`}
+                  className={`relative overflow-hidden bg-gradient-to-br backdrop-blur-xl border-0 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1 group ${
+                    colorScheme == "dark"
+                      ? "from-gray-900/80 via-blue-950/60 to-purple-950/60"
+                      : "from-white/80 via-blue-50/60 to-purple-50/60"
+                  }`}
                 >
                   <div
                     className={`absolute inset-0 bg-gradient-to-br ${feature.gradient} opacity-5 group-hover:opacity-10 transition-opacity duration-300`}
@@ -221,9 +209,7 @@ const page: React.FC<LandingPageProps> = ({ initialShowLogin = false }) => {
                       </div>
                       <CardTitle
                         className={`text-lg sm:text-xl ${
-                          colorScheme === "dark"
-                            ? "gradient-card-title-dark"
-                            : "gradient-card-title-light"
+                          colorScheme === "dark" ? "text-dark" : "text-light"
                         }`}
                       >
                         {feature.title}
@@ -233,7 +219,7 @@ const page: React.FC<LandingPageProps> = ({ initialShowLogin = false }) => {
                   <CardContent className="relative z-10">
                     <p
                       className={`leading-relaxed ${
-                        colorScheme === "dark" ? "text-white" : "text-black"
+                        colorScheme === "dark" ? "text-dark" : "text-light"
                       }`}
                     >
                       {feature.description}
@@ -246,15 +232,14 @@ const page: React.FC<LandingPageProps> = ({ initialShowLogin = false }) => {
         </div>
       </section>
 
-      {/* CTA Section */}
       <section className="py-12 sm:py-16 lg:py-20 px-4 sm:px-6 lg:px-8">
         <div className="max-w-4xl mx-auto text-center">
           <Card
-            className={`relative overflow-hidden ${
-              colorScheme === "dark"
-                ? "gradient-card-cta-dark"
-                : "gradient-card-cta-light"
-            } backdrop-blur-xl border-0 shadow-2xl`}
+            className={`relative overflow-hidden bg-gradient-to-br backdrop-blur-xl border-0 shadow-2xl ${
+              colorScheme == "dark"
+                ? "from-gray-900/80 via-blue-950/60 to-purple-950/60"
+                : "from-white/80 via-blue-50/60 to-purple-50/60"
+            }`}
           >
             <div className="absolute inset-0 bg-gradient-to-r from-blue-500/10 via-purple-500/10 to-indigo-500/10"></div>
             <CardContent className="py-12 sm:py-16 relative z-10">
@@ -263,7 +248,7 @@ const page: React.FC<LandingPageProps> = ({ initialShowLogin = false }) => {
               </h3>
               <p
                 className={`text-lg sm:text-xl ${
-                  colorScheme === "dark" ? "text-white" : "text-black"
+                  colorScheme === "dark" ? "text-dark" : "text-light"
                 } mb-8 leading-relaxed`}
               >
                 Join thousands of students and teachers already using
