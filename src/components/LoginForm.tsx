@@ -1,5 +1,4 @@
 import React, { useState } from "react";
-import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -9,10 +8,36 @@ import { useAuth } from "@/hooks/useAuth";
 import { User } from "@/types";
 import { toast } from "@/hooks/use-toast";
 import { LogIn, UserPlus, GraduationCap, BookOpen } from "lucide-react";
+import { useTheme } from "@/hooks/ThemeProvider";
+import Image from "next/image";
+import Logo from "./Logo";
 
 const LoginForm = () => {
+  const userTypesNav = [
+    {
+      name: "Student",
+      value: "student",
+      icon: BookOpen,
+    },
+    {
+      name: "Teacher",
+      value: "teacher",
+      icon: GraduationCap,
+    },
+  ];
+
+  const authenticationOptions = [
+    {
+      name: "Login",
+      value: "login",
+    },
+    {
+      name: "Register",
+      value: "register",
+    },
+  ];
+
   const { login } = useAuth();
-  const router = useRouter();
   const [studentCredentials, setStudentCredentials] = useState({
     id: "",
     password: "",
@@ -45,7 +70,7 @@ const LoginForm = () => {
     const user: User = {
       id: studentCredentials.id,
       name: `Student ${studentCredentials.id}`,
-      email: `${studentCredentials.id}@student.stenolearn.com`,
+      email: `${studentCredentials.id}@student.StenoMaster.com`,
       type: "student",
     };
 
@@ -54,7 +79,6 @@ const LoginForm = () => {
       title: "Welcome!",
       description: `Logged in as ${user.name}`,
     });
-    router.push("/dashboard/student");
   };
 
   const handleTeacherLogin = (e: React.FormEvent) => {
@@ -85,7 +109,6 @@ const LoginForm = () => {
       title: "Welcome!",
       description: `Logged in as ${user.name}`,
     });
-    router.push("/dashboard/teacher");
   };
 
   const handleTeacherSignup = (e: React.FormEvent) => {
@@ -134,43 +157,46 @@ const LoginForm = () => {
     login(user);
     toast({
       title: "Account Created!",
-      description: `Welcome to StenoLearn, ${user.name}!`,
+      description: `Welcome to StenoMaster, ${user.name}!`,
     });
-    router.push("/dashboard/teacher");
   };
 
+  const { colorScheme } = useTheme();
+
   return (
-    <Card className="w-full max-w-md mx-auto glass-card border-0 bg-gradient-to-br from-card/90 to-card/70 backdrop-blur-xl shadow-2xl">
-      <CardHeader className="text-center pb-6">
-        <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
-          <GraduationCap className="h-8 w-8 text-white" />
-        </div>
-        <CardTitle className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-          StenoLearn
-        </CardTitle>
-        <p className="text-muted-foreground">
-          Welcome back! Please sign in to continue.
+    <Card
+      className={`w-full max-w-md mx-auto flex flex-col overflow-auto backdrop-blur-xl border shadow-xl ${
+        colorScheme === "dark"
+          ? "bg-black/20 border-white/10"
+          : "bg-white/20 border-white/30"
+      }`}
+    >
+      <CardHeader className="flex flex-col gap-2 justify-center items-center pb-6">
+        <Logo />
+        <p
+          className={`font-bold ${
+            colorScheme == "dark" ? "text-dark" : "text-light"
+          }`}
+        >
+          Welcome! Please authorize to continue.
         </p>
       </CardHeader>
       <CardContent>
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-2 mb-6 bg-muted/50">
-            <TabsTrigger
-              value="student"
-              className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-purple-500 data-[state=active]:text-white"
-            >
-              <BookOpen className="h-4 w-4 mr-2" />
-              Student
-            </TabsTrigger>
-            <TabsTrigger
-              value="teacher"
-              className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-purple-500 data-[state=active]:text-white"
-            >
-              <GraduationCap className="h-4 w-4 mr-2" />
-              Teacher
-            </TabsTrigger>
+          <TabsList className="grid w-full grid-cols-2 gap-2">
+            {userTypesNav.map((nav, index) => (
+              <TabsTrigger
+                key={index}
+                value={nav.value}
+                className={`cursor-pointer data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-purple-500 data-[state=active]:text-white ${
+                  colorScheme == "dark" ? "bg-slate-900" : "bg-slate-300/80"
+                }`}
+              >
+                <nav.icon className="h-4 w-4 mr-2" />
+                {nav.name}
+              </TabsTrigger>
+            ))}
           </TabsList>
-
           <TabsContent value="student">
             <form onSubmit={handleStudentLogin} className="space-y-4">
               <div className="space-y-2">
@@ -205,10 +231,7 @@ const LoginForm = () => {
                   className="bg-background/50 border-muted focus:border-blue-500 transition-colors"
                 />
               </div>
-              <Button
-                type="submit"
-                className="w-full bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white font-medium"
-              >
+              <Button type="submit" className="gradient-button w-full">
                 <LogIn className="h-4 w-4 mr-2" />
                 Sign In as Student
               </Button>
@@ -217,11 +240,19 @@ const LoginForm = () => {
 
           <TabsContent value="teacher">
             <Tabs defaultValue="login" className="w-full">
-              <TabsList className="grid w-full grid-cols-2 mb-4 bg-muted/50">
-                <TabsTrigger value="login">Sign In</TabsTrigger>
-                <TabsTrigger value="signup">Sign Up</TabsTrigger>
+              <TabsList className="grid w-full grid-cols-2 mb-4 gap-2">
+                {authenticationOptions.map((nav, index) => (
+                  <TabsTrigger
+                    key={index}
+                    className={`cursor-pointer data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-purple-500 data-[state=active]:text-white ${
+                      colorScheme == "dark" ? "bg-slate-900" : "bg-slate-300/80"
+                    }`}
+                    value={nav.value}
+                  >
+                    {nav.name}
+                  </TabsTrigger>
+                ))}
               </TabsList>
-
               <TabsContent value="login">
                 <form onSubmit={handleTeacherLogin} className="space-y-4">
                   <div className="space-y-2">
@@ -256,17 +287,14 @@ const LoginForm = () => {
                       className="bg-background/50 border-muted focus:border-blue-500 transition-colors"
                     />
                   </div>
-                  <Button
-                    type="submit"
-                    className="w-full bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white font-medium"
-                  >
+                  <Button type="submit" className="gradient-button w-full">
                     <LogIn className="h-4 w-4 mr-2" />
                     Sign In as Teacher
                   </Button>
                 </form>
               </TabsContent>
 
-              <TabsContent value="signup">
+              <TabsContent value="register">
                 <form onSubmit={handleTeacherSignup} className="space-y-4">
                   <div className="space-y-2">
                     <Label htmlFor="signup-name">Full Name</Label>
@@ -334,10 +362,7 @@ const LoginForm = () => {
                       className="bg-background/50 border-muted focus:border-blue-500 transition-colors"
                     />
                   </div>
-                  <Button
-                    type="submit"
-                    className="w-full bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600 text-white font-medium"
-                  >
+                  <Button type="submit" className="gradient-button w-full">
                     <UserPlus className="h-4 w-4 mr-2" />
                     Create Teacher Account
                   </Button>

@@ -22,6 +22,7 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import LoginForm from "@/components/LoginForm";
 import { useTheme } from "@/hooks/ThemeProvider";
 import Image from "next/image";
+import Logo from "@/components/Logo";
 
 interface LandingPageProps {
   initialShowLogin?: boolean;
@@ -95,12 +96,7 @@ const page: React.FC<LandingPageProps> = ({ initialShowLogin = false }) => {
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
-            <div className="flex items-center space-x-3">
-              <Image src="/logo.png" alt="logo" height={50} width={50} />
-              <h1 className="text-xl sm:text-2xl font-bold gradient-text">
-                StenoMaster
-              </h1>
-            </div>
+            <Logo />
             <div className="flex items-center space-x-4">
               <ThemeToggle />
               <Dialog open={isLoginOpen} onOpenChange={setIsLoginOpen}>
@@ -108,11 +104,11 @@ const page: React.FC<LandingPageProps> = ({ initialShowLogin = false }) => {
                   <Button className="gradient-button">Login</Button>
                 </DialogTrigger>
                 <DialogContent
-                  className={
+                  className={`flex flex-col rounded-xl ${
                     colorScheme == "dark"
-                      ? "max-w-sm sm:max-w-md mx-4 bg-gradient-to-br from-gray-900/95 via-blue-950/90 to-purple-950/95 backdrop-blur-xl border-0 shadow-2xl"
-                      : "max-w-sm sm:max-w-md mx-4 bg-gradient-to-br from-white/95 via-blue-50/90 to-purple-50/95 backdrop-blur-xl border-0 shadow-2xl"
-                  }
+                      ? "max-h-[90vh] max-w-sm sm:max-w-lg bg-gradient-to-br from-gray-900/95 via-blue-950/90 to-purple-950/95 backdrop-blur-xl border-0 shadow-2xl"
+                      : "max-h-[90vh] max-w-sm sm:max-w-lg bg-gradient-to-br from-white/95 via-blue-50/90 to-purple-50/95 backdrop-blur-xl border-0 shadow-2xl"
+                  }`}
                 >
                   <DialogHeader>
                     <DialogTitle className="text-xl bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600 bg-clip-text text-transparent font-bold text-center">
@@ -142,7 +138,7 @@ const page: React.FC<LandingPageProps> = ({ initialShowLogin = false }) => {
               </h2>
               <p
                 className={`text-lg sm:text-xl ${
-                  colorScheme === "dark" ? "text-white" : "text-black"
+                  colorScheme === "dark" ? "text-dark" : "text-light"
                 } mb-8 max-w-3xl mx-auto leading-relaxed`}
               >
                 A comprehensive platform for learning stenography with real-time
@@ -191,7 +187,7 @@ const page: React.FC<LandingPageProps> = ({ initialShowLogin = false }) => {
               return (
                 <Card
                   key={index}
-                  className={`relative overflow-hidden bg-gradient-to-br backdrop-blur-xl border-0 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1 group ${
+                  className={`relative overflow-hidden bg-gradient-to-br backdrop-blur-xl border-0 group ${
                     colorScheme == "dark"
                       ? "from-gray-900/80 via-blue-950/60 to-purple-950/60"
                       : "from-white/80 via-blue-50/60 to-purple-50/60"
@@ -235,7 +231,7 @@ const page: React.FC<LandingPageProps> = ({ initialShowLogin = false }) => {
       <section className="py-12 sm:py-16 lg:py-20 px-4 sm:px-6 lg:px-8">
         <div className="max-w-4xl mx-auto text-center">
           <Card
-            className={`relative overflow-hidden bg-gradient-to-br backdrop-blur-xl border-0 shadow-2xl ${
+            className={`relative overflow-hidden bg-gradient-to-br backdrop-blur-xl border-0 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1 ${
               colorScheme == "dark"
                 ? "from-gray-900/80 via-blue-950/60 to-purple-950/60"
                 : "from-white/80 via-blue-50/60 to-purple-50/60"
@@ -261,13 +257,6 @@ const page: React.FC<LandingPageProps> = ({ initialShowLogin = false }) => {
               >
                 Login to Your Account
               </Button>
-              <p
-                className={`text-sm ${
-                  colorScheme === "dark" ? "text-white" : "text-black"
-                } mt-4`}
-              >
-                Demo: teacher@demo.com / password
-              </p>
             </CardContent>
           </Card>
         </div>
@@ -283,9 +272,7 @@ const page: React.FC<LandingPageProps> = ({ initialShowLogin = false }) => {
       >
         <div className="max-w-7xl mx-auto text-center">
           <p
-            className={`${
-              colorScheme === "dark" ? "text-white" : "text-black"
-            }`}
+            className={`${colorScheme === "dark" ? "text-dark" : "text-light"}`}
           >
             © 2024 StenoMaster. Built for educational excellence.
           </p>

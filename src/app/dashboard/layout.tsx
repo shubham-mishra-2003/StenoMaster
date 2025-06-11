@@ -74,7 +74,13 @@ const DashboardLayout = ({
             <div className="max-w-7xl mx-auto">{children}</div>
           </main>
 
-          <footer className="border-t border-border/50 bg-gradient-to-r from-blue-50/50 via-purple-50/30 to-indigo-50/50 dark:from-blue-950/50 dark:via-purple-950/30 dark:to-indigo-950/50 backdrop-blur-sm">
+          <footer
+            className={`border-t border-border/50 bg-gradient-to-r backdrop-blur-sm ${
+              colorScheme == "dark"
+                ? "from-blue-950/50 via-purple-950/30 to-indigo-950/50"
+                : "from-blue-50/50 via-purple-50/30 to-indigo-50/50"
+            }`}
+          >
             <div className="container mx-auto px-4 py-6">
               <div className="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
                 <div className="flex items-center space-x-2">
