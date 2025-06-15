@@ -41,6 +41,8 @@ import {
   GraduationCap,
 } from "lucide-react";
 import QuickActionModal from "./QuickActionModal";
+import { useTheme } from "@/hooks/ThemeProvider";
+import Logo from "./Logo";
 
 interface AppSidebarProps {
   onLogout: () => void;
@@ -117,22 +119,38 @@ const AppSidebar: React.FC<AppSidebarProps> = ({ onLogout }) => {
     setQuickActionOpen(false);
   };
 
+  const { colorScheme } = useTheme();
+
   return (
     <>
       <TooltipProvider>
-        <Sidebar className="border-r border-border/50 bg-gradient-to-b from-background/95 via-background/90 to-background/95 backdrop-blur-xl">
-          <SidebarHeader className="border-b border-border/50 bg-gradient-to-r from-blue-50/50 via-purple-50/30 to-indigo-50/50 dark:from-blue-950/50 dark:via-purple-950/30 dark:to-indigo-950/50">
-            <div className="flex items-center space-x-3 px-4 py-3 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-2">
-              <div className="w-8 h-8 bg-gradient-to-br from-blue-500 via-purple-500 to-indigo-500 rounded-lg flex items-center justify-center shadow-lg">
-                <GraduationCap className="h-5 w-5 text-white" />
-              </div>
-              <h1 className="text-xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600 bg-clip-text text-transparent group-data-[collapsible=icon]:hidden">
-                StenoLearn
-              </h1>
-            </div>
+        <Sidebar
+          className={`border-r ${
+            colorScheme === "dark"
+              ? "border-gray-800/50 bg-gray-900"
+              : "border-gray-200/50 bg-white"
+          } data-[mobile=true]:bg-gradient-to-b ${
+            colorScheme === "dark"
+              ? "data-[mobile=true]:from-gray-900 data-[mobile=true]:via-blue-950/90 data-[mobile=true]:to-purple-950/90"
+              : "data-[mobile=true]:from-white data-[mobile=true]:via-blue-50/90 data-[mobile=true]:to-purple-50/90"
+          }`}
+        >
+          <SidebarHeader
+            className={`border-b border-border/50 bg-gradient-to-r ${
+              colorScheme == "dark"
+                ? "from-blue-950/50 via-purple-950/30 to-indigo-950/50"
+                : "from-blue-50/50 via-purple-50/30 to-indigo-50/50"
+            }`}
+          >
+            <Logo height={50} width={50} />
           </SidebarHeader>
-
-          <SidebarContent className="bg-gradient-to-b from-transparent via-blue-50/20 to-purple-50/20 dark:via-blue-950/20 dark:to-purple-950/20">
+          <SidebarContent
+            className={`bg-gradient-to-b from-transparent ${
+              colorScheme
+                ? "via-blue-950/20 to-purple-950/20"
+                : "via-blue-50/20 to-purple-50/20"
+            }  `}
+          >
             <SidebarGroup>
               <SidebarGroupLabel className="text-xs font-semibold text-muted-foreground/80 uppercase tracking-wider px-4 py-2 group-data-[collapsible=icon]:hidden">
                 Navigation
@@ -148,29 +166,26 @@ const AppSidebar: React.FC<AppSidebarProps> = ({ onLogout }) => {
                           <TooltipTrigger asChild>
                             <SidebarMenuButton
                               asChild
-                              className={`mx-2 rounded-lg transition-all duration-200 hover:shadow-md ${
-                                active
-                                  ? "bg-gradient-to-r from-blue-500/10 via-purple-500/10 to-indigo-500/10 border border-blue-200/50 dark:border-blue-800/50 text-blue-700 dark:text-blue-300 shadow-sm"
-                                  : "hover:bg-gradient-to-r hover:from-blue-50/50 hover:via-purple-50/30 hover:to-indigo-50/50 dark:hover:from-blue-950/50 dark:hover:via-purple-950/30 dark:hover:to-indigo-950/50"
-                              }`}
+                              className={`
+                         w-full cursor-pointer justify-start px-3 py-2 rounded-lg transition-all duration-200
+                         ${
+                           active
+                             ? "gradient-button shadow-lg"
+                             : `bg-gradient-to-r ${
+                                 colorScheme === "dark"
+                                   ? "hover:from-blue-600/50 hover:via-purple-600/50 hover:to-indigo-950/50"
+                                   : "hover:from-blue-200 hover:via-purple-200 hover:to-indigo-50"
+                               }`
+                         }
+                       `}
                             >
                               <Link
                                 href={item.url}
                                 className="flex items-center space-x-3 w-full"
                               >
-                                <Icon
-                                  className={`h-5 w-5 ${
-                                    active
-                                      ? "text-blue-600 dark:text-blue-400"
-                                      : "text-muted-foreground"
-                                  }`}
-                                />
+                                <Icon className={`h-5 w-5`} />
                                 <span
-                                  className={`font-medium group-data-[collapsible=icon]:sr-only ${
-                                    active
-                                      ? "text-blue-700 dark:text-blue-300"
-                                      : ""
-                                  }`}
+                                  className={`font-medium group-data-[collapsible=icon]:sr-only`}
                                 >
                                   {item.title}
                                 </span>
@@ -201,7 +216,7 @@ const AppSidebar: React.FC<AppSidebarProps> = ({ onLogout }) => {
                     <TooltipTrigger asChild>
                       <Button
                         onClick={handleQuickAction}
-                        className="w-full justify-start bg-gradient-to-r from-blue-500 via-purple-500 to-indigo-500 hover:from-blue-600 hover:via-purple-600 hover:to-indigo-600 text-white shadow-lg hover:shadow-xl transition-all duration-300 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0"
+                        className="w-full gradient-button group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0"
                         size="sm"
                       >
                         <Plus className="h-4 w-4 group-data-[collapsible=icon]:mr-0 group-data-[collapsible=expanded]:mr-2" />
@@ -226,7 +241,13 @@ const AppSidebar: React.FC<AppSidebarProps> = ({ onLogout }) => {
             </SidebarGroup>
           </SidebarContent>
 
-          <SidebarFooter className="border-t border-border/50 bg-gradient-to-r from-blue-50/50 via-purple-50/30 to-indigo-50/50 dark:from-blue-950/50 dark:via-purple-950/30 dark:to-indigo-950/50">
+          <SidebarFooter
+            className={`border-t border-border/50 bg-gradient-to-r ${
+              colorScheme == "dark"
+                ? "from-blue-950/50 via-purple-950/30 to-indigo-950/50"
+                : "from-blue-50/50 via-purple-50/30 to-indigo-50/50"
+            }`}
+          >
             <SidebarMenu>
               <SidebarMenuItem>
                 <DropdownMenu>

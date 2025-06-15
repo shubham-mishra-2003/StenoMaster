@@ -2,14 +2,13 @@ import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/hooks/useAuth";
 import { User } from "@/types";
 import { toast } from "@/hooks/use-toast";
 import { LogIn, UserPlus, GraduationCap, BookOpen } from "lucide-react";
 import { useTheme } from "@/hooks/ThemeProvider";
-import Image from "next/image";
 import Logo from "./Logo";
 
 const LoginForm = () => {
@@ -188,7 +187,7 @@ const LoginForm = () => {
               <TabsTrigger
                 key={index}
                 value={nav.value}
-                className={`cursor-pointer data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-purple-500 data-[state=active]:text-white ${
+                className={`cursor-pointer p-1.5 data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-purple-500 data-[state=active]:text-white ${
                   colorScheme == "dark" ? "bg-slate-900" : "bg-slate-300/80"
                 }`}
               >
@@ -198,7 +197,7 @@ const LoginForm = () => {
             ))}
           </TabsList>
           <TabsContent value="student">
-            <form onSubmit={handleStudentLogin} className="space-y-4">
+            <form onSubmit={handleStudentLogin} className="space-y-4 mt-2">
               <div className="space-y-2">
                 <Label htmlFor="student-id">Student ID</Label>
                 <Input
@@ -244,7 +243,7 @@ const LoginForm = () => {
                 {authenticationOptions.map((nav, index) => (
                   <TabsTrigger
                     key={index}
-                    className={`cursor-pointer data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-purple-500 data-[state=active]:text-white ${
+                    className={`cursor-pointer p-1.5 data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-purple-500 data-[state=active]:text-white ${
                       colorScheme == "dark" ? "bg-slate-900" : "bg-slate-300/80"
                     }`}
                     value={nav.value}

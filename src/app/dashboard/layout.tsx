@@ -5,9 +5,10 @@ import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import AppSidebar from "@/components/AppSidebar";
 import { Button } from "@/components/ui/button";
 import { SidebarTrigger } from "@/components/ui/sidebar";
-import { GraduationCap, LogOut, User } from "lucide-react";
+import { LogOut, User } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { useTheme } from "@/hooks/ThemeProvider";
+import Logo from "@/components/Logo";
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -38,16 +39,13 @@ const DashboardLayout = ({
             <div className="flex justify-between items-center h-16 px-4 lg:px-6">
               <div className="flex items-center space-x-4">
                 <SidebarTrigger className="lg:hidden" />
-                <div className="hidden sm:block">
-                  <h1 className="gradient-text">StenoLearn</h1>
-                </div>
-              </div>
-
-              <div className="flex items-center space-x-2 lg:space-x-4">
-                <div className="hidden sm:flex items-center space-x-2 text-sm">
+                <div className="flex gap-2 justify-center items-center">
                   <User className="h-4 w-4" />
                   <span className="hidden md:inline">{userName}</span>
                 </div>
+              </div>
+              <div className="flex items-center space-x-2 lg:space-x-4">
+                <div className="hidden sm:flex items-center space-x-2 text-sm"></div>
                 <ThemeToggle />
                 <Button
                   variant="ghost"
@@ -83,15 +81,7 @@ const DashboardLayout = ({
           >
             <div className="container mx-auto px-4 py-6">
               <div className="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
-                <div className="flex items-center space-x-2">
-                  <div className="w-6 h-6 bg-gradient-to-br from-blue-500 via-purple-500 to-indigo-500 rounded flex items-center justify-center">
-                    <GraduationCap className="h-4 w-4 text-white" />
-                  </div>
-                  <span className="text-sm font-semibold bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600 bg-clip-text text-transparent">
-                    StenoLearn
-                  </span>
-                </div>
-
+                <Logo height={30} width={30} />
                 <div className="text-center">
                   <p className="text-sm text-muted-foreground">
                     © 2024 StenoLearn. Empowering stenography education.
