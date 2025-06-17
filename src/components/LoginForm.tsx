@@ -7,6 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/hooks/useAuth";
 import { BookOpen, GraduationCap, LogIn, UserPlus } from "lucide-react";
 import { useTheme } from "@/hooks/ThemeProvider";
+import { toast } from "@/hooks/use-toast";
 import Logo from "./Logo";
 
 const LoginForm = () => {
@@ -40,29 +41,119 @@ const LoginForm = () => {
 
   const handleStudentLogin = (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!studentCredentials.id.trim() || !studentCredentials.password.trim()) {
+      toast({
+        title: "Error",
+        description: "Please enter both Student ID and password.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const user = {
+      id: studentCredentials.id,
+      name: `${studentCredentials.id}`,
+      email: `${studentCredentials.id}@student.stenolearn.com`,
+      type: "student",
+    };
+
     login({
       id: studentCredentials.id,
       password: studentCredentials.password,
       type: "student",
     });
+    toast({
+      title: "Welcome!",
+      description: `Logged in as ${user.name}`,
+    });
   };
 
   const handleTeacherLogin = (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (
+      !teacherCredentials.email.trim() ||
+      !teacherCredentials.password.trim()
+    ) {
+      toast({
+        title: "Error",
+        description: "Please enter both email and password.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const user = {
+      id: teacherCredentials.email,
+      name: "Teacher",
+      email: teacherCredentials.email,
+      type: "teacher",
+    };
+
     login({
       email: teacherCredentials.email,
       password: teacherCredentials.password,
       type: "teacher",
     });
+    toast({
+      title: "Welcome!",
+      description: `Logged in as ${user.name}`,
+    });
   };
 
   const handleTeacherSignup = (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (
+      !teacherSignup.name.trim() ||
+      !teacherSignup.email.trim() ||
+      !teacherSignup.password.trim() ||
+      !teacherSignup.confirmPassword.trim()
+    ) {
+      toast({
+        title: "Error",
+        description: "Please fill in all fields.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (teacherSignup.password !== teacherSignup.confirmPassword) {
+      toast({
+        title: "Error",
+        description: "Passwords do not match.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (teacherSignup.password.length < 6) {
+      toast({
+        title: "Error",
+        description: "Password must be at least 6 characters long.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const user = {
+      id: teacherSignup.email,
+      name: teacherSignup.name,
+      email: teacherSignup.email,
+      type: "teacher",
+    };
+
     signup({
       name: teacherSignup.name,
       email: teacherSignup.email,
       password: teacherSignup.password,
       confirmPassword: teacherSignup.confirmPassword,
+    });
+
+    toast({
+      title: "Account Created!",
+      description: `Welcome to StenoLearn, ${user.name}!`,
     });
   };
 

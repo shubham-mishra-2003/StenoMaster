@@ -78,11 +78,11 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
               </div>
             </nav>
 
-            <main className="flex-1 p-4 lg:p-8 overflow-auto">
+            <main className="flex-1 p-2 sm:p-4 lg:p-9 overflow-auto">
               <div className="max-w-7xl mx-auto">{children}</div>
             </main>
 
-            <footer
+            {/* <footer
               className={`border-t border-border/50 bg-gradient-to-r backdrop-blur-sm ${
                 colorScheme == "dark"
                   ? "from-blue-950/50 via-purple-950/30 to-indigo-950/50"
@@ -114,7 +114,7 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
                   </div>
                 </div>
               </div>
-            </footer>
+            </footer> */}
           </SidebarInset>
         </div>
       </SidebarProvider>

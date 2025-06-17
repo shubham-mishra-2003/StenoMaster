@@ -88,7 +88,6 @@ const page: React.FC<LandingPageProps> = ({ initialShowLogin = false }) => {
         colorScheme === "dark" ? "gradient-card-dark" : "gradient-card-light"
       }`}
     >
-      {/* Navigation */}
       <nav
         className={`border-b border-border/50 ${
           colorScheme === "dark"
@@ -125,7 +124,6 @@ const page: React.FC<LandingPageProps> = ({ initialShowLogin = false }) => {
         </div>
       </nav>
 
-      {/* Hero Section */}
       <section className="py-12 sm:py-16 lg:py-20 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto text-center">
           <div className="relative">
@@ -161,7 +159,6 @@ const page: React.FC<LandingPageProps> = ({ initialShowLogin = false }) => {
         </div>
       </section>
 
-      {/* Features Section */}
       <section
         className={`py-12 sm:py-16 lg:py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-r backdrop-blur-sm ${
           colorScheme == "dark"
