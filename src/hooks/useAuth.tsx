@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { User, AuthState } from "@/types";
+import { useRouter } from "next/navigation";
 
 interface AuthContextType extends AuthState {
   login: (user: User) => void;
@@ -17,23 +18,46 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     isAuthenticated: false,
     user: null,
   });
+  const router = useRouter();
 
   useEffect(() => {
-    const savedUser = localStorage.getItem("StenoMaster-user");
+    // Check for cookie on mount
+    const getCookie = (name: string) => {
+      const value = `; ${document.cookie}`;
+      const parts = value.split(`; ${name}=`);
+      if (parts.length === 2) return parts.pop()?.split(";").shift();
+      return null;
+    };
+
+    const savedUser = getCookie("StenoMaster-user");
     if (savedUser) {
-      const user = JSON.parse(savedUser);
-      setAuthState({ isAuthenticated: true, user });
+      try {
+        const user = JSON.parse(savedUser);
+        setAuthState({ isAuthenticated: true, user });
+      } catch {
+        // Invalid cookie, clear it
+        document.cookie = "StenoMaster-user=; Max-Age=0; path=/";
+      }
     }
   }, []);
 
   const login = (user: User) => {
     setAuthState({ isAuthenticated: true, user });
-    localStorage.setItem("StenoMaster-user", JSON.stringify(user));
+    // Set cookie with 7-day expiry
+    const cookieValue = JSON.stringify(user);
+    document.cookie = `StenoMaster-user=${cookieValue}; Max-Age=${
+      7 * 24 * 60 * 60
+    }; path=/; SameSite=Strict`;
+    // Redirect to appropriate dashboard
+    const dashboardPath =
+      user.type === "teacher" ? "/dashboard/teacher" : "/dashboard/student";
+    router.push(dashboardPath);
   };
 
   const logout = () => {
     setAuthState({ isAuthenticated: false, user: null });
-    localStorage.removeItem("StenoMaster-user");
+    document.cookie = "StenoMaster-user=; Max-Age=0; path=/";
+    router.push("/?showLogin=true");
   };
 
   return (

@@ -21,8 +21,8 @@ import {
 import { ThemeToggle } from "@/components/ThemeToggle";
 import LoginForm from "@/components/LoginForm";
 import { useTheme } from "@/hooks/ThemeProvider";
-import Image from "next/image";
 import Logo from "@/components/Logo";
+import { useSearchParams } from "next/navigation";
 
 interface LandingPageProps {
   initialShowLogin?: boolean;
@@ -30,11 +30,13 @@ interface LandingPageProps {
 
 const page: React.FC<LandingPageProps> = ({ initialShowLogin = false }) => {
   const { colorScheme } = useTheme();
+  const searchParams = useSearchParams();
   const [isLoginOpen, setIsLoginOpen] = useState(initialShowLogin);
 
   useEffect(() => {
-    setIsLoginOpen(initialShowLogin);
-  }, [initialShowLogin]);
+    const showLogin = searchParams.get("showLogin") === "true";
+    setIsLoginOpen(showLogin || initialShowLogin);
+  }, [searchParams, initialShowLogin]);
 
   const features = [
     {
