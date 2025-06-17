@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect } from "react";
+import React from "react";
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import AppSidebar from "@/components/AppSidebar";
 import { Button } from "@/components/ui/button";
@@ -10,34 +10,13 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { useTheme } from "@/hooks/ThemeProvider";
 import Logo from "@/components/Logo";
 import { AuthProvider, useAuth } from "@/hooks/useAuth";
-import { useRouter } from "next/navigation";
 
-interface DashboardLayoutProps {
-  children: React.ReactNode;
-  userType: "teacher" | "student";
-  userName: string;
-  onLogout: () => void;
-}
-
-const DashboardLayout = ({
-  children,
-  userType,
-  userName,
-  onLogout,
-}: DashboardLayoutProps) => {
+const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
   const { colorScheme } = useTheme();
-  const { isAuthenticated } = useAuth();
-  const router = useRouter();
+  const { isAuthenticated, user, logout } = useAuth();
 
-  useEffect(() => {
-    if (!isAuthenticated) {
-      // Redirect to landing page with login modal open
-      router.push("/?showLogin=true");
-    }
-  }, [isAuthenticated, router]);
-
-  if (!isAuthenticated) {
-    return null; // Prevent rendering until redirect
+  if (!isAuthenticated || !user) {
+    return null;
   }
 
   return (
@@ -50,15 +29,21 @@ const DashboardLayout = ({
               : "from-slate-50 via-blue-50 to-slate-100"
           }`}
         >
-          <AppSidebar onLogout={onLogout} />
+          <AppSidebar />
           <SidebarInset className="flex-1 flex flex-col">
-            <nav className="border-b border-border/50 bg-card/80 backdrop-blur-sm sticky top-0 z-10">
+            <nav className="border-b h-16 border-border/50 bg-card/80 backdrop-blur-sm sticky top-0 z-10">
               <div className="flex justify-between items-center h-16 px-4 lg:px-6">
                 <div className="flex items-center space-x-4">
-                  <SidebarTrigger className="lg:hidden" />
+                  <SidebarTrigger
+                    className={`lg:hidden h-9 w-9 cursor-pointer ${
+                      colorScheme == "dark"
+                        ? "bg-slate-900/70 hover:bg-black/60"
+                        : "bg-slate-200 hover:bg-slate-300"
+                    }`}
+                  />
                   <div className="flex gap-2 justify-center items-center">
                     <User className="h-4 w-4" />
-                    <span className="hidden md:inline">{userName}</span>
+                    <span className="hidden md:inline">{user.name}</span>
                   </div>
                 </div>
                 <div className="flex items-center space-x-2 lg:space-x-4">
@@ -67,17 +52,25 @@ const DashboardLayout = ({
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={onLogout}
-                    className="hidden sm:flex"
+                    onClick={logout}
+                    className={`hidden h-9 sm:flex items-center justify-center cursor-pointer ${
+                      colorScheme == "dark"
+                        ? "bg-slate-900/70 hover:bg-black/60"
+                        : "bg-slate-200 hover:bg-slate-300"
+                    }`}
                   >
-                    <LogOut className="h-4 w-4 mr-2" />
+                    <LogOut className="h-4 w-4" />
                     <span className="hidden lg:inline">Logout</span>
                   </Button>
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={onLogout}
-                    className="sm:hidden"
+                    onClick={logout}
+                    className={`sm:hidden h-9 w-9 flex items-center justify-center cursor-pointer ${
+                      colorScheme == "dark"
+                        ? "bg-slate-900/70 hover:bg-black/60"
+                        : "bg-slate-200 hover:bg-slate-300"
+                    }`}
                   >
                     <LogOut className="h-4 w-4" />
                   </Button>

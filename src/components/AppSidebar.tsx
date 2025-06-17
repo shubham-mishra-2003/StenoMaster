@@ -43,12 +43,9 @@ import {
 import QuickActionModal from "./QuickActionModal";
 import { useTheme } from "@/hooks/ThemeProvider";
 import Logo from "./Logo";
+import UserButton from "./UserButton";
 
-interface AppSidebarProps {
-  onLogout: () => void;
-}
-
-const AppSidebar: React.FC<AppSidebarProps> = ({ onLogout }) => {
+const AppSidebar = () => {
   const { user } = useAuth();
   const pathname = usePathname();
   const [quickActionOpen, setQuickActionOpen] = React.useState(false);
@@ -136,7 +133,7 @@ const AppSidebar: React.FC<AppSidebarProps> = ({ onLogout }) => {
           }`}
         >
           <SidebarHeader
-            className={`border-b border-border/50 bg-gradient-to-r ${
+            className={`border-b h-16 items-center justify-center border-border/50 bg-gradient-to-r ${
               colorScheme == "dark"
                 ? "from-blue-950/50 via-purple-950/30 to-indigo-950/50"
                 : "from-blue-50/50 via-purple-50/30 to-indigo-50/50"
@@ -146,7 +143,7 @@ const AppSidebar: React.FC<AppSidebarProps> = ({ onLogout }) => {
           </SidebarHeader>
           <SidebarContent
             className={`bg-gradient-to-b from-transparent ${
-              colorScheme
+              colorScheme == "dark"
                 ? "via-blue-950/20 to-purple-950/20"
                 : "via-blue-50/20 to-purple-50/20"
             }  `}
@@ -250,37 +247,7 @@ const AppSidebar: React.FC<AppSidebarProps> = ({ onLogout }) => {
           >
             <SidebarMenu>
               <SidebarMenuItem>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <SidebarMenuButton className="mx-2 rounded-lg hover:bg-gradient-to-r hover:from-blue-50/50 hover:via-purple-50/30 hover:to-indigo-50/50 dark:hover:from-blue-950/50 dark:hover:via-purple-950/30 dark:hover:to-indigo-950/50 transition-all duration-200 group-data-[collapsible=icon]:justify-center">
-                      <Avatar className="h-8 w-8 bg-gradient-to-br from-blue-500 via-purple-500 to-indigo-500">
-                        <AvatarFallback className="bg-transparent text-white font-semibold">
-                          {user?.name.charAt(0).toUpperCase()}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="flex flex-col items-start group-data-[collapsible=icon]:hidden">
-                        <span className="text-sm font-medium">
-                          {user?.name}
-                        </span>
-                        <span className="text-xs text-muted-foreground capitalize">
-                          {user?.type}
-                        </span>
-                      </div>
-                    </SidebarMenuButton>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent
-                    align="end"
-                    className="w-48 bg-gradient-to-br from-white/95 via-blue-50/90 to-purple-50/95 dark:from-gray-900/95 dark:via-blue-950/90 dark:to-purple-950/95 backdrop-blur-xl border-0 shadow-2xl"
-                  >
-                    <DropdownMenuItem
-                      onClick={onLogout}
-                      className="cursor-pointer hover:bg-gradient-to-r hover:from-red-50 hover:to-pink-50 dark:hover:from-red-950/50 dark:hover:to-pink-950/50 text-red-600 dark:text-red-400"
-                    >
-                      <LogOut className="h-4 w-4 mr-2" />
-                      Logout
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                <UserButton />
               </SidebarMenuItem>
             </SidebarMenu>
           </SidebarFooter>

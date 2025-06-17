@@ -1,23 +1,8 @@
 "use client";
 
-import React, { useEffect } from "react";
-import { useAuth } from "@/hooks/useAuth";
-import { useRouter } from "next/navigation";
+import React from "react";
 
 const TeacherDashboard = () => {
-  const { isAuthenticated } = useAuth();
-  const router = useRouter();
-
-  useEffect(() => {
-    if (!isAuthenticated) {
-      router.push("/?showLogin=true");
-    }
-  }, [isAuthenticated, router]);
-
-  if (!isAuthenticated) {
-    return null; // Prevent rendering until redirect
-  }
-
   return <div>Teacher Dashboard</div>;
 };
 

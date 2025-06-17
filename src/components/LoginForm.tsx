@@ -5,38 +5,22 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/hooks/useAuth";
-import { User } from "@/types";
-import { toast } from "@/hooks/use-toast";
-import { LogIn, UserPlus, GraduationCap, BookOpen } from "lucide-react";
+import { BookOpen, GraduationCap, LogIn, UserPlus } from "lucide-react";
 import { useTheme } from "@/hooks/ThemeProvider";
 import Logo from "./Logo";
 
 const LoginForm = () => {
   const userTypesNav = [
-    {
-      name: "Student",
-      value: "student",
-      icon: BookOpen,
-    },
-    {
-      name: "Teacher",
-      value: "teacher",
-      icon: GraduationCap,
-    },
+    { name: "Student", value: "student", icon: BookOpen },
+    { name: "Teacher", value: "teacher", icon: GraduationCap },
   ];
 
   const authenticationOptions = [
-    {
-      name: "Login",
-      value: "login",
-    },
-    {
-      name: "Register",
-      value: "register",
-    },
+    { name: "Login", value: "login" },
+    { name: "Register", value: "register" },
   ];
 
-  const { login } = useAuth();
+  const { login, signup } = useAuth();
   const [studentCredentials, setStudentCredentials] = useState({
     id: "",
     password: "",
@@ -52,115 +36,35 @@ const LoginForm = () => {
     confirmPassword: "",
   });
   const [activeTab, setActiveTab] = useState("student");
+  const { colorScheme } = useTheme();
 
   const handleStudentLogin = (e: React.FormEvent) => {
     e.preventDefault();
-
-    if (!studentCredentials.id.trim() || !studentCredentials.password.trim()) {
-      toast({
-        title: "Error",
-        description: "Please enter both Student ID and password.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    // Mock authentication - in real app, verify against backend
-    const user: User = {
+    login({
       id: studentCredentials.id,
-      name: `Student ${studentCredentials.id}`,
-      email: `${studentCredentials.id}@student.StenoMaster.com`,
+      password: studentCredentials.password,
       type: "student",
-    };
-
-    login(user);
-    toast({
-      title: "Welcome!",
-      description: `Logged in as ${user.name}`,
     });
   };
 
   const handleTeacherLogin = (e: React.FormEvent) => {
     e.preventDefault();
-
-    if (
-      !teacherCredentials.email.trim() ||
-      !teacherCredentials.password.trim()
-    ) {
-      toast({
-        title: "Error",
-        description: "Please enter both email and password.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    // Mock authentication
-    const user: User = {
-      id: teacherCredentials.email,
-      name: "Teacher",
+    login({
       email: teacherCredentials.email,
+      password: teacherCredentials.password,
       type: "teacher",
-    };
-
-    login(user);
-    toast({
-      title: "Welcome!",
-      description: `Logged in as ${user.name}`,
     });
   };
 
   const handleTeacherSignup = (e: React.FormEvent) => {
     e.preventDefault();
-
-    if (
-      !teacherSignup.name.trim() ||
-      !teacherSignup.email.trim() ||
-      !teacherSignup.password.trim() ||
-      !teacherSignup.confirmPassword.trim()
-    ) {
-      toast({
-        title: "Error",
-        description: "Please fill in all fields.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (teacherSignup.password !== teacherSignup.confirmPassword) {
-      toast({
-        title: "Error",
-        description: "Passwords do not match.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (teacherSignup.password.length < 6) {
-      toast({
-        title: "Error",
-        description: "Password must be at least 6 characters long.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    // Mock signup - in real app, create account in backend
-    const user: User = {
-      id: teacherSignup.email,
+    signup({
       name: teacherSignup.name,
       email: teacherSignup.email,
-      type: "teacher",
-    };
-
-    login(user);
-    toast({
-      title: "Account Created!",
-      description: `Welcome to StenoMaster, ${user.name}!`,
+      password: teacherSignup.password,
+      confirmPassword: teacherSignup.confirmPassword,
     });
   };
-
-  const { colorScheme } = useTheme();
 
   return (
     <Card
