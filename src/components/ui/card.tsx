@@ -12,10 +12,10 @@ const Card = React.forwardRef<
     <div
       ref={ref}
       className={cn(
-        `relative overflow-hidden bg-gradient-to-br backdrop-blur-xl border-0 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1 rounded-lg ${
+        `relative rounded-2xl overflow-hidden bg-gradient-to-br border-2 backdrop-blur-xl shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1 ${
           colorScheme == "dark"
-            ? "from-gray-900/80 via-gray-800/60 to-gray-700/40"
-            : "from-white/80 via-white/60 to-white/40"
+            ? "from-gray-900/80 via-gray-800/60 to-gray-700/40 border-slate-700"
+            : "from-white/80 via-white/60 to-white/40 border-slate-200"
         }`,
         className
       )}

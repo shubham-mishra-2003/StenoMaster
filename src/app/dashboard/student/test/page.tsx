@@ -339,8 +339,7 @@ const TypingTest = () => {
       </Card>
 
       {testResults.length > 0 && (
-        <Card>
-          <div className="absolute inset-0 bg-gradient-to-br from-purple-500/5 via-indigo-500/5 to-blue-500/5"></div>
+        <Card className="max-h-[70vh] overflow-auto bg-gradient-to-br from-purple-500/5 via-indigo-500/5 to-blue-500/5">
           <CardHeader>
             <CardTitle>Recent Test Results</CardTitle>
           </CardHeader>
@@ -352,13 +351,25 @@ const TypingTest = () => {
                 .map((result) => (
                   <div
                     key={result.id}
-                    className="flex items-center justify-between p-3 bg-gradient-to-r from-white/50 to-purple-50/50 dark:from-gray-800/50 dark:to-purple-950/50 rounded-lg backdrop-blur-sm border border-white/20 dark:border-gray-700/20"
+                    className={`flex items-center justify-between p-3 bg-gradient-to-r rounded-lg backdrop-blur-sm border ${
+                      colorScheme == "dark"
+                        ? "from-gray-800/30 to-blue-950/30 border-gray-500"
+                        : "border-blue-500/60 from-blue-500/10 to-blue-50/10"
+                    }`}
                   >
                     <div>
-                      <p className="font-medium bg-gradient-to-r from-gray-900 to-gray-700 dark:from-blue-200 dark:to-gray-100 bg-clip-text text-transparent">
+                      <p
+                        className={`font-semibold ${
+                          colorScheme == "dark" ? "text-dark" : "text-light"
+                        }`}
+                      >
                         {result.wpm} WPM
                       </p>
-                      <p className="text-sm text-muted-foreground">
+                      <p
+                        className={`font-semibold text-sm ${
+                          colorScheme == "dark" ? "text-dark" : "text-light"
+                        }`}
+                      >
                         {result.accuracy}% accuracy in {result.timeElapsed}s
                       </p>
                     </div>
