@@ -20,6 +20,7 @@ import {
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { Class } from "@/types";
 import { toast } from "@/hooks/use-toast";
+import { useTheme } from "@/hooks/ThemeProvider";
 
 interface QuickActionModalProps {
   isOpen: boolean;
@@ -170,6 +171,7 @@ const QuickActionModal = ({
   };
 
   const { title, actions } = getModalContent();
+  const { colorScheme } = useTheme();
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -177,13 +179,14 @@ const QuickActionModal = ({
         <DialogHeader>
           <DialogTitle className="text-xl font-bold">{title}</DialogTitle>
         </DialogHeader>
-
         {isCreatingClass ? (
           <div className="space-y-4 py-4">
             <div className="space-y-2">
               <Label
                 htmlFor="class-name"
-                className="text-sm font-medium text-gray-700 dark:text-gray-300"
+                className={`text-sm font-medium ${
+                  colorScheme == "dark" ? "text-dark" : "text-light"
+                }`}
               >
                 Class Name
               </Label>
@@ -192,7 +195,11 @@ const QuickActionModal = ({
                 placeholder="Enter class name"
                 value={newClassName}
                 onChange={(e) => setNewClassName(e.target.value)}
-                className="bg-white/60 dark:bg-gray-800/60 border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-blue-500"
+                className={`focus:ring-2 focus:ring-blue-500 ${
+                  colorScheme == "dark"
+                    ? "border-gray-700 bg-gray-800/60"
+                    : "bg-white/60 border-gray-200"
+                }`}
                 onKeyPress={(e) => e.key === "Enter" && handleCreateClass()}
               />
             </div>
@@ -200,13 +207,17 @@ const QuickActionModal = ({
               <Button
                 variant="outline"
                 onClick={() => setIsCreatingClass(false)}
-                className="flex-1 border-gray-300 hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-800"
+                className={`flex-1 ${
+                  colorScheme == "dark"
+                    ? "border-gray-600 hover:bg-gray-800"
+                    : "border-gray-300 hover:bg-gray-50"
+                }`}
               >
                 Cancel
               </Button>
               <Button
                 onClick={handleCreateClass}
-                className="flex-1 bg-gradient-to-r from-blue-500 via-purple-500 to-indigo-500 hover:from-blue-600 hover:via-purple-600 hover:to-indigo-600 text-white shadow-lg hover:shadow-xl transition-all duration-300"
+                className="flex-1 gradient-button"
               >
                 Create Class
               </Button>
@@ -220,7 +231,11 @@ const QuickActionModal = ({
                 <Button
                   key={index}
                   variant="ghost"
-                  className="w-full justify-start h-auto p-4 hover:bg-gradient-to-r hover:from-blue-50/80 hover:via-purple-50/80 hover:to-indigo-50/80 dark:hover:from-blue-950/50 dark:hover:via-purple-950/50 dark:hover:to-indigo-950/50 transition-all duration-300 hover:shadow-md rounded-lg border border-transparent hover:border-blue-200/50 dark:hover:border-blue-800/50"
+                  className={`w-full cursor-pointer justify-start h-auto p-4 hover:bg-gradient-to-r transition-all duration-300 hover:shadow-md rounded-lg border border-transparent ${
+                    colorScheme == "dark"
+                      ? "hover:from-blue-950/50 hover:via-purple-950/50 hover:to-indigo-950/50  hover:border-blue-800/50"
+                      : "hover:from-blue-50/80 hover:via-purple-50/80 hover:to-indigo-50/80 hover:border-blue-200/50"
+                  }`}
                   onClick={() => {
                     if (actionItem.tab === "quick-create") {
                       setIsCreatingClass(true);
@@ -236,11 +251,19 @@ const QuickActionModal = ({
                       <Icon className="h-5 w-5 text-white" />
                     </div>
                     <div className="flex-1">
-                      <div className="font-medium text-gray-900 dark:text-gray-100">
+                      <div
+                        className={`font-medium ${
+                          colorScheme == "dark" ? "text-dark" : "text-light"
+                        }`}
+                      >
                         {actionItem.label}
                       </div>
                       {actionItem.description && (
-                        <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                        <div
+                          className={`text-sm mt-1 ${
+                            colorScheme == "dark" ? "text-dark" : "text-light"
+                          }`}
+                        >
                           {actionItem.description}
                         </div>
                       )}

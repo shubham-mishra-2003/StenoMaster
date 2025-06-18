@@ -18,11 +18,13 @@ import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "@/hooks/use-toast";
 import Image from "next/image";
+import { useTheme } from "@/hooks/ThemeProvider";
 
-const TypingPractice = ({}: // assignments
-{
-  // assignments: Assignment[];
-}) => {
+const TypingPractice = () => {
+  const [assignments] = useLocalStorage<Assignment[]>(
+    "stenolearn-assignments",
+    []
+  );
   const [selectedAssignment, setSelectedAssignment] =
     useState<Assignment | null>(null);
   const [typedText, setTypedText] = useState("");
@@ -110,28 +112,8 @@ const TypingPractice = ({}: // assignments
       : 0;
 
   if (!selectedAssignment) {
-    const assignments: Assignment[] = [
-      {
-        id: "1",
-        description: "ABCD",
-        title: "XYZ",
-        correctText: "1234",
-        createdAt: new Date(),
-        classId: "12",
-        imageUrl: "",
-        isActive: true,
-      },
-      {
-        id: "2",
-        description: "ABCD",
-        title: "XYZ",
-        correctText: "1234",
-        createdAt: new Date(),
-        classId: "12",
-        imageUrl: "",
-        isActive: true,
-      },
-    ];
+    const { colorScheme } = useTheme();
+
     return (
       <Card>
         <CardHeader>
@@ -144,12 +126,32 @@ const TypingPractice = ({}: // assignments
               if (assignment) setSelectedAssignment(assignment);
             }}
           >
-            <SelectTrigger>
+            <SelectTrigger
+              className={`cursor-pointer border-2 h-12 rounded-xl ${
+                colorScheme == "dark"
+                  ? "bg-slate-800 border-slate-700"
+                  : "bg-slate-200 border-slate-300"
+              }`}
+            >
               <SelectValue placeholder="Choose an assignment to practice" />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent
+              className={`cursor-pointer scroll-smooth max-h-[50vh] border-2 rounded-xl ${
+                colorScheme == "dark"
+                  ? "bg-slate-800 border-slate-700"
+                  : "bg-slate-200 border-slate-300"
+              }`}
+            >
               {assignments.map((assignment) => (
-                <SelectItem key={assignment.id} value={assignment.id}>
+                <SelectItem
+                  className={`cursor-pointer mb-2 border-2 h-12 rounded-xl ${
+                    colorScheme == "dark"
+                      ? "bg-slate-700 border-slate-600"
+                      : "bg-slate-200 border-slate-300"
+                  }`}
+                  key={assignment.id}
+                  value={assignment.id}
+                >
                   {assignment.title}
                 </SelectItem>
               ))}

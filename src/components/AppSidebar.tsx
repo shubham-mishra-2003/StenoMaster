@@ -15,19 +15,6 @@ import {
 } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 import {
   Home,
   Users,
@@ -36,9 +23,7 @@ import {
   BookOpen,
   Target,
   TrendingUp,
-  LogOut,
   Plus,
-  GraduationCap,
 } from "lucide-react";
 import QuickActionModal from "./QuickActionModal";
 import { useTheme } from "@/hooks/ThemeProvider";
@@ -120,50 +105,47 @@ const AppSidebar = () => {
 
   return (
     <>
-      <TooltipProvider>
-        <Sidebar
-          className={`border-r ${
-            colorScheme === "dark"
-              ? "border-gray-800/50 bg-gray-900"
-              : "border-gray-200/50 bg-white"
-          } data-[mobile=true]:bg-gradient-to-b ${
-            colorScheme === "dark"
-              ? "data-[mobile=true]:from-gray-900 data-[mobile=true]:via-blue-950/90 data-[mobile=true]:to-purple-950/90"
-              : "data-[mobile=true]:from-white data-[mobile=true]:via-blue-50/90 data-[mobile=true]:to-purple-50/90"
+      <Sidebar
+        className={`border-r ${
+          colorScheme === "dark"
+            ? "border-gray-800/50 bg-gray-900"
+            : "border-gray-200/50 bg-white"
+        } data-[mobile=true]:bg-gradient-to-b ${
+          colorScheme === "dark"
+            ? "data-[mobile=true]:from-gray-900 data-[mobile=true]:via-blue-950/90 data-[mobile=true]:to-purple-950/90"
+            : "data-[mobile=true]:from-white data-[mobile=true]:via-blue-50/90 data-[mobile=true]:to-purple-50/90"
+        }`}
+      >
+        <SidebarHeader
+          className={`border-b h-16 items-center justify-center border-border/50 bg-gradient-to-r ${
+            colorScheme == "dark"
+              ? "from-blue-950/50 via-purple-950/30 to-indigo-950/50"
+              : "from-blue-50/50 via-purple-50/30 to-indigo-50/50"
           }`}
         >
-          <SidebarHeader
-            className={`border-b h-16 items-center justify-center border-border/50 bg-gradient-to-r ${
-              colorScheme == "dark"
-                ? "from-blue-950/50 via-purple-950/30 to-indigo-950/50"
-                : "from-blue-50/50 via-purple-50/30 to-indigo-50/50"
-            }`}
-          >
-            <Logo height={50} width={50} />
-          </SidebarHeader>
-          <SidebarContent
-            className={`bg-gradient-to-b from-transparent ${
-              colorScheme == "dark"
-                ? "via-blue-950/20 to-purple-950/20"
-                : "via-blue-50/20 to-purple-50/20"
-            }  `}
-          >
-            <SidebarGroup>
-              <SidebarGroupLabel className="text-xs font-semibold text-muted-foreground/80 uppercase tracking-wider px-4 py-2 group-data-[collapsible=icon]:hidden">
-                Navigation
-              </SidebarGroupLabel>
-              <SidebarGroupContent>
-                <SidebarMenu>
-                  {items.map((item) => {
-                    const Icon = item.icon;
-                    const active = isActive(item.url);
-                    return (
-                      <SidebarMenuItem key={item.title}>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <SidebarMenuButton
-                              asChild
-                              className={`
+          <Logo height={50} width={50} />
+        </SidebarHeader>
+        <SidebarContent
+          className={`bg-gradient-to-b from-transparent ${
+            colorScheme == "dark"
+              ? "via-blue-950/20 to-purple-950/20"
+              : "via-blue-50/20 to-purple-50/20"
+          }  `}
+        >
+          <SidebarGroup>
+            <SidebarGroupLabel className="text-xs font-semibold text-muted-foreground/80 uppercase tracking-wider px-4 py-2 group-data-[collapsible=icon]:hidden">
+              Navigation
+            </SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {items.map((item) => {
+                  const Icon = item.icon;
+                  const active = isActive(item.url);
+                  return (
+                    <SidebarMenuItem key={item.title}>
+                      <SidebarMenuButton
+                        asChild
+                        className={`
                          w-full cursor-pointer justify-start px-3 py-2 rounded-lg transition-all duration-200
                          ${
                            active
@@ -175,85 +157,63 @@ const AppSidebar = () => {
                                }`
                          }
                        `}
-                            >
-                              <Link
-                                href={item.url}
-                                className="flex items-center space-x-3 w-full"
-                              >
-                                <Icon className={`h-5 w-5`} />
-                                <span
-                                  className={`font-medium group-data-[collapsible=icon]:sr-only`}
-                                >
-                                  {item.title}
-                                </span>
-                              </Link>
-                            </SidebarMenuButton>
-                          </TooltipTrigger>
-                          <TooltipContent
-                            side="right"
-                            className="group-data-[collapsible=expanded]:hidden"
+                      >
+                        <Link
+                          href={item.url}
+                          className="flex items-center space-x-3 w-full"
+                        >
+                          <Icon className={`h-5 w-5`} />
+                          <span
+                            className={`font-medium group-data-[collapsible=icon]:sr-only`}
                           >
                             {item.title}
-                          </TooltipContent>
-                        </Tooltip>
-                      </SidebarMenuItem>
-                    );
-                  })}
-                </SidebarMenu>
-              </SidebarGroupContent>
-            </SidebarGroup>
+                          </span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  );
+                })}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
 
-            <SidebarGroup>
-              <SidebarGroupLabel className="text-xs font-semibold text-muted-foreground/80 uppercase tracking-wider px-4 py-2 group-data-[collapsible=icon]:hidden">
-                Quick Actions
-              </SidebarGroupLabel>
-              <SidebarGroupContent>
-                <div className="px-2">
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        onClick={handleQuickAction}
-                        className="w-full gradient-button group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0"
-                        size="sm"
-                      >
-                        <Plus className="h-4 w-4 group-data-[collapsible=icon]:mr-0 group-data-[collapsible=expanded]:mr-2" />
-                        <span className="group-data-[collapsible=icon]:sr-only">
-                          {user?.type === "teacher"
-                            ? "Add Assignment"
-                            : "Start Practice"}
-                        </span>
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent
-                      side="right"
-                      className="group-data-[collapsible=expanded]:hidden"
-                    >
-                      {user?.type === "teacher"
-                        ? "Add Assignment"
-                        : "Start Practice"}
-                    </TooltipContent>
-                  </Tooltip>
-                </div>
-              </SidebarGroupContent>
-            </SidebarGroup>
-          </SidebarContent>
+          <SidebarGroup>
+            <SidebarGroupLabel className="text-xs font-semibold text-muted-foreground/80 uppercase tracking-wider px-4 py-2 group-data-[collapsible=icon]:hidden">
+              Quick Actions
+            </SidebarGroupLabel>
+            <SidebarGroupContent>
+              <div className="px-2">
+                <Button
+                  onClick={handleQuickAction}
+                  className="w-full gradient-button group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0"
+                  size="sm"
+                >
+                  <Plus className="h-4 w-4 group-data-[collapsible=icon]:mr-0 group-data-[collapsible=expanded]:mr-2" />
+                  <span className="group-data-[collapsible=icon]:sr-only">
+                    {user?.type === "teacher"
+                      ? "Add Assignment"
+                      : "Start Practice"}
+                  </span>
+                </Button>
+              </div>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        </SidebarContent>
 
-          <SidebarFooter
-            className={`border-t border-border/50 bg-gradient-to-r ${
-              colorScheme == "dark"
-                ? "from-blue-950/50 via-purple-950/30 to-indigo-950/50"
-                : "from-blue-50/50 via-purple-50/30 to-indigo-50/50"
-            }`}
-          >
-            <SidebarMenu>
-              <SidebarMenuItem>
-                <UserButton />
-              </SidebarMenuItem>
-            </SidebarMenu>
-          </SidebarFooter>
-        </Sidebar>
-      </TooltipProvider>
-
+        <SidebarFooter
+          className={`border-t border-border/50 bg-gradient-to-r ${
+            colorScheme == "dark"
+              ? "from-blue-950/50 via-purple-950/30 to-indigo-950/50"
+              : "from-blue-50/50 via-purple-50/30 to-indigo-50/50"
+          }`}
+        >
+          <SidebarMenu>
+            <SidebarMenuItem>
+              <UserButton />
+            </SidebarMenuItem>
+          </SidebarMenu>
+        </SidebarFooter>
+      </Sidebar>
       <QuickActionModal
         isOpen={quickActionOpen}
         onClose={() => setQuickActionOpen(false)}
