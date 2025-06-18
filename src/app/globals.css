@@ -80,3 +80,11 @@
 .gradient-text {
   @apply bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600 bg-clip-text text-transparent;
 }
+
+.text-dark-muted {
+  @apply text-slate-400;
+}
+
+.text-light-muted {
+  @apply text-slate-500;
+}
