@@ -10,7 +10,7 @@
 }
 
 .gradient-button {
-  @apply text-[12px] sm:text-[14px] px-6 sm:px-8 py-3 bg-gradient-to-r from-blue-500 via-purple-500 to-indigo-500 hover:from-blue-600 hover:via-purple-600 hover:to-indigo-600 text-white shadow-lg hover:shadow-xl transition-all duration-300 rounded-2xl;
+  @apply text-[12px] sm:text-[14px] border-0 px-6 sm:px-8 py-3 bg-gradient-to-r from-blue-500 via-purple-500 to-indigo-500 hover:from-blue-600 hover:via-purple-600 hover:to-indigo-600 text-white shadow-lg hover:shadow-xl transition-all duration-300 rounded-2xl;
 }
 
 .gradient-card-light {
@@ -27,10 +27,6 @@
 
 .gradient-card-cta-dark {
   @apply bg-gradient-to-br from-gray-900/80 via-blue-950/60 to-purple-950/60;
-}
-
-.gradient-text {
-  @apply bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600 bg-clip-text text-transparent;
 }
 
 .gradient-card-title-light {
@@ -78,7 +74,7 @@
 }
 
 .gradient-text {
-  @apply bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600 bg-clip-text text-transparent;
+  @apply bg-gradient-to-r from-blue-500 via-purple-500 to-indigo-500 bg-clip-text text-transparent;
 }
 
 .text-dark-muted {

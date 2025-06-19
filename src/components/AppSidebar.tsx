@@ -201,7 +201,7 @@ const AppSidebar = () => {
         </SidebarContent>
 
         <SidebarFooter
-          className={`border-t border-border/50 bg-gradient-to-r ${
+          className={`border-t border-border/50 p-1 bg-gradient-to-r ${
             colorScheme == "dark"
               ? "from-blue-950/50 via-purple-950/30 to-indigo-950/50"
               : "from-blue-50/50 via-purple-50/30 to-indigo-50/50"

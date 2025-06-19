@@ -136,7 +136,7 @@ const TypingPractice = () => {
               <SelectValue placeholder="Choose an assignment to practice" />
             </SelectTrigger>
             <SelectContent
-              className={`cursor-pointer scroll-smooth max-h-[50vh] border-2 rounded-xl ${
+              className={`scroll-smooth max-h-[50vh] border-2 rounded-xl ${
                 colorScheme == "dark"
                   ? "bg-slate-800 border-slate-700"
                   : "bg-slate-200 border-slate-300"

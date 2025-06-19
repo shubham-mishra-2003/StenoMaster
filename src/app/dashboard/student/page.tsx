@@ -7,7 +7,7 @@ import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { Assignment, Score } from "@/types";
 
 import { useRouter } from "next/navigation";
-import AssignmentList from "@/components/student/AssignmentList";
+import AssignmentList from "@/components/AssignmentList";
 import { useTheme } from "@/hooks/ThemeProvider";
 
 const StudentDashboard = () => {
