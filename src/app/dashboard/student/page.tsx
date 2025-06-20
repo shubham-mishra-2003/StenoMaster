@@ -78,14 +78,14 @@ const StudentDashboard = () => {
           return (
             <Card
               key={index}
-              className={`relative overflow-hidden bg-gradient-to-br backdrop-blur-xl border-0 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1 ${
+              className={`relative group overflow-hidden bg-gradient-to-br backdrop-blur-xl border-0 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1 ${
                 colorScheme == "dark"
                   ? "from-gray-900/80 via-gray-800/60 to-gray-700/40"
                   : "from-white/80 via-white/60 to-white/40"
               }`}
             >
               <div
-                className={`absolute inset-0 bg-gradient-to-br ${stat.color} opacity-5`}
+                className={`absolute group-hover:opacity-10 inset-0 bg-gradient-to-br ${stat.color} opacity-5`}
               ></div>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative z-10">
                 <CardTitle

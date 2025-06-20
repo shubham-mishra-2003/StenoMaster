@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { Assignment, Student, Score, Class } from "@/types";
 import { BarChart3, Trophy, Clock, Target } from "lucide-react";
+import { useTheme } from "@/hooks/ThemeProvider";
 
 const ScoresPage = () => {
   const [students] = useLocalStorage<Student[]>("stenolearn-students", []);
@@ -12,9 +13,10 @@ const ScoresPage = () => {
     "stenolearn-assignments",
     []
   );
+  const { colorScheme } = useTheme();
   const [classes] = useLocalStorage<Class[]>("stenolearn-classes", []);
   const [scores] = useLocalStorage<Score[]>("stenolearn-scores", []);
-
+  
   const getStudentScores = (studentId: string) => {
     return scores.filter((s) => s.studentId === studentId);
   };
@@ -44,25 +46,36 @@ const ScoresPage = () => {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 dark:from-blue-200 dark:to-gray-100 bg-clip-text text-transparent">
-          Student Scores
-        </h2>
-        <p className="text-muted-foreground">
+        <h2 className="gradient-text text-2xl font-bold">Student Scores</h2>
+        <p
+          className={
+            colorScheme == "dark" ? "text-dark-muted" : "text-light-muted"
+          }
+        >
           Track student progress and performance
         </p>
       </div>
 
       {students.length === 0 ? (
         <Card>
-          <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 via-purple-500/5 to-indigo-500/5"></div>
           <CardContent className="flex flex-col items-center justify-center py-12">
             <div className="w-16 h-16 bg-gradient-to-br from-blue-500 via-purple-500 to-indigo-500 rounded-full flex items-center justify-center mb-4 shadow-lg">
               <BarChart3 className="h-8 w-8 text-white" />
             </div>
-            <h3 className="text-lg font-semibold mb-2 bg-gradient-to-r from-gray-900 to-gray-700 dark:from-blue-200 dark:to-gray-100 bg-clip-text text-transparent">
+            <h3
+              className={`text-lg font-semibold mb-2 ${
+                colorScheme == "dark" ? "text-dark-muted" : "text-light-muted"
+              }`}
+            >
               No students yet
             </h3>
-            <p className="text-muted-foreground text-center">
+            <p
+              className={
+                colorScheme == "dark"
+                  ? "text-dark-muted text-center"
+                  : "text-light-muted text-center"
+              }
+            >
               Add students to your classes to track their progress
             </p>
           </CardContent>
@@ -76,12 +89,17 @@ const ScoresPage = () => {
 
             return (
               <Card key={student.id}>
-                <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 via-purple-500/5 to-indigo-500/5"></div>
                 <CardHeader>
                   <div className="flex items-center justify-between">
                     <div>
                       <CardTitle className="text-xl">{student.name}</CardTitle>
-                      <p className="text-muted-foreground">
+                      <p
+                        className={
+                          colorScheme == "dark"
+                            ? "text-dark-muted"
+                            : "text-light-muted"
+                        }
+                      >
                         Class: {getClassName(student.classId)} | ID:{" "}
                         {student.id}
                       </p>
@@ -90,29 +108,65 @@ const ScoresPage = () => {
                       <div className="text-center">
                         <div className="flex items-center space-x-1">
                           <Target className="h-4 w-4" />
-                          <span className="font-semibold bg-gradient-to-r from-gray-900 to-gray-700 dark:from-blue-200 dark:to-gray-100 bg-clip-text text-transparent">
+                          <span
+                            className={`text-xl font-semibold ${
+                              colorScheme == "dark" ? "text-dark" : "text-light"
+                            }`}
+                          >
                             {avgAccuracy}%
                           </span>
                         </div>
-                        <p className="text-muted-foreground">Avg Accuracy</p>
+                        <p
+                          className={
+                            colorScheme == "dark"
+                              ? "text-dark-muted"
+                              : "text-light-muted"
+                          }
+                        >
+                          Avg Accuracy
+                        </p>
                       </div>
                       <div className="text-center">
                         <div className="flex items-center space-x-1">
                           <Clock className="h-4 w-4" />
-                          <span className="font-semibold bg-gradient-to-r from-gray-900 to-gray-700 dark:from-blue-200 dark:to-gray-100 bg-clip-text text-transparent">
+                          <span
+                            className={`text-xl font-semibold ${
+                              colorScheme == "dark" ? "text-dark" : "text-light"
+                            }`}
+                          >
                             {avgWPM}
                           </span>
                         </div>
-                        <p className="text-muted-foreground">Avg WPM</p>
+                        <p
+                          className={
+                            colorScheme == "dark"
+                              ? "text-dark-muted"
+                              : "text-light-muted"
+                          }
+                        >
+                          Avg WPM
+                        </p>
                       </div>
                       <div className="text-center">
                         <div className="flex items-center space-x-1">
                           <Trophy className="h-4 w-4" />
-                          <span className="font-semibold bg-gradient-to-r from-gray-900 to-gray-700 dark:from-blue-200 dark:to-gray-100 bg-clip-text text-transparent">
+                          <span
+                            className={`text-xl font-semibold ${
+                              colorScheme == "dark" ? "text-dark" : "text-light"
+                            }`}
+                          >
                             {studentScores.length}
                           </span>
                         </div>
-                        <p className="text-muted-foreground">Completed</p>
+                        <p
+                          className={
+                            colorScheme == "dark"
+                              ? "text-dark-muted"
+                              : "text-light-muted"
+                          }
+                        >
+                          Completed
+                        </p>
                       </div>
                     </div>
                   </div>
@@ -124,7 +178,11 @@ const ScoresPage = () => {
                     </p>
                   ) : (
                     <div className="space-y-3">
-                      <h4 className="font-semibold bg-gradient-to-r from-gray-900 to-gray-700 dark:from-blue-200 dark:to-gray-100 bg-clip-text text-transparent">
+                      <h4
+                        className={`text-xl font-semibold ${
+                          colorScheme == "dark" ? "text-dark" : "text-light"
+                        }`}
+                      >
                         Recent Assignments
                       </h4>
                       <div className="space-y-2">
