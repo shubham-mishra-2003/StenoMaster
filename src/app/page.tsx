@@ -24,15 +24,15 @@ import { useTheme } from "@/hooks/ThemeProvider";
 import Logo from "@/components/Logo";
 import { useSearchParams } from "next/navigation";
 
-const page = ({ initialShowLogin = false }: { initialShowLogin: boolean }) => {
+const page = () => {
   const { colorScheme } = useTheme();
   const searchParams = useSearchParams();
-  const [isLoginOpen, setIsLoginOpen] = useState(initialShowLogin);
+  const [isLoginOpen, setIsLoginOpen] = useState(false);
 
   useEffect(() => {
     const showLogin = searchParams.get("showLogin") === "true";
-    setIsLoginOpen(showLogin || initialShowLogin);
-  }, [searchParams, initialShowLogin]);
+    setIsLoginOpen(showLogin);
+  }, [searchParams]);
 
   const features = [
     {
