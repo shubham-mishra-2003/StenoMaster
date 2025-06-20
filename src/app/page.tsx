@@ -24,7 +24,7 @@ import { useTheme } from "@/hooks/ThemeProvider";
 import Logo from "@/components/Logo";
 import { useSearchParams } from "next/navigation";
 
-const page = ({ initialShowLogin = false }) => {
+const page = ({ initialShowLogin = false }: { initialShowLogin: boolean }) => {
   const { colorScheme } = useTheme();
   const searchParams = useSearchParams();
   const [isLoginOpen, setIsLoginOpen] = useState(initialShowLogin);
