@@ -24,11 +24,7 @@ import { useTheme } from "@/hooks/ThemeProvider";
 import Logo from "@/components/Logo";
 import { useSearchParams } from "next/navigation";
 
-interface LandingPageProps {
-  initialShowLogin?: boolean;
-}
-
-const page: React.FC<LandingPageProps> = ({ initialShowLogin = false }) => {
+const page = ({ initialShowLogin = false }) => {
   const { colorScheme } = useTheme();
   const searchParams = useSearchParams();
   const [isLoginOpen, setIsLoginOpen] = useState(initialShowLogin);
