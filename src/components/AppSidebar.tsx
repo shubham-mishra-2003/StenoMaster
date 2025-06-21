@@ -66,7 +66,7 @@ const AppSidebar = () => {
       icon: Home,
     },
     {
-      title: "Practice",
+      title: "Assignment",
       url: "/dashboard/student/practice",
       icon: BookOpen,
     },

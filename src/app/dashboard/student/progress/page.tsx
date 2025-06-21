@@ -50,7 +50,6 @@ const StudentProgress = () => {
   if (scores.length == 0) {
     return (
       <Card>
-        <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 via-purple-500/5 to-indigo-500/5"></div>
         <CardContent className="flex flex-col items-center justify-center py-12">
           <div className="w-16 h-16 bg-gradient-to-br from-blue-500 via-purple-500 to-indigo-500 rounded-full flex items-center justify-center mb-4 shadow-lg">
             <TrendingUp className="h-8 w-8 text-white" />
@@ -77,21 +76,15 @@ const StudentProgress = () => {
   return (
     <div className="space-y-6">
       <div>
-        <h2
-          className={`text-2xl font-bold ${
-            colorScheme == "dark" ? "text-dark" : "text-light"
-          }`}
-        >
-          Your Progress
-        </h2>
+        <h2 className="text-2xl font-bold gradient-text">Your Progress</h2>
         <p className="text-muted-foreground">
           Track your stenography improvement
         </p>
       </div>
 
       <div className="grid gap-4 md:grid-cols-3">
-        <Card>
-          <div className="absolute inset-0 bg-gradient-to-br from-green-500/5 via-green-500/5 to-green-500/5"></div>
+        <Card className="group">
+          <div className="absolute opacity-5 group-hover:opacity-10 inset-0 bg-gradient-to-br from-green-500 via-green-500 to-green-500"></div>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle
               className={`text-xl font-bold ${
@@ -118,8 +111,8 @@ const StudentProgress = () => {
           </CardContent>
         </Card>
 
-        <Card>
-          <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 via-indigo-500/5 to-purple-500/5"></div>
+        <Card className="group">
+          <div className="absolute group-hover:opacity-10 opacity-5 inset-0 bg-gradient-to-br from-blue-500 via-indigo-500 to-purple-500"></div>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle
               className={`text-xl font-bold ${
@@ -144,8 +137,8 @@ const StudentProgress = () => {
           </CardContent>
         </Card>
 
-        <Card>
-          <div className="absolute inset-0 bg-gradient-to-br from-orange-500/5 via-red-500/5 to-pink-500/5"></div>
+        <Card className="group">
+          <div className="absolute opacity-5 group-hover:opacity-10 inset-0 bg-gradient-to-br from-orange-500 via-red-500 to-pink-500"></div>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle
               className={`text-xl font-bold ${
@@ -175,7 +168,6 @@ const StudentProgress = () => {
       </div>
 
       <Card>
-        <div className="absolute inset-0 bg-gradient-to-br from-purple-500/5 via-indigo-500/5 to-blue-500/5"></div>
         <CardHeader>
           <CardTitle>Recent Scores</CardTitle>
         </CardHeader>
@@ -220,20 +212,46 @@ const StudentProgress = () => {
                   <div className="text-right">
                     <div className="flex space-x-4 text-sm">
                       <div className="text-center">
-                        <div className="font-semibold flex items-center bg-gradient-to-r from-gray-900 to-gray-700 dark:from-blue-200 dark:to-gray-100 bg-clip-text text-transparent">
+                        <div className="flex items-center">
                           <Target className="h-3 w-3 mr-1" />
-                          {score.accuracy}%
+                          <p
+                            className={`"font-bold flex items-center ${
+                              colorScheme == "dark" ? "text-dark" : "text-light"
+                            }`}
+                          >
+                            {score.accuracy}%
+                          </p>
                         </div>
-                        <div className="text-muted-foreground text-xs">
+                        <div
+                          className={`text-sm ${
+                            colorScheme == "dark"
+                              ? "text-dark-muted"
+                              : "text-light-muted"
+                          }`}
+                        >
                           Accuracy
                         </div>
                       </div>
                       <div className="text-center">
-                        <div className="font-semibold flex items-center bg-gradient-to-r from-gray-900 to-gray-700 dark:from-blue-200 dark:to-gray-100 bg-clip-text text-transparent">
+                        <div className="flex items-center">
                           <Clock className="h-3 w-3 mr-1" />
-                          {score.wpm}
+                          <p
+                            className={`"font-bold flex items-center ${
+                              colorScheme == "dark" ? "text-dark" : "text-light"
+                            }`}
+                          >
+                            {score.wpm}
+                          </p>
                         </div>
-                        <div className="text-muted-foreground text-xs">WPM</div>
+                        <div
+                          className={`text-sm ${
+                            colorScheme == "dark"
+                              ? "text-dark-muted"
+                              : "text-light-muted"
+                          }`}
+                        >
+                          WPM
+                        </div>
                       </div>
                     </div>
                   </div>

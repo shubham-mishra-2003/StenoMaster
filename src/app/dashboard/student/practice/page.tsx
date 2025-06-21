@@ -3,8 +3,6 @@
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
-import { Progress } from "@/components/ui/progress";
 import {
   Select,
   SelectContent,
@@ -12,235 +10,122 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { FileText, Clock, Target } from "lucide-react";
-import { Assignment, Score } from "@/types";
+import { FileText } from "lucide-react";
+import { Assignment } from "@/types";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
-import { useAuth } from "@/hooks/useAuth";
-import { toast } from "@/hooks/use-toast";
-import Image from "next/image";
 import { useTheme } from "@/hooks/ThemeProvider";
+import { useRouter } from "next/navigation";
 
-const TypingPractice = () => {
+const PracticePage = () => {
   const [assignments] = useLocalStorage<Assignment[]>(
     "stenolearn-assignments",
     []
   );
-  const [selectedAssignment, setSelectedAssignment] =
-    useState<Assignment | null>(null);
-  const [typedText, setTypedText] = useState("");
-  const [startTime, setStartTime] = useState<Date | null>(null);
-  const [isStarted, setIsStarted] = useState(false);
-  const [timeElapsed, setTimeElapsed] = useState(0);
-  const { user } = useAuth();
-  const [scores, setScores] = useLocalStorage<Score[]>("stenolearn-scores", []);
+  const [selectedAssignmentId, setSelectedAssignmentId] = useState<
+    string | null
+  >(null);
+  const { colorScheme } = useTheme();
+  const router = useRouter();
 
   useEffect(() => {
-    let interval: NodeJS.Timeout;
-    if (isStarted && startTime) {
-      interval = setInterval(() => {
-        setTimeElapsed(Math.floor((Date.now() - startTime.getTime()) / 1000));
-      }, 1000);
+    console.log("Practice Page - Assignments loaded:", assignments);
+    assignments.forEach((assignment, index) =>
+      console.log(
+        `Practice Page - Assignment ${index + 1}: ID=${assignment.id}, Title=${
+          assignment.title
+        }`
+      )
+    );
+  }, [assignments]);
+
+  const handleStartPractice = () => {
+    if (selectedAssignmentId) {
+      console.log(
+        "Practice Page - Navigating to assignment ID:",
+        selectedAssignmentId
+      );
+      router.push(`/dashboard/student/practice/${selectedAssignmentId}`);
     }
-    return () => clearInterval(interval);
-  }, [isStarted, startTime]);
-
-  const calculateAccuracy = (typed: string, correct: string) => {
-    const typedWords = typed.trim().split(/\s+/);
-    const correctWords = correct.trim().split(/\s+/);
-    let correctCount = 0;
-
-    typedWords.forEach((word, index) => {
-      if (correctWords[index] && word === correctWords[index]) {
-        correctCount++;
-      }
-    });
-
-    return Math.round((correctCount / correctWords.length) * 100);
   };
-
-  const calculateWPM = (typed: string, timeInSeconds: number) => {
-    const words = typed.trim().split(/\s+/).length;
-    return Math.round((words / timeInSeconds) * 60);
-  };
-
-  const handleStart = () => {
-    setIsStarted(true);
-    setStartTime(new Date());
-    setTimeElapsed(0);
-  };
-
-  const handleSubmit = () => {
-    if (!startTime || !user || !selectedAssignment) return;
-
-    const accuracy = calculateAccuracy(
-      typedText,
-      selectedAssignment.correctText
-    );
-    const wpm = calculateWPM(typedText, timeElapsed);
-
-    const score: Score = {
-      id: `score-${Date.now()}`,
-      studentId: user.id,
-      assignmentId: selectedAssignment.id,
-      typedText,
-      accuracy,
-      wpm,
-      completedAt: new Date(),
-    };
-
-    const updatedScores = [...scores, score];
-    setScores(updatedScores);
-
-    toast({
-      title: "Assignment Completed!",
-      description: `Accuracy: ${accuracy}%, WPM: ${wpm}`,
-    });
-
-    // Reset form
-    setTypedText("");
-    setIsStarted(false);
-    setStartTime(null);
-    setTimeElapsed(0);
-  };
-
-  const progress =
-    selectedAssignment && selectedAssignment.correctText.length > 0
-      ? Math.min(
-          (typedText.length / selectedAssignment.correctText.length) * 100,
-          100
-        )
-      : 0;
-
-  if (!selectedAssignment) {
-    const { colorScheme } = useTheme();
-
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Select Assignment</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Select
-            onValueChange={(value) => {
-              const assignment = assignments.find((a) => a.id === value);
-              if (assignment) setSelectedAssignment(assignment);
-            }}
-          >
-            <SelectTrigger
-              className={`cursor-pointer border-2 h-12 rounded-xl ${
-                colorScheme == "dark"
-                  ? "bg-slate-800 border-slate-700"
-                  : "bg-slate-200 border-slate-300"
-              }`}
-            >
-              <SelectValue placeholder="Choose an assignment to practice" />
-            </SelectTrigger>
-            <SelectContent
-              className={`scroll-smooth max-h-[50vh] border-2 rounded-xl ${
-                colorScheme == "dark"
-                  ? "bg-slate-800 border-slate-700"
-                  : "bg-slate-200 border-slate-300"
-              }`}
-            >
-              {assignments.map((assignment) => (
-                <SelectItem
-                  className={`cursor-pointer mb-2 border-2 h-12 rounded-xl ${
-                    colorScheme == "dark"
-                      ? "bg-slate-700 border-slate-600"
-                      : "bg-slate-200 border-slate-300"
-                  }`}
-                  key={assignment.id}
-                  value={assignment.id}
-                >
-                  {assignment.title}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </CardContent>
-      </Card>
-    );
-  }
 
   return (
     <div className="space-y-6">
+      <div>
+        <h4 className="gradient-text font-bold text-2xl">
+          Assignments assigned to you
+        </h4>
+        <p
+          className={
+            colorScheme == "dark" ? "text-dark-muted" : "text-light-muted"
+          }
+        >
+          Select and complete your assignments
+        </p>
+      </div>
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle className="flex items-center gap-2">
-              <FileText className="h-5 w-5" />
-              {selectedAssignment.title}
-            </CardTitle>
-            <Button
-              variant="outline"
-              onClick={() => setSelectedAssignment(null)}
-            >
-              Change Assignment
-            </Button>
-          </div>
+          <CardTitle className="flex items-center gap-2">
+            <FileText className="h-5 w-5" />
+            Select Assignment
+          </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
-            <div className="flex items-center gap-4 text-sm text-muted-foreground">
-              <div className="flex items-center gap-1">
-                <Clock className="h-4 w-4" />
-                Time: {Math.floor(timeElapsed / 60)}:
-                {(timeElapsed % 60).toString().padStart(2, "0")}
-              </div>
-              <div className="flex items-center gap-1">
-                <Target className="h-4 w-4" />
-                Progress: {Math.round(progress)}%
-              </div>
-            </div>
-
-            <Progress value={progress} className="w-full" />
-
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <div>
-                <h3 className="font-medium mb-2">Assignment Image</h3>
-                <div className="border rounded-lg p-4 bg-muted">
-                  <Image
-                    src={selectedAssignment.imageUrl}
-                    alt={selectedAssignment.title}
-                    className="w-full h-auto rounded"
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-4">
-                <div>
-                  <h3 className="font-medium mb-2">Type the text you see</h3>
-                  <Textarea
-                    value={typedText}
-                    onChange={(e) => setTypedText(e.target.value)}
-                    placeholder="Start typing here..."
-                    className="min-h-[200px]"
-                    disabled={!isStarted}
-                  />
-                </div>
-
-                <div className="flex gap-2">
-                  {!isStarted ? (
-                    <Button onClick={handleStart} className="w-full">
-                      Start Assignment
-                    </Button>
-                  ) : (
-                    <Button
-                      onClick={handleSubmit}
-                      className="w-full"
-                      disabled={typedText.trim().length === 0}
+          {assignments.length === 0 ? (
+            <p className="text-muted-foreground">
+              No assignments available. Please add assignments to continue.
+            </p>
+          ) : (
+            <div className="space-y-4">
+              <Select
+                onValueChange={(value) => {
+                  console.log("Practice Page - Selected assignment ID:", value);
+                  setSelectedAssignmentId(value);
+                }}
+              >
+                <SelectTrigger
+                  className={`cursor-pointer border-2 h-12 rounded-xl ${
+                    colorScheme === "dark"
+                      ? "bg-slate-800 border-slate-700"
+                      : "bg-slate-200 border-slate-300"
+                  }`}
+                >
+                  <SelectValue placeholder="Choose an assignment to practice" />
+                </SelectTrigger>
+                <SelectContent
+                  className={`scroll-smooth max-h-[50vh] border-2 rounded-xl ${
+                    colorScheme === "dark"
+                      ? "bg-slate-800 border-slate-700"
+                      : "bg-slate-200 border-slate-300"
+                  }`}
+                >
+                  {assignments.map((assignment) => (
+                    <SelectItem
+                      className={`cursor-pointer mb-2 border-2 h-12 rounded-xl ${
+                        colorScheme === "dark"
+                          ? "bg-slate-700 border-slate-600"
+                          : "bg-slate-200 border-slate-300"
+                      }`}
+                      key={assignment.id}
+                      value={assignment.id}
                     >
-                      Submit Assignment
-                    </Button>
-                  )}
-                </div>
-              </div>
+                      {assignment.title}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button
+                onClick={handleStartPractice}
+                className="w-full gradient-button"
+                disabled={!selectedAssignmentId}
+              >
+                Start Practice
+              </Button>
             </div>
-          </div>
+          )}
         </CardContent>
       </Card>
     </div>
   );
 };
 
-export default TypingPractice;
+export default PracticePage;

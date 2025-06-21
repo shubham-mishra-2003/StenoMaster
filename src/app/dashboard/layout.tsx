@@ -10,13 +10,20 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { useTheme } from "@/hooks/ThemeProvider";
 import Logo from "@/components/Logo";
 import { AuthProvider, useAuth } from "@/hooks/useAuth";
+import { usePathname } from "next/navigation";
 
 const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
-  const { colorScheme } = useTheme();
-  const { isAuthenticated, user, logout } = useAuth();
+  const { colorScheme } = useTheme(); // Hook 1
+  const { isAuthenticated, user, logout } = useAuth(); // Hook 2
+  const pathname = usePathname(); // Hook 3
+
+  const isAssignmentPage =
+    pathname &&
+    pathname.startsWith("/dashboard/student/practice/") &&
+    pathname.split("/").length === 5;
 
   if (!isAuthenticated || !user) {
-    return null;
+    return null; // Early return after all hooks
   }
 
   return (
@@ -24,23 +31,26 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
       <SidebarProvider>
         <div
           className={`min-h-screen flex w-full bg-gradient-to-br ${
-            colorScheme == "dark"
+            colorScheme === "dark"
               ? "from-slate-900 via-slate-800 to-slate-900"
               : "from-slate-50 via-blue-50 to-slate-100"
           }`}
         >
-          <AppSidebar />
+          {!isAssignmentPage && <AppSidebar />}
           <SidebarInset className="flex-1 flex flex-col">
             <nav className="border-b h-16 border-border/50 bg-card/80 backdrop-blur-sm sticky top-0 z-10">
               <div className="flex justify-between items-center h-16 px-4 lg:px-6">
                 <div className="flex items-center space-x-4">
-                  <SidebarTrigger
-                    className={`lg:hidden h-9 w-9 cursor-pointer ${
-                      colorScheme == "dark"
-                        ? "bg-slate-900/70 hover:bg-black/60"
-                        : "bg-slate-200 hover:bg-slate-300"
-                    }`}
-                  />
+                  {!isAssignmentPage && (
+                    <SidebarTrigger
+                      className={`lg:hidden h-9 w-9 cursor-pointer ${
+                        colorScheme === "dark"
+                          ? "bg-slate-900/70 hover:bg-black/60"
+                          : "bg-slate-200 hover:bg-slate-300"
+                      }`}
+                    />
+                  )}
+                  {isAssignmentPage && <Logo />}
                   <div className="flex gap-2 justify-center items-center">
                     <User className="h-4 w-4" />
                     <span className="hidden md:inline">{user.name}</span>
@@ -54,7 +64,7 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
                     size="sm"
                     onClick={logout}
                     className={`hidden h-9 sm:flex items-center justify-center cursor-pointer ${
-                      colorScheme == "dark"
+                      colorScheme === "dark"
                         ? "bg-slate-900/70 hover:bg-black/60"
                         : "bg-slate-200 hover:bg-slate-300"
                     }`}
@@ -67,7 +77,7 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
                     size="sm"
                     onClick={logout}
                     className={`sm:hidden h-9 w-9 flex items-center justify-center cursor-pointer ${
-                      colorScheme == "dark"
+                      colorScheme === "dark"
                         ? "bg-slate-900/70 hover:bg-black/60"
                         : "bg-slate-200 hover:bg-slate-300"
                     }`}
@@ -77,44 +87,9 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
                 </div>
               </div>
             </nav>
-
             <main className="flex-1 p-2 sm:p-4 lg:p-9 overflow-auto">
               <div className="max-w-7xl mx-auto">{children}</div>
             </main>
-
-            {/* <footer
-              className={`border-t border-border/50 bg-gradient-to-r backdrop-blur-sm ${
-                colorScheme == "dark"
-                  ? "from-blue-950/50 via-purple-950/30 to-indigo-950/50"
-                  : "from-blue-50/50 via-purple-50/30 to-indigo-50/50"
-              }`}
-            >
-              <div className="container mx-auto px-4 py-6">
-                <div className="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
-                  <Logo height={30} width={30} />
-                  <div className="text-center">
-                    <p className="text-sm text-muted-foreground">
-                      © 2024 StenoLearn. Empowering stenography education.
-                    </p>
-                  </div>
-
-                  <div className="flex space-x-4 text-sm text-muted-foreground">
-                    <a
-                      href="#"
-                      className="hover:text-primary transition-colors"
-                    >
-                      Help
-                    </a>
-                    <a
-                      href="#"
-                      className="hover:text-primary transition-colors"
-                    >
-                      Support
-                    </a>
-                  </div>
-                </div>
-              </div>
-            </footer> */}
           </SidebarInset>
         </div>
       </SidebarProvider>
