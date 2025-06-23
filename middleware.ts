@@ -1,6 +1,26 @@
 import { NextRequest, NextResponse } from "next/server";
+import { MongoClient } from "mongodb";
 
-export function middleware(request: NextRequest) {
+const MONGODB_URI = process.env.MONGODB_URI!;
+const mongoClient = new MongoClient(MONGODB_URI);
+
+class AuthProvider {
+  async getUser(userId: string) {
+    await mongoClient.connect();
+    const db = mongoClient.db("stenomaster");
+    const user = await db.collection("users").findOne({ clerkId: userId });
+    if (!user) throw new Error("User not found");
+    return {
+      id: user.clerkId,
+      type: user.type,
+      name: user.name,
+      email: user.email,
+      classIds: user.classIds
+    };
+  }
+}
+
+export async function middleware(request: NextRequest) {
   console.log("[Middleware] Request URL:", request.url);
   console.log("[Middleware] Request Pathname:", request.nextUrl.pathname);
   console.log("[Middleware] Cookies:", request.cookies.getAll());
@@ -25,8 +45,7 @@ export function middleware(request: NextRequest) {
   if (pathname.startsWith("/dashboard")) {
     if (!userCookie) {
       console.log(
-        "[Middleware] No user cookie found, redirecting to /?showLogin=true from:",
-        pathname
+        "[Middleware] No user cookie, redirecting to /?showLogin=true"
       );
       const url = new URL("/?showLogin=true", request.url);
       return NextResponse.redirect(url);
@@ -35,10 +54,11 @@ export function middleware(request: NextRequest) {
     try {
       const user = JSON.parse(userCookie);
       console.log("[Middleware] Parsed user:", user);
-      if (!user || !user.type || !["student", "teacher"].includes(user.type)) {
+      const authProvider = new AuthProvider();
+      const dbUser = await authProvider.getUser(user.id);
+      if (!dbUser || !["student", "teacher"].includes(dbUser.type)) {
         console.log(
-          "[Middleware] Invalid user data, redirecting to /?showLogin=true from:",
-          pathname
+          "[Middleware] Invalid user, redirecting to /?showLogin=true"
         );
         const response = NextResponse.redirect(
           new URL("/?showLogin=true", request.url)
@@ -52,12 +72,7 @@ export function middleware(request: NextRequest) {
       );
       return NextResponse.next();
     } catch (error) {
-      console.log(
-        "[Middleware] Error parsing cookie, redirecting to /?showLogin=true from:",
-        pathname,
-        "Error:",
-        error
-      );
+      console.log("[Middleware] Error validating user, redirecting:", error);
       const response = NextResponse.redirect(
         new URL("/?showLogin=true", request.url)
       );
@@ -66,32 +81,30 @@ export function middleware(request: NextRequest) {
     }
   }
 
-  // Check for landing page (/)
+  // Check for landing page
   if (pathname === "/") {
     if (userCookie) {
       try {
         const user = JSON.parse(userCookie);
         console.log("[Middleware] Parsed user on /:", user);
-        if (user && user.type && ["student", "teacher"].includes(user.type)) {
+        const authProvider = new AuthProvider();
+        const dbUser = await authProvider.getUser(user.id);
+        if (dbUser && ["student", "teacher"].includes(dbUser.type)) {
           const dashboardPath =
-            user.type === "teacher"
+            dbUser.type === "teacher"
               ? "/dashboard/teacher"
               : "/dashboard/student";
-          console.log(
-            "[Middleware] User authenticated, redirecting from / to:",
-            dashboardPath
-          );
-          const url = new URL(dashboardPath, request.url);
-          return NextResponse.redirect(url);
+          console.log("[Middleware] Redirecting to:", dashboardPath);
+          return NextResponse.redirect(new URL(dashboardPath, request.url));
         } else {
-          console.log("[Middleware] Invalid user data on /, clearing cookie");
+          console.log("[Middleware] Invalid user data, clearing cookie");
           const response = NextResponse.next();
           response.cookies.delete("StenoMaster-user");
           return response;
         }
       } catch (error) {
         console.log(
-          "[Middleware] Error parsing cookie on /, clearing cookie. Error:",
+          "[Middleware] Error parsing cookie, clearing cookie:",
           error
         );
         const response = NextResponse.next();
@@ -108,5 +121,5 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/", "/dashboard/:path*"],
+  matcher: ["/", "/dashboard/:path*"]
 };
