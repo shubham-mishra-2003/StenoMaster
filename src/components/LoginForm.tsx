@@ -165,8 +165,7 @@ const LoginForm = () => {
           : "bg-white/20 border-white/30"
       }`}
     >
-      <CardHeader className="flex flex-col gap-2 justify-center items-center pb-6">
-        <Logo />
+      <CardHeader className="flex flex-col gap-2 justify-center items-center pb-2">
         <p
           className={`font-bold ${
             colorScheme == "dark" ? "text-dark" : "text-light"

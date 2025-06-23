@@ -54,7 +54,7 @@ function LoginDialogContent({
       >
         <DialogHeader>
           <DialogTitle className="text-xl bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600 bg-clip-text text-transparent font-bold text-center">
-            Welcome Back
+            <Logo />
           </DialogTitle>
         </DialogHeader>
         <LoginForm />
