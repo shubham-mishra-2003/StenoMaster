@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, Suspense } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -24,15 +24,48 @@ import { useTheme } from "@/hooks/ThemeProvider";
 import Logo from "@/components/Logo";
 import { useSearchParams } from "next/navigation";
 
-const page = () => {
-  const { colorScheme } = useTheme();
+// Component to handle useSearchParams with Suspense
+function LoginDialogContent({
+  isLoginOpen,
+  setIsLoginOpen,
+}: {
+  isLoginOpen: boolean;
+  setIsLoginOpen: (open: boolean) => void;
+}) {
   const searchParams = useSearchParams();
-  const [isLoginOpen, setIsLoginOpen] = useState(false);
+  const { colorScheme } = useTheme();
 
   useEffect(() => {
     const showLogin = searchParams.get("showLogin") === "true";
     setIsLoginOpen(showLogin);
-  }, [searchParams]);
+  }, [searchParams, setIsLoginOpen]);
+
+  return (
+    <Dialog open={isLoginOpen} onOpenChange={setIsLoginOpen}>
+      <DialogTrigger asChild>
+        <Button className="gradient-button">Login</Button>
+      </DialogTrigger>
+      <DialogContent
+        className={`flex flex-col rounded-xl ${
+          colorScheme === "dark"
+            ? "max-h-[90vh] max-w-sm sm:max-w-lg bg-gradient-to-br from-gray-900/95 via-blue-950/90 to-purple-950/95 backdrop-blur-xl border-0 shadow-2xl"
+            : "max-h-[90vh] max-w-sm sm:max-w-lg bg-gradient-to-br from-white/95 via-blue-50/90 to-purple-50/95 backdrop-blur-xl border-0 shadow-2xl"
+        }`}
+      >
+        <DialogHeader>
+          <DialogTitle className="text-xl bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600 bg-clip-text text-transparent font-bold text-center">
+            Welcome Back
+          </DialogTitle>
+        </DialogHeader>
+        <LoginForm />
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+const Page = () => {
+  const { colorScheme } = useTheme();
+  const [isLoginOpen, setIsLoginOpen] = useState(false);
 
   const features = [
     {
@@ -96,25 +129,12 @@ const page = () => {
             <Logo />
             <div className="flex items-center space-x-4">
               <ThemeToggle />
-              <Dialog open={isLoginOpen} onOpenChange={setIsLoginOpen}>
-                <DialogTrigger asChild>
-                  <Button className="gradient-button">Login</Button>
-                </DialogTrigger>
-                <DialogContent
-                  className={`flex flex-col rounded-xl ${
-                    colorScheme == "dark"
-                      ? "max-h-[90vh] max-w-sm sm:max-w-lg bg-gradient-to-br from-gray-900/95 via-blue-950/90 to-purple-950/95 backdrop-blur-xl border-0 shadow-2xl"
-                      : "max-h-[90vh] max-w-sm sm:max-w-lg bg-gradient-to-br from-white/95 via-blue-50/90 to-purple-50/95 backdrop-blur-xl border-0 shadow-2xl"
-                  }`}
-                >
-                  <DialogHeader>
-                    <DialogTitle className="text-xl bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600 bg-clip-text text-transparent font-bold text-center">
-                      Welcome Back
-                    </DialogTitle>
-                  </DialogHeader>
-                  <LoginForm />
-                </DialogContent>
-              </Dialog>
+              <Suspense fallback={<Button disabled>Loading...</Button>}>
+                <LoginDialogContent
+                  isLoginOpen={isLoginOpen}
+                  setIsLoginOpen={setIsLoginOpen}
+                />
+              </Suspense>
             </div>
           </div>
         </div>
@@ -157,7 +177,7 @@ const page = () => {
 
       <section
         className={`py-12 sm:py-16 lg:py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-r backdrop-blur-sm ${
-          colorScheme == "dark"
+          colorScheme === "dark"
             ? "from-gray-900/60 via-blue-950/40 to-purple-950/40"
             : "from-white/60 via-blue-50/40 to-purple-50/40"
         }`}
@@ -183,7 +203,7 @@ const page = () => {
                 <Card
                   key={index}
                   className={`relative overflow-hidden bg-gradient-to-br backdrop-blur-xl border-0 group ${
-                    colorScheme == "dark"
+                    colorScheme === "dark"
                       ? "from-gray-900/80 via-blue-950/60 to-purple-950/60"
                       : "from-white/80 via-blue-50/60 to-purple-50/60"
                   }`}
@@ -227,7 +247,7 @@ const page = () => {
         <div className="max-w-4xl mx-auto text-center">
           <Card
             className={`relative overflow-hidden bg-gradient-to-br backdrop-blur-xl border-0 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1 ${
-              colorScheme == "dark"
+              colorScheme === "dark"
                 ? "from-gray-900/80 via-blue-950/60 to-purple-950/60"
                 : "from-white/80 via-blue-50/60 to-purple-50/60"
             }`}
@@ -257,7 +277,6 @@ const page = () => {
         </div>
       </section>
 
-      {/* Footer */}
       <footer
         className={`border-t border-border/50 py-6 sm:py-8 px-4 sm:px-6 lg:px-8 ${
           colorScheme === "dark"
@@ -277,4 +296,4 @@ const page = () => {
   );
 };
 
-export default page;
+export default Page;
