@@ -10,6 +10,7 @@ import React, {
 import { User, AuthState } from "@/types";
 import { useRouter } from "next/navigation";
 import { toast } from "@/hooks/use-toast";
+import { useSignIn, useSignUp, useSession } from "@clerk/nextjs";
 
 interface AuthContextType extends AuthState {
   login: (credentials: {
@@ -24,7 +25,6 @@ interface AuthContextType extends AuthState {
     password: string;
     confirmPassword: string;
   }) => void;
-  logout: () => void;
   user: User | null;
 }
 
@@ -38,47 +38,51 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     user: null,
   });
   const router = useRouter();
+  const {
+    signIn,
+    isLoaded: isSignInLoaded,
+    setActive: setActiveSessionLogin,
+  } = useSignIn();
+  const {
+    signUp,
+    isLoaded: isSignUpLoaded,
+    setActive: setActiveSessionSignup,
+  } = useSignUp();
+  const { session } = useSession();
 
-  // Initialize auth state from cookie
+  // Initialize auth state from Clerk session
   useEffect(() => {
-    const getCookie = (name: string) => {
-      const value = `; ${document.cookie}`;
-      const parts = value.split(`; ${name}=`);
-      if (parts.length === 2) return parts.pop()?.split(";").shift();
-      return null;
-    };
-
-    const savedUser = getCookie("StenoMaster-user");
-    console.log(
-      "[useAuth] Initial cookie check - StenoMaster-user:",
-      savedUser
-    );
-    if (savedUser) {
-      try {
-        const user = JSON.parse(savedUser);
-        setAuthState({ isAuthenticated: true, user });
-        console.log("[useAuth] User loaded from cookie:", user);
-      } catch (error) {
-        console.log(
-          "[useAuth] Error parsing cookie, clearing it. Error:",
-          error
-        );
-        document.cookie = "StenoMaster-user=; Max-Age=0; path=/";
-      }
+    if (session) {
+      const clerkUser = session.user;
+      const user: User = {
+        id: clerkUser.id,
+        name:
+          clerkUser.fullName ||
+          clerkUser.emailAddresses[0]?.emailAddress.split("@")[0] ||
+          "User",
+        email: clerkUser.emailAddresses[0]?.emailAddress || "",
+        type:
+          clerkUser.publicMetadata.role === "teacher" ? "teacher" : "student",
+      };
+      setAuthState({ isAuthenticated: true, user });
+      console.log("[useAuth] User loaded from Clerk session:", user);
     } else {
-      console.log(
-        "[useAuth] No StenoMaster-user cookie found on initialization"
-      );
+      console.log("[useAuth] No active Clerk session found on initialization");
     }
-  }, []);
+  }, [session]);
 
   const login = useCallback(
-    (credentials: {
+    async (credentials: {
       id?: string;
       email?: string;
       password: string;
       type: "student" | "teacher";
     }) => {
+      if (!isSignInLoaded) {
+        console.log("[useAuth] SignIn not loaded yet");
+        return;
+      }
+
       const { id, email, password, type } = credentials;
 
       if (type === "student" && (!id?.trim() || !password.trim())) {
@@ -99,44 +103,68 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         return;
       }
 
-      // Mock authentication
-      const user: User = {
-        id: type === "student" ? id! : email!,
-        name: type === "student" ? `Student ${id}` : `Teacher`,
-        email: type === "student" ? `${id}@student.StenoMaster.com` : email!,
-        type,
-      };
+      const loginEmail =
+        type === "student" ? `${id}@student.stenomaster.com` : email!;
 
-      setAuthState({ isAuthenticated: true, user });
-      const cookieValue = JSON.stringify(user);
-      document.cookie = `StenoMaster-user=${cookieValue}; Max-Age=${
-        7 * 24 * 60 * 60
-      }; path=/; SameSite=Lax`;
-      console.log(
-        "[useAuth] Set cookie on login:",
-        `StenoMaster-user=${cookieValue}`
-      );
+      try {
+        const signInAttempt = await signIn.create({
+          identifier: loginEmail,
+          password,
+          strategy: "password",
+        });
 
-      const dashboardPath =
-        type === "teacher" ? "/dashboard/teacher" : "/dashboard/student";
-      router.push(dashboardPath);
-      router.refresh();
+        if (signInAttempt.status === "complete") {
+          await setActiveSessionLogin({
+            session: signInAttempt.createdSessionId,
+          });
+          const user: User = {
+            id: loginEmail,
+            name: type === "student" ? `Student ${id}` : `Teacher`,
+            email: loginEmail,
+            type,
+          };
+          setAuthState({ isAuthenticated: true, user });
 
-      toast({
-        title: "Welcome!",
-        description: `Logged in as ${user.name}`,
-      });
+          const dashboardPath =
+            type === "teacher" ? "/dashboard/teacher" : "/dashboard/student";
+          router.push(dashboardPath);
+          router.refresh();
+
+          toast({
+            title: "Welcome!",
+            description: `Logged in as ${user.name}`,
+          });
+        } else {
+          throw new Error("Authentication failed. Please try again.");
+        }
+      } catch (error) {
+        const errorMessage =
+          error instanceof Error
+            ? error.message
+            : "An unexpected error occurred";
+        toast({
+          title: "Error",
+          description: errorMessage,
+          variant: "destructive",
+        });
+        console.log("[useAuth] Login error:", errorMessage);
+      }
     },
-    [router]
+    [isSignInLoaded, router, setActiveSessionLogin]
   );
 
   const signup = useCallback(
-    (credentials: {
+    async (credentials: {
       name: string;
       email: string;
       password: string;
       confirmPassword: string;
     }) => {
+      if (!isSignUpLoaded) {
+        console.log("[useAuth] SignUp not loaded yet");
+        return;
+      }
+
       const { name, email, password, confirmPassword } = credentials;
 
       if (
@@ -171,46 +199,56 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         return;
       }
 
-      // Mock signup
-      const user: User = {
-        id: email,
-        name,
-        email,
-        type: "teacher",
-      };
+      try {
+        const signUpAttempt = await signUp.create({
+          emailAddress: email,
+          password,
+          firstName: name.split(" ")[0],
+          lastName: name.split(" ").slice(1).join(" ") || "",
+          unsafeMetadata: { role: "teacher" },
+        });
 
-      setAuthState({ isAuthenticated: true, user });
-      const cookieValue = JSON.stringify(user);
-      document.cookie = `StenoMaster-user=${cookieValue}; Max-Age=${
-        7 * 24 * 60 * 60
-      }; path=/; SameSite=Lax`;
-      console.log(
-        "[useAuth] Set cookie on signup:",
-        `StenoMaster-user=${cookieValue}`
-      );
+        if (signUpAttempt.status === "complete") {
+          await setActiveSessionSignup({
+            session: signUpAttempt.createdSessionId,
+          });
+          const user: User = {
+            id: email,
+            name,
+            email,
+            type: "teacher",
+          };
+          setAuthState({ isAuthenticated: true, user });
 
-      router.push("/dashboard/teacher");
-      router.refresh();
+          router.push("/dashboard/teacher");
+          router.refresh();
 
-      toast({
-        title: "Account Created!",
-        description: `Welcome to StenoMaster, ${user.name}!`,
-      });
+          toast({
+            title: "Account Created!",
+            description: `Welcome to StenoMaster, ${user.name}!`,
+          });
+        } else {
+          throw new Error("Sign-up failed. Please try again.");
+        }
+      } catch (error) {
+        const errorMessage =
+          error instanceof Error
+            ? error.message
+            : "An unexpected error occurred";
+        toast({
+          title: "Error",
+          description: errorMessage,
+          variant: "destructive",
+        });
+        console.log("[useAuth] Signup error:", errorMessage);
+      }
     },
-    [router]
+    [isSignUpLoaded, router, setActiveSessionSignup]
   );
-
-  const logout = useCallback(() => {
-    setAuthState({ isAuthenticated: false, user: null });
-    document.cookie = "StenoMaster-user=; Max-Age=0; path=/; SameSite=Lax";
-    console.log("[useAuth] Cleared cookie on logout");
-    router.push("/?showLogin=true");
-    router.refresh();
-  }, [router]);
 
   return (
     <AuthContext.Provider
-      value={{ ...authState, login, signup, logout, user: authState.user }}
+      value={{ ...authState, login, signup, user: authState.user }}
     >
       {children}
     </AuthContext.Provider>
