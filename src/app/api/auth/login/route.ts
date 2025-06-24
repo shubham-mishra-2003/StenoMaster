@@ -34,12 +34,11 @@ export async function POST(request: NextRequest) {
     // Validate userType
     validateUserType(body.userType);
 
-    // Debug: Log query parameters
     console.log("Login query:", { email: body.email, userType: body.userType });
 
     const user: IUser | null = await User.findOne({
       email: body.email,
-    }).lean<IUser>();
+    });
 
     if (!user) {
       return NextResponse.json(
@@ -53,17 +52,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Debug: Log found user
     console.log("Found user:", user);
 
     // Check userType match, with fallback for undefined
     if (!user.userType) {
-      // Update user in database to set userType
       await User.updateOne(
         { _id: user._id },
         { $set: { userType: body.userType } }
       );
-      user.userType = body.userType; // Update local user object
+      user.userType = body.userType;
       console.log("Updated userType to:", body.userType);
     } else if (user.userType !== body.userType) {
       return NextResponse.json(
@@ -82,12 +79,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Generate JWT
+    // Generate JWT and store in database
     const token = jwt.sign(
       { userId: user.userId, userType: user.userType },
       process.env.JWT_SECRET || "fallback-secret-key",
       { expiresIn: "1h" }
     );
+
+    // Update user with new session token, invalidating previous sessions
+    await User.updateOne({ _id: user._id }, { $set: { sessionToken: token } });
 
     return NextResponse.json(
       {

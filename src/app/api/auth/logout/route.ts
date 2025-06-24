@@ -2,19 +2,18 @@ import { NextRequest, NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/database/mongoose";
 import { handleError } from "@/lib/utils";
 import User from "@/lib/database/models/user.model";
-import { deleteUser } from "@/lib/actions/user.action";
 import jwt from "jsonwebtoken";
 
-interface DeleteRequestBody {
-  userId: string; // Changed to userId for consistency
-  token: string; // Require token for authentication
+interface LogoutRequestBody {
+  userId: string;
+  token: string;
 }
 
 export async function POST(request: NextRequest) {
   try {
     await connectToDatabase();
 
-    const body: DeleteRequestBody = await request.json();
+    const body: LogoutRequestBody = await request.json();
 
     if (!body.userId || !body.token) {
       return NextResponse.json(
@@ -35,30 +34,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const user = await User.findOne({
-      userId: body.userId,
-      sessionToken: body.token,
-    });
-    if (!user) {
-      return NextResponse.json(
-        { status: "error", message: "User not found or invalid session" },
-        { status: 404 }
-      );
-    }
+    // Invalidate session token
+    await User.updateOne(
+      { userId: body.userId, sessionToken: body.token },
+      { $set: { sessionToken: null } }
+    );
 
-    // Allow teachers to delete students, or users to delete their own account
-    if (decoded.userType === "teacher" || decoded.userId === body.userId) {
-      await deleteUser(body.userId);
-      return NextResponse.json(
-        { status: "success", message: "Account deleted successfully" },
-        { status: 200 }
-      );
-    } else {
-      return NextResponse.json(
-        { status: "error", message: "Unauthorized to delete this account" },
-        { status: 403 }
-      );
-    }
+    return NextResponse.json(
+      { status: "success", message: "Logged out successfully" },
+      { status: 200 }
+    );
   } catch (error: any) {
     handleError(error);
     return NextResponse.json(

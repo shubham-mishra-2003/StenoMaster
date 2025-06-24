@@ -35,7 +35,6 @@ export async function POST(request: NextRequest) {
     // Validate userType
     validateUserType(body.userType);
 
-    // Debug: Log input body
     console.log("Register input:", body);
 
     const existingUser = await User.findOne({ email: body.email });
@@ -61,11 +60,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Generate JWT
+    // Generate JWT and store in database
     const token = jwt.sign(
       { userId: newUser.userId, userType: newUser.userType },
       process.env.JWT_SECRET || "fallback-secret-key",
       { expiresIn: "1h" }
+    );
+
+    await User.updateOne(
+      { _id: newUser._id },
+      { $set: { sessionToken: token } }
     );
 
     return NextResponse.json(

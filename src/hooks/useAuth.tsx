@@ -7,25 +7,47 @@ import React, {
   useEffect,
   useCallback,
 } from "react";
-import { User, AuthState } from "@/types";
 import { useRouter } from "next/navigation";
 import { toast } from "@/hooks/use-toast";
 
+interface User {
+  _id: string;
+  userId: string;
+  email: string;
+  fullName?: string;
+  userType: "student" | "teacher";
+  photo?: string;
+}
+
+interface AuthState {
+  isAuthenticated: boolean;
+  user: User | null;
+  token: string | null;
+}
+
 interface AuthContextType extends AuthState {
   login: (credentials: {
-    id?: string;
-    email?: string;
-    password: string;
-    type: "student" | "teacher";
-  }) => void;
-  signup: (credentials: {
-    name: string;
     email: string;
     password: string;
+    userType: "student" | "teacher";
+  }) => Promise<void>;
+  signup: (credentials: {
+    email: string;
+    fullName: string;
+    password: string;
     confirmPassword: string;
-  }) => void;
-  logout: () => void;
-  user: User | null;
+    userType: "teacher" | "student";
+    photo?: string;
+  }) => Promise<void>;
+  createStudent: (credentials: {
+    email: string;
+    fullName: string;
+    password: string;
+    confirmPassword: string;
+    photo?: string;
+  }) => Promise<void>;
+  logout: () => Promise<void>;
+  deleteAccount: (userId: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -36,118 +58,140 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   const [authState, setAuthState] = useState<AuthState>({
     isAuthenticated: false,
     user: null,
+    token: null,
   });
   const router = useRouter();
 
-  // Initialize auth state from cookie
+  // Initialize auth state from localStorage
   useEffect(() => {
-    const getCookie = (name: string) => {
-      const value = `; ${document.cookie}`;
-      const parts = value.split(`; ${name}=`);
-      if (parts.length === 2) return parts.pop()?.split(";").shift();
-      return null;
+    const initializeAuth = async () => {
+      const token = localStorage.getItem("StenoMaster-token");
+      const user = localStorage.getItem("StenoMaster-user");
+      console.log(
+        "[useAuth] Initial localStorage check - token:",
+        token,
+        "user:",
+        user
+      );
+
+      if (token && user) {
+        try {
+          const userData = JSON.parse(user);
+          // Verify session token with backend
+          const response = await fetch("/api/auth/validate", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ token }),
+          });
+          const result = await response.json();
+          if (response.ok && result.status === "success") {
+            setAuthState({ isAuthenticated: true, user: userData, token });
+            console.log("[useAuth] Session validated, user:", userData);
+          } else {
+            // Invalid session, clear localStorage
+            localStorage.removeItem("StenoMaster-token");
+            localStorage.removeItem("StenoMaster-user");
+            setAuthState({ isAuthenticated: false, user: null, token: null });
+            console.log("[useAuth] Invalid session, cleared localStorage");
+          }
+        } catch (error) {
+          console.error("[useAuth] Error validating session:", error);
+          localStorage.removeItem("StenoMaster-token");
+          localStorage.removeItem("StenoMaster-user");
+          setAuthState({ isAuthenticated: false, user: null, token: null });
+        }
+      } else {
+        console.log("[useAuth] No token or user found in localStorage");
+      }
     };
 
-    const savedUser = getCookie("StenoMaster-user");
-    console.log(
-      "[useAuth] Initial cookie check - StenoMaster-user:",
-      savedUser
-    );
-    if (savedUser) {
-      try {
-        const user = JSON.parse(savedUser);
-        setAuthState({ isAuthenticated: true, user });
-        console.log("[useAuth] User loaded from cookie:", user);
-      } catch (error) {
-        console.log(
-          "[useAuth] Error parsing cookie, clearing it. Error:",
-          error
-        );
-        document.cookie = "StenoMaster-user=; Max-Age=0; path=/";
-      }
-    } else {
-      console.log(
-        "[useAuth] No StenoMaster-user cookie found on initialization"
-      );
-    }
+    initializeAuth();
   }, []);
 
   const login = useCallback(
-    (credentials: {
-      id?: string;
-      email?: string;
+    async (credentials: {
+      email: string;
       password: string;
-      type: "student" | "teacher";
+      userType: "student" | "teacher";
     }) => {
-      const { id, email, password, type } = credentials;
+      const { email, password, userType } = credentials;
 
-      if (type === "student" && (!id?.trim() || !password.trim())) {
+      if (!email?.trim() || !password.trim() || !userType) {
         toast({
           title: "Error",
-          description: "Please enter both Student ID and password.",
+          description: "Please enter email, password, and user type.",
           variant: "destructive",
         });
         return;
       }
 
-      if (type === "teacher" && (!email?.trim() || !password.trim())) {
+      try {
+        const response = await fetch("/api/auth/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, password, userType }),
+        });
+
+        const result = await response.json();
+        if (response.ok && result.status === "success") {
+          const { user, token } = result.data;
+          setAuthState({ isAuthenticated: true, user, token });
+          localStorage.setItem("StenoMaster-token", token);
+          localStorage.setItem("StenoMaster-user", JSON.stringify(user));
+          console.log("[useAuth] Login successful, user:", user);
+
+          const dashboardPath =
+            userType === "teacher"
+              ? "/dashboard/teacher"
+              : "/dashboard/student";
+          router.push(dashboardPath);
+          router.refresh();
+
+          toast({
+            title: "Welcome!",
+            description: `Logged in as ${user.fullName || user.email}`,
+          });
+        } else {
+          toast({
+            title: "Error",
+            description: result.message || "Login failed",
+            variant: "destructive",
+          });
+        }
+      } catch (error) {
+        console.error("[useAuth] Login error:", error);
         toast({
           title: "Error",
-          description: "Please enter both email and password.",
+          description: "An unexpected error occurred during login.",
           variant: "destructive",
         });
-        return;
       }
-
-      // Mock authentication
-      const user: User = {
-        id: type === "student" ? id! : email!,
-        name: type === "student" ? `Student ${id}` : `Teacher`,
-        email: type === "student" ? `${id}@student.StenoMaster.com` : email!,
-        type,
-      };
-
-      setAuthState({ isAuthenticated: true, user });
-      const cookieValue = JSON.stringify(user);
-      document.cookie = `StenoMaster-user=${cookieValue}; Max-Age=${
-        7 * 24 * 60 * 60
-      }; path=/; SameSite=Lax`;
-      console.log(
-        "[useAuth] Set cookie on login:",
-        `StenoMaster-user=${cookieValue}`
-      );
-
-      const dashboardPath =
-        type === "teacher" ? "/dashboard/teacher" : "/dashboard/student";
-      router.push(dashboardPath);
-      router.refresh();
-
-      toast({
-        title: "Welcome!",
-        description: `Logged in as ${user.name}`,
-      });
     },
     [router]
   );
 
   const signup = useCallback(
-    (credentials: {
-      name: string;
+    async (credentials: {
       email: string;
+      fullName: string;
       password: string;
       confirmPassword: string;
+      userType: "teacher" | "student";
+      photo?: string;
     }) => {
-      const { name, email, password, confirmPassword } = credentials;
+      const { email, fullName, password, confirmPassword, userType, photo } =
+        credentials;
 
       if (
-        !name.trim() ||
         !email.trim() ||
+        !fullName.trim() ||
         !password.trim() ||
-        !confirmPassword.trim()
+        !confirmPassword.trim() ||
+        !userType
       ) {
         toast({
           title: "Error",
-          description: "Please fill in all fields.",
+          description: "Please fill in all required fields.",
           variant: "destructive",
         });
         return;
@@ -171,46 +215,280 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         return;
       }
 
-      // Mock signup
-      const user: User = {
-        id: email,
-        name,
-        email,
-        type: "teacher",
-      };
+      try {
+        const response = await fetch("/api/auth/register", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, fullName, password, userType, photo }),
+        });
 
-      setAuthState({ isAuthenticated: true, user });
-      const cookieValue = JSON.stringify(user);
-      document.cookie = `StenoMaster-user=${cookieValue}; Max-Age=${
-        7 * 24 * 60 * 60
-      }; path=/; SameSite=Lax`;
-      console.log(
-        "[useAuth] Set cookie on signup:",
-        `StenoMaster-user=${cookieValue}`
-      );
+        const result = await response.json();
+        if (response.ok && result.status === "success") {
+          const { user, token } = result.data;
+          setAuthState({ isAuthenticated: true, user, token });
+          localStorage.setItem("StenoMaster-token", token);
+          localStorage.setItem("StenoMaster-user", JSON.stringify(user));
+          console.log("[useAuth] Signup successful, user:", user);
 
-      router.push("/dashboard/teacher");
-      router.refresh();
+          const dashboardPath =
+            userType === "teacher"
+              ? "/dashboard/teacher"
+              : "/dashboard/student";
+          router.push(dashboardPath);
+          router.refresh();
 
-      toast({
-        title: "Account Created!",
-        description: `Welcome to StenoMaster, ${user.name}!`,
-      });
+          toast({
+            title: "Account Created!",
+            description: `Welcome to StenoMaster, ${user.fullName}!`,
+          });
+        } else {
+          toast({
+            title: "Error",
+            description: result.message || "Signup failed",
+            variant: "destructive",
+          });
+        }
+      } catch (error) {
+        console.error("[useAuth] Signup error:", error);
+        toast({
+          title: "Error",
+          description: "An unexpected error occurred during signup.",
+          variant: "destructive",
+        });
+      }
     },
     [router]
   );
 
-  const logout = useCallback(() => {
-    setAuthState({ isAuthenticated: false, user: null });
-    document.cookie = "StenoMaster-user=; Max-Age=0; path=/; SameSite=Lax";
-    console.log("[useAuth] Cleared cookie on logout");
-    router.push("/?showLogin=true");
-    router.refresh();
-  }, [router]);
+  const createStudent = useCallback(
+    async (credentials: {
+      email: string;
+      fullName: string;
+      password: string;
+      confirmPassword: string;
+      photo?: string;
+    }) => {
+      if (
+        !authState.isAuthenticated ||
+        authState.user?.userType !== "teacher"
+      ) {
+        toast({
+          title: "Error",
+          description: "Only teachers can create student accounts.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const { email, fullName, password, confirmPassword, photo } = credentials;
+
+      if (
+        !email.trim() ||
+        !fullName.trim() ||
+        !password.trim() ||
+        !confirmPassword.trim()
+      ) {
+        toast({
+          title: "Error",
+          description: "Please fill in all required fields.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (password !== confirmPassword) {
+        toast({
+          title: "Error",
+          description: "Passwords do not match.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (password.length < 6) {
+        toast({
+          title: "Error",
+          description: "Password must be at least 6 characters long.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      try {
+        const response = await fetch("/api/auth/register", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${authState.token}`,
+          },
+          body: JSON.stringify({
+            email,
+            fullName,
+            password,
+            userType: "student",
+            photo,
+          }),
+        });
+
+        const result = await response.json();
+        if (response.ok && result.status === "success") {
+          toast({
+            title: "Success",
+            description: `Student ${fullName} created successfully!`,
+          });
+        } else {
+          toast({
+            title: "Error",
+            description: result.message || "Failed to create student",
+            variant: "destructive",
+          });
+        }
+      } catch (error) {
+        console.error("[useAuth] Create student error:", error);
+        toast({
+          title: "Error",
+          description:
+            "An unexpected error occurred while creating the student.",
+          variant: "destructive",
+        });
+      }
+    },
+    [authState]
+  );
+
+  const logout = useCallback(async () => {
+    if (!authState.isAuthenticated || !authState.user || !authState.token) {
+      setAuthState({ isAuthenticated: false, user: null, token: null });
+      localStorage.removeItem("StenoMaster-token");
+      localStorage.removeItem("StenoMaster-user");
+      router.push("/?showLogin=true");
+      router.refresh();
+      return;
+    }
+
+    try {
+      const response = await fetch("/api/auth/logout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId: authState.user.userId,
+          token: authState.token,
+        }),
+      });
+
+      if (response.ok) {
+        setAuthState({ isAuthenticated: false, user: null, token: null });
+        localStorage.removeItem("StenoMaster-token");
+        localStorage.removeItem("StenoMaster-user");
+        console.log("[useAuth] Logout successful");
+        router.push("/?showLogin=true");
+        router.refresh();
+
+        toast({
+          title: "Logged Out",
+          description: "You have been logged out successfully.",
+        });
+      } else {
+        const result = await response.json();
+        toast({
+          title: "Error",
+          description: result.message || "Logout failed",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error("[useAuth] Logout error:", error);
+      toast({
+        title: "Error",
+        description: "An unexpected error occurred during logout.",
+        variant: "destructive",
+      });
+    }
+  }, [authState, router]);
+
+  const deleteAccount = useCallback(
+    async (userId: string) => {
+      if (!authState.isAuthenticated || !authState.user || !authState.token) {
+        toast({
+          title: "Error",
+          description: "You must be logged in to delete an account.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (
+        authState.user.userType !== "teacher" &&
+        authState.user.userId !== userId
+      ) {
+        toast({
+          title: "Error",
+          description:
+            "You can only delete your own account or student accounts as a teacher.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      try {
+        const response = await fetch("/api/auth/delete", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${authState.token}`,
+          },
+          body: JSON.stringify({ userId, token: authState.token }),
+        });
+
+        const result = await response.json();
+        if (response.ok && result.status === "success") {
+          if (authState.user.userId === userId) {
+            // User deleted their own account
+            setAuthState({ isAuthenticated: false, user: null, token: null });
+            localStorage.removeItem("StenoMaster-token");
+            localStorage.removeItem("StenoMaster-user");
+            router.push("/?showLogin=true");
+            router.refresh();
+            toast({
+              title: "Account Deleted",
+              description: "Your account has been deleted successfully.",
+            });
+          } else {
+            toast({
+              title: "Success",
+              description: "Student account deleted successfully.",
+            });
+          }
+        } else {
+          toast({
+            title: "Error",
+            description: result.message || "Failed to delete account",
+            variant: "destructive",
+          });
+        }
+      } catch (error) {
+        console.error("[useAuth] Delete account error:", error);
+        toast({
+          title: "Error",
+          description:
+            "An unexpected error occurred while deleting the account.",
+          variant: "destructive",
+        });
+      }
+    },
+    [authState, router]
+  );
 
   return (
     <AuthContext.Provider
-      value={{ ...authState, login, signup, logout, user: authState.user }}
+      value={{
+        ...authState,
+        login,
+        signup,
+        createStudent,
+        logout,
+        deleteAccount,
+      }}
     >
       {children}
     </AuthContext.Provider>

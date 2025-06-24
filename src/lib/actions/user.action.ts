@@ -5,6 +5,7 @@ import User, { IUser } from "../database/models/user.model";
 import { connectToDatabase } from "../database/mongoose";
 import { handleError } from "../utils";
 import bcrypt from "bcrypt";
+import jwt from "jsonwebtoken";
 
 declare type CreateUserParams = {
   email: string;
@@ -30,7 +31,6 @@ export async function createUser(user: CreateUserParams) {
   try {
     await connectToDatabase();
     const hashedPassword = await bcrypt.hash(user.password, 10);
-    // Explicitly construct the user object to ensure userType is included
     const userData = {
       email: user.email,
       fullName: user.fullName,
@@ -38,11 +38,9 @@ export async function createUser(user: CreateUserParams) {
       password: hashedPassword,
       userType: user.userType,
     };
-    // Debug: Log user data before creation
     console.log("User data to create:", userData);
     const newUser = await User.create(userData);
     const userObject = newUser.toObject();
-    // Debug: Log created user
     console.log("Created user:", userObject);
     return userObject;
   } catch (error) {
@@ -68,6 +66,25 @@ export async function getUserByEmail(email: string) {
     await connectToDatabase();
     const user = await User.findOne({ email }).lean<IUser>();
     if (!user) throw new Error("User not found");
+    return user;
+  } catch (error) {
+    handleError(error);
+    throw error;
+  }
+}
+
+export async function validateSessionToken(token: string) {
+  try {
+    await connectToDatabase();
+    const decoded = jwt.verify(
+      token,
+      process.env.JWT_SECRET || "fallback-secret-key"
+    ) as { userId: string; userType: string };
+    const user = await User.findOne({
+      userId: decoded.userId,
+      sessionToken: token,
+    }).lean<IUser>();
+    if (!user) throw new Error("Invalid or expired session token");
     return user;
   } catch (error) {
     handleError(error);
@@ -122,6 +139,7 @@ export async function updateCredits(userId: string, creditFee: number) {
     throw error;
   }
 }
+
 export async function getAllUsers() {
   try {
     await connectToDatabase();
@@ -132,6 +150,7 @@ export async function getAllUsers() {
     throw error;
   }
 }
+
 export async function getUsersByType(userType: "teacher" | "student") {
   try {
     await connectToDatabase();
@@ -142,6 +161,7 @@ export async function getUsersByType(userType: "teacher" | "student") {
     throw error;
   }
 }
+
 export async function getUserByUsername(username: string) {
   try {
     await connectToDatabase();
@@ -153,13 +173,14 @@ export async function getUserByUsername(username: string) {
     throw error;
   }
 }
+
 export async function updateUserPassword(userId: string, newPassword: string) {
   try {
     await connectToDatabase();
     const hashedPassword = await bcrypt.hash(newPassword, 10);
     const updatedUser = await User.findOneAndUpdate(
       { userId },
-      { password: hashedPassword },
+      { password: hashedPassword, sessionToken: null }, // Invalidate session on password change
       { new: true }
     ).lean<IUser>();
     if (!updatedUser) throw new Error("User password update failed");
