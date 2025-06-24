@@ -6,10 +6,10 @@ import { connectToDatabase } from "../database/mongoose";
 import { handleError } from "../utils";
 
 declare type CreateUserParams = {
-  clerkId: string;
   email: string;
   fullName?: string;
   photo?: string;
+  password: string;
 };
 
 declare type UpdateUserParams = {
@@ -31,7 +31,7 @@ export async function createUser(user: CreateUserParams) {
 export async function getUserById(userId: string) {
   try {
     await connectToDatabase();
-    const user = await User.findOne({ clerkId: userId });
+    const user = await User.findOne({ userId });
     if (!user) throw new Error("User not found");
     return JSON.parse(JSON.stringify(user));
   } catch (error) {
@@ -39,10 +39,21 @@ export async function getUserById(userId: string) {
   }
 }
 
-export async function updateUser(clerkId: string, user: UpdateUserParams) {
+export async function getUserByEmail(email: string) {
   try {
     await connectToDatabase();
-    const updatedUser = await User.findOneAndUpdate({ clerkId }, user, {
+    const user = await User.findOne({ email });
+    if (!user) throw new Error("User not found");
+    return JSON.parse(JSON.stringify(user));
+  } catch (error) {
+    handleError(error);
+  }
+}
+
+export async function updateUser(userId: string, user: UpdateUserParams) {
+  try {
+    await connectToDatabase();
+    const updatedUser = await User.findOneAndUpdate({ userId }, user, {
       new: true,
     });
     if (!updatedUser) throw new Error("User update failed");
@@ -52,10 +63,10 @@ export async function updateUser(clerkId: string, user: UpdateUserParams) {
   }
 }
 
-export async function deleteUser(clerkId: string) {
+export async function deleteUser(userId: string) {
   try {
     await connectToDatabase();
-    const userToDelete = await User.findOne({ clerkId });
+    const userToDelete = await User.findOne({ userId });
     if (!userToDelete) {
       throw new Error("User not found");
     }
@@ -71,7 +82,7 @@ export async function updateCredits(userId: string, creditFee: number) {
   try {
     await connectToDatabase();
     const updatedUserCredits = await User.findOneAndUpdate(
-      { _id: userId },
+      { userId },
       { $inc: { creditBalance: creditFee } },
       { new: true }
     );

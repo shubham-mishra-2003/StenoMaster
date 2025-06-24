@@ -1,10 +1,12 @@
 import { Schema, model, models } from "mongoose";
+import { nanoid } from "nanoid";
 
 const UserSchema = new Schema({
-  clerkId: {
+  userId: {
     type: String,
     required: true,
     unique: true,
+    default: () => nanoid(),
   },
   email: {
     type: String,
@@ -16,6 +18,10 @@ const UserSchema = new Schema({
   },
   fullName: {
     type: String,
+  },
+  password: {
+    type: String,
+    required: true,
   },
 });
 
