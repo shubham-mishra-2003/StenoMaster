@@ -1,7 +1,16 @@
-import { Schema, model, models } from "mongoose";
+import { Schema, model, models, Document } from "mongoose";
 import { nanoid } from "nanoid";
 
-const UserSchema = new Schema({
+export interface IUser extends Document {
+  userId: string;
+  email: string;
+  photo?: string;
+  fullName?: string;
+  password: string;
+  userType: "student" | "teacher";
+}
+
+const UserSchema = new Schema<IUser>({
   userId: {
     type: String,
     required: true,
@@ -23,8 +32,13 @@ const UserSchema = new Schema({
     type: String,
     required: true,
   },
+  userType: {
+    type: String,
+    enum: ["student", "teacher"],
+    required: true,
+  },
 });
 
-const User = models?.User || model("User", UserSchema);
+const User = models?.User || model<IUser>("User", UserSchema);
 
 export default User;
