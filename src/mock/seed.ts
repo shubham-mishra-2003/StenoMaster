@@ -1,6 +1,6 @@
 import { MongoClient, ObjectId } from 'mongodb';
 import { getFirestore } from 'firebase-admin/firestore';
-import { initializeApp, getApps, cert } from 'firebase-admin/app';
+import { initializeApp, getApps, cert, App } from 'firebase-admin/app';
 
 const MONGODB_URI = process.env.MONGODB_URI!;
 const FIREBASE_CONFIG = JSON.parse(process.env.FIREBASE_CONFIG!);

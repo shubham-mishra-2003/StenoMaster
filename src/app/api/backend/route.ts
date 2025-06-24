@@ -1,94 +1,102 @@
-import { NextResponse } from 'next/server';
-import { MongoClient, ObjectId } from 'mongodb';
-import { getFirestore } from 'firebase-admin/firestore';
-import { initializeApp, getApps, cert, App } from 'firebase-admin/app';
-import cloudinary from 'cloudinary';
-import { clerkClient } from '@clerk/nextjs/server';
-import { v4 as uuidv4 } from 'uuid';
-import { z } from 'zod';
+import { NextRequest, NextResponse } from "next/server";
+import { MongoClient, ObjectId } from "mongodb";
+import { initializeApp, cert, getApps } from "firebase-admin/app";
+import { getFirestore } from "firebase-admin/firestore";
+import { getStorage } from "firebase-admin/storage";
+import * as bcrypt from "bcrypt";
+import { v2 as cloudinary } from "cloudinary";
+import { config as dotenvConfig } from "dotenv";
 
-// Environment Variables
-const MONGODB_URI = process.env.MONGODB_URI!;
-const FIREBASE_PROJECT_ID = process.env.FIREBASE_PROJECT_ID!;
-const FIREBASE_PRIVATE_KEY = process.env.FIREBASE_PRIVATE_KEY!.replace(/\\n/g, '\n');
-const FIREBASE_CLIENT_EMAIL = process.env.FIREBASE_CLIENT_EMAIL!;
-const CLOUDINARY_CLOUD_NAME = process.env.CLOUDINARY_CLOUD_NAME!;
-const CLOUDINARY_API_KEY = process.env.CLOUDINARY_API_KEY!;
-const CLOUDINARY_API_SECRET = process.env.CLOUDINARY_API_SECRET!;
+// Load environment variables
+dotenvConfig({ path: ".env" });
 
-// Initialize Firebase
-let firebaseApp: App | null = null;
-function getFirebaseApp(): App {
-  if (!firebaseApp && !getApps().length) {
-    firebaseApp = initializeApp({
-      credential: cert({
-        projectId: FIREBASE_PROJECT_ID,
-        privateKey: FIREBASE_PRIVATE_KEY,
-        clientEmail: FIREBASE_CLIENT_EMAIL,
-      }),
-    });
-  }
-  return firebaseApp!;
+// Validate environment variables
+const MONGODB_URI = process.env.MONGODB_URI;
+if (!MONGODB_URI) {
+  throw new Error("MONGODB_URI is not defined in environment variables");
 }
-const firestore = getFirestore(getFirebaseApp());
 
-// Initialize Cloudinary
-cloudinary.v2.config({
-  cloud_name: CLOUDINARY_CLOUD_NAME,
-  api_key: CLOUDINARY_API_KEY,
-  api_secret: CLOUDINARY_API_SECRET,
+const FIREBASE_CONFIG = {
+  projectId: process.env.FIREBASE_PROJECT_ID,
+  privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, "\n"),
+  clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+};
+if (
+  !FIREBASE_CONFIG.projectId ||
+  !FIREBASE_CONFIG.privateKey ||
+  !FIREBASE_CONFIG.clientEmail
+) {
+  throw new Error("Firebase configuration is incomplete");
+}
+
+// Initialize Firebase Admin
+if (!getApps().length) {
+  initializeApp({
+    credential: cert(FIREBASE_CONFIG),
+    storageBucket: `${FIREBASE_CONFIG.projectId}.appspot.com`,
+  });
+}
+const firestore = getFirestore();
+const storage = getStorage();
+
+// Configure Cloudinary
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME || "",
+  api_key: process.env.CLOUDINARY_API_KEY || "",
+  api_secret: process.env.CLOUDINARY_API_SECRET || "",
 });
 
-// MongoDB Singleton
+// Initialize MongoDB client
 let mongoClient: MongoClient | null = null;
-function getMongoClient(): MongoClient {
+async function getMongoClient(): Promise<MongoClient> {
   if (!mongoClient) {
+    if (!MONGODB_URI) {
+      throw new Error("MONGODB_URI is not defined");
+    }
     mongoClient = new MongoClient(MONGODB_URI);
-    mongoClient.connect().catch(error => {
-      console.error('MongoDB connection error:', error);
-      throw error;
-    });
+    await mongoClient.connect();
+    console.log("MongoDB connected");
   }
   return mongoClient;
 }
 
-// Error Class
-class AppError extends Error {
-  constructor(public message: string, public status: number) {
-    super(message);
-    this.name = 'AppError';
-  }
-}
+const SALT_ROUNDS = 10;
 
-// Interfaces
+// Define interfaces
 interface User {
-  id: string;
-  type: 'teacher' | 'student';
+  _id: ObjectId;
+  type: "teacher" | "student";
   name: string;
   email?: string;
-  classIds?: string[];
+  password: string;
+  classIds: string[];
+}
+
+interface CloudinaryUploadResponse {
+  secure_url: string;
+  [key: string]: any; // Allow additional properties
 }
 
 interface Class {
-  id: string;
-  name: string;
-  teacherId: string;
+  _id: ObjectId;
+  name?: string;
+  teacherId?: string;
   studentIds: string[];
 }
 
 interface Assignment {
-  id: string;
-  classId: string;
-  title: string;
+  _id?: ObjectId;
+  classId?: string;
+  title?: string;
   imageUrl?: string;
-  correctText: string;
-  dueDate: Date;
+  correctText?: string;
+  dueDate?: Date;
 }
 
 interface Submission {
-  studentId: string;
-  assignmentId: string;
-  typedText: string;
+  studentId?: string;
+  assignmentId?: string;
+  typedText?: string;
   mistakes: number;
   speed: number;
   backspaces: number;
@@ -96,512 +104,495 @@ interface Submission {
 }
 
 interface TypingTest {
-  studentId: string;
-  paragraphId: string;
+  studentId?: string;
+  paragraphId?: string;
   speed: number;
   mistakes: number;
   backspaces: number;
   timestamp: Date;
 }
 
-// Validation Schemas
-const schemas = {
-  register: z.object({
-    action: z.literal('register'),
-    email: z.string().email(),
-    password: z.string().min(6),
-    teacherName: z.string().min(2),
-  }),
-  login: z.object({
-    action: z.literal('login'),
-    email: z.string().email(),
-    password: z.string().min(6),
-  }),
-  createStudent: z.object({
-    action: z.literal('createStudent'),
-    studentName: z.string().min(2),
-    classId: z.string(),
-    teacherId: z.string(),
-  }),
-  createClass: z.object({
-    action: z.literal('createClass'),
-    className: z.string().min(2),
-    teacherId: z.string(),
-  }),
-  getClasses: z.object({
-    action: z.literal('getClasses'),
-    teacherId: z.string(),
-  }),
-  createAssignment: z.object({
-    action: z.literal('createAssignment'),
-    classId: z.string(),
-    title: z.string().min(2),
-    correctText: z.string(),
-    dueDate: z.string().optional(),
-  }),
-  getAssignments: z.object({
-    action: z.literal('getAssignments'),
-    classId: z.string(),
-  }),
-  submitAssignment: z.object({
-    action: z.literal('submitAssignment'),
-    studentId: z.string(),
-    assignmentId: z.string(),
-    typedText: z.string(),
-    speed: z.number(),
-    backspaces: z.number(),
-  }),
-  getSubmissions: z.object({
-    action: z.literal('getSubmissions'),
-    assignmentId: z.string(),
-  }),
-  saveTypingTest: z.object({
-    action: z.literal('saveTypingTest'),
-    studentId: z.string(),
-    paragraphId: z.string(),
-    speed: z.number(),
-    mistakes: z.number(),
-    backspaces: z.number(),
-  }),
-  getTypingTests: z.object({
-    action: z.literal('getTypingTests'),
-    studentId: z.string(),
-  }),
-};
-
-// Auth Provider
-class AuthProvider {
-  private mongoClient: MongoClient;
-
-  constructor() {
-    this.mongoClient = getMongoClient();
-  }
-
-  async createTeacher(email: string, password: string, name: string): Promise<User> {
-    try {
-      const clerk = await clerkClient();
-      const user = await clerk.users.createUser({
-        emailAddress: [email],
-        password,
-        firstName: name,
-      });
-      const db = this.mongoClient.db('stenomaster');
-      await db.collection('users').insertOne({
-        clerkId: user.id,
-        type: 'teacher',
-        name,
-        email,
-        classIds: [],
-      });
-      return { id: user.id, type: 'teacher', name, email };
-    } catch {
-      throw new AppError('Failed to create teacher', 400);
-    }
-  }
-
-  async createStudent(studentName: string, classId: string, teacherId: string): Promise<User & { password: string }> {
-    try {
-      const userId = uuidv4();
-      const password = uuidv4().slice(0, 8);
-      const db = this.mongoClient.db('stenomaster');
-      await db.collection('users').insertOne({
-        clerkId: userId,
-        type: 'student',
-        name: studentName,
-        classIds: [classId],
-        password, // Note: Hash in production
-      });
-      await db.collection('classes').updateOne(
-        { _id: new ObjectId(classId), teacherId },
-        { $addToSet: { studentIds: userId } }
-      );
-      return { id: userId, name: studentName, password, type: 'student', classIds: [classId] };
-    } catch {
-      throw new AppError('Failed to create student', 400);
-    }
-  }
-
-  async login(email: string, password: string): Promise<User> {
-    try {
-      const clerk = await clerkClient();
-      const userList = await clerk.users.getUserList({ emailAddress: [email] });
-      if (!userList.data.length) throw new AppError('User not found', 401);
-      const db = this.mongoClient.db('stenomaster');
-      const dbUser = await db.collection('users').findOne({ clerkId: userList.data[0].id });
-      if (!dbUser || dbUser.type !== 'teacher') throw new AppError('Invalid user type', 401);
-      return { id: userList.data[0].id, type: 'teacher', name: dbUser.name, email, classIds: dbUser.classIds };
-    } catch (error) {
-      if (error instanceof AppError) throw error;
-      const db = this.mongoClient.db('stenomaster');
-      const student = await db.collection('users').findOne({ email, password, type: 'student' });
-      if (!student) throw new AppError('Invalid credentials', 401);
-      return { id: student.clerkId, type: 'student', name: student.name, classIds: student.classIds };
-    }
-  }
-
-  async getUser(userId: string): Promise<User> {
-    try {
-      const db = this.mongoClient.db('stenomaster');
-      const user = await db.collection('users').findOne({ clerkId: userId });
-      if (!user) throw new AppError('User not found', 404);
-      return { id: user.clerkId, type: user.type, name: user.name, email: user.email, classIds: user.classIds };
-    } catch {
-      throw new AppError('Failed to fetch user', 500);
-    }
-  }
+// Request body type
+interface RequestBody {
+  action: string;
+  email?: string;
+  password?: string;
+  teacherName?: string;
+  studentName?: string;
+  classId?: string;
+  className?: string;
+  teacherId?: string;
+  title?: string;
+  correctText?: string;
+  dueDate?: string;
+  studentId?: string;
+  assignmentId?: string;
+  typedText?: string;
+  speed?: number;
+  backspaces?: number;
+  paragraphId?: string;
+  mistakes?: number;
 }
 
-// Storage Provider
-class StorageProvider {
-  async uploadImage(file: Buffer): Promise<string> {
-    try {
-      return new Promise((resolve, reject) => {
-        cloudinary.v2.uploader.upload_stream({ resource_type: 'image' }, (error, result) => {
-          if (error) reject(error);
-          else resolve(result!.secure_url);
-        }).end(file);
-      });
-    } catch {
-      throw new AppError('Failed to upload image', 500);
-    }
-  }
-}
-
-// Database Provider
-class DatabaseProvider {
-  private mongoClient: MongoClient;
-  private firestore: ReturnType<typeof getFirestore>;
-
-  constructor() {
-    this.mongoClient = getMongoClient();
-    this.firestore = firestore;
-  }
-
-  async createClass(className: string, teacherId: string): Promise<Class> {
-    try {
-      const db = this.mongoClient.db('stenomaster');
-      const result = await db.collection('classes').insertOne({
-        name: className,
-        teacherId,
-        studentIds: [],
-      });
-      await db.collection('users').updateOne(
-        { clerkId: teacherId },
-        { $addToSet: { classIds: result.insertedId.toString() } }
-      );
-      return { id: result.insertedId.toString(), name: className, teacherId, studentIds: [] };
-    } catch {
-      throw new AppError('Failed to create class', 500);
-    }
-  }
-
-  async getClasses(teacherId: string): Promise<Class[]> {
-    try {
-      const db = this.mongoClient.db('stenomaster');
-      const classes = await db.collection('classes').find({ teacherId }).toArray();
-      return classes.map(c => ({
-        id: c._id.toString(),
-        name: c.name,
-        teacherId: c.teacherId,
-        studentIds: c.studentIds,
-      }));
-    } catch {
-      throw new AppError('Failed to fetch classes', 500);
-    }
-  }
-
-  async createAssignment(
-    classId: string,
-    title: string,
-    correctText: string,
-    imageFile?: Buffer,
-    dueDate?: string
-  ): Promise<Assignment> {
-    try {
-      let imageUrl: string | undefined;
-      if (imageFile) {
-        const storageProvider = new StorageProvider();
-        imageUrl = await storageProvider.uploadImage(imageFile);
-      }
-      const db = this.mongoClient.db('stenomaster');
-      const result = await db.collection('assignments').insertOne({
-        classId,
-        title,
-        imageUrl,
-        correctText,
-        dueDate: dueDate ? new Date(dueDate) : new Date(),
-      });
-      return {
-        id: result.insertedId.toString(),
-        classId,
-        title,
-        imageUrl,
-        correctText,
-        dueDate: dueDate ? new Date(dueDate) : new Date(),
-      };
-    } catch {
-      throw new AppError('Failed to create assignment', 500);
-    }
-  }
-
-  async getAssignments(classId: string): Promise<Assignment[]> {
-    try {
-      const db = this.mongoClient.db('stenomaster');
-      const assignments = await db.collection('assignments').find({ classId }).toArray();
-      return assignments.map(a => ({
-        id: a._id.toString(),
-        classId: a.classId,
-        title: a.title,
-        imageUrl: a.imageUrl,
-        correctText: a.correctText,
-        dueDate: a.dueDate,
-      }));
-    } catch {
-      throw new AppError('Failed to fetch assignments', 500);
-    }
-  }
-
-  async submitAssignment(
-    studentId: string,
-    assignmentId: string,
-    typedText: string,
-    speed: number,
-    backspaces: number
-  ): Promise<Submission> {
-    try {
-      const db = this.mongoClient.db('stenomaster');
-      const assignment = await db.collection('assignments').findOne({ _id: new ObjectId(assignmentId) });
-      if (!assignment) throw new AppError('Assignment not found', 404);
-      const mistakes = this.calculateMistakes(typedText, assignment.correctText);
-      const submission: Submission = {
-        studentId,
-        assignmentId,
-        typedText,
-        mistakes,
-        speed,
-        backspaces,
-        timestamp: new Date(),
-      };
-      await this.firestore.collection('submissions').add(submission);
-      return submission;
-    } catch (error) {
-      if (error instanceof AppError) throw error;
-      throw new AppError('Failed to submit assignment', 500);
-    }
-  }
-
-  async getSubmissions(assignmentId: string): Promise<Submission[]> {
-    try {
-      const snapshot = await this.firestore.collection('submissions').where('assignmentId', '==', assignmentId).get();
-      return snapshot.docs.map(doc => doc.data() as Submission);
-    } catch {
-      throw new AppError('Failed to fetch submissions', 500);
-    }
-  }
-
-  async saveTypingTest(
-    studentId: string,
-    paragraphId: string,
-    speed: number,
-    mistakes: number,
-    backspaces: number
-  ): Promise<TypingTest> {
-    try {
-      const test: TypingTest = {
-        studentId,
-        paragraphId,
-        speed,
-        mistakes,
-        backspaces,
-        timestamp: new Date(),
-      };
-      await this.firestore.collection('typing_tests').add(test);
-      return test;
-    } catch {
-      throw new AppError('Failed to save typing test', 500);
-    }
-  }
-
-  async getTypingTests(studentId: string): Promise<TypingTest[]> {
-    try {
-      const snapshot = await this.firestore.collection('typing_tests').where('studentId', '==', studentId).get();
-      return snapshot.docs.map(doc => doc.data() as TypingTest);
-    } catch {
-      throw new AppError('Failed to fetch typing tests', 500);
-    }
-  }
-
-  private calculateMistakes(typedText: string, correctText: string): number {
-    let mistakes = 0;
-    const typedChars = typedText.split('');
-    const correctChars = correctText.split('');
-    for (let i = 0; i < Math.min(typedChars.length, correctChars.length); i++) {
-      if (typedChars[i] !== correctChars[i]) mistakes++;
-    }
-    mistakes += Math.abs(typedChars.length - correctChars.length);
-    return mistakes;
-  }
-}
-
-// API Config
-export const config = {
-  api: {
-    bodyParser: false,
-  },
-};
-
-// API Handlers
-export async function POST(req: Request) {
-  const authProvider = new AuthProvider();
-  const dbProvider = new DatabaseProvider();
+export async function POST(request: NextRequest) {
+  const client = await getMongoClient();
+  const db = client.db("stenomaster");
 
   try {
-    const contentType = req.headers.get('content-type');
-    let body: any;
+    const contentType = request.headers.get("content-type");
+    let body: RequestBody | undefined;
 
-    if (contentType?.includes('multipart/form-data')) {
-      const formData = await req.formData();
-      const action = formData.get('action')?.toString();
-      const classId = formData.get('classId')?.toString();
-      const title = formData.get('title')?.toString();
-      const correctText = formData.get('correctText')?.toString();
-      const dueDate = formData.get('dueDate')?.toString();
-      const imageFile = formData.get('image');
-      let imageBuffer: Buffer | undefined;
-      if (imageFile instanceof File) {
-        const arrayBuffer = await imageFile.arrayBuffer();
-        imageBuffer = Buffer.from(arrayBuffer);
-      }
-      body = { action, classId, title, correctText, dueDate, imageFile: imageBuffer };
+    if (contentType?.includes("multipart/form-data")) {
+      const formData = await request.formData();
+      body = Object.fromEntries(formData) as unknown as RequestBody;
     } else {
-      body = await req.json();
+      body = (await request.json()) as RequestBody;
     }
 
-    switch (body.action) {
-      case 'register':
-        const registerData = schemas.register.parse(body);
-        const teacher = await authProvider.createTeacher(
-          registerData.email,
-          registerData.password,
-          registerData.teacherName
-        );
-        return NextResponse.json(teacher, {
-          headers: {
-            'set-cookie': `StenoMaster-user=${JSON.stringify(teacher)};path=/;HttpOnly;Secure;SameSite=Strict;Max-Age=86400`,
-          },
-        });
-
-      case 'login':
-        const loginData = schemas.login.parse(body);
-        const user = await authProvider.login(loginData.email, loginData.password);
-        return NextResponse.json(user, {
-          headers: {
-            'set-cookie': `StenoMaster-user=${JSON.stringify(user)};path=/;HttpOnly;Secure;SameSite=Strict;Max-Age=86400`,
-          },
-        });
-
-      case 'createStudent':
-        const studentData = schemas.createStudent.parse(body);
-        const student = await authProvider.createStudent(
-          studentData.studentName,
-          studentData.classId,
-          studentData.teacherId
-        );
-        return NextResponse.json(student);
-
-      case 'createClass':
-        const classData = schemas.createClass.parse(body);
-        const classResult = await dbProvider.createClass(classData.className, classData.teacherId);
-        return NextResponse.json(classResult);
-
-      case 'createAssignment':
-        const assignmentData = schemas.createAssignment.parse(body);
-        const assignment = await dbProvider.createAssignment(
-          assignmentData.classId,
-          assignmentData.title,
-          assignmentData.correctText,
-          body.imageFile,
-          assignmentData.dueDate
-        );
-        return NextResponse.json(assignment);
-
-      case 'submitAssignment':
-        const submissionData = schemas.submitAssignment.parse(body);
-        const submission = await dbProvider.submitAssignment(
-          submissionData.studentId,
-          submissionData.assignmentId,
-          submissionData.typedText,
-          submissionData.speed,
-          submissionData.backspaces
-        );
-        return NextResponse.json(submission);
-
-      case 'saveTypingTest':
-        const testData = schemas.saveTypingTest.parse(body);
-        const test = await dbProvider.saveTypingTest(
-          testData.studentId,
-          testData.paragraphId,
-          testData.speed,
-          testData.mistakes,
-          testData.backspaces
-        );
-        return NextResponse.json(test);
-
-      default:
-        throw new AppError('Invalid action', 400);
+    if (!body || typeof body !== "object") {
+      return NextResponse.json(
+        { error: "Invalid request body" },
+        { status: 400 }
+      );
     }
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: error.errors }, { status: 400 });
-    }
-    if (error instanceof AppError) {
-      return NextResponse.json({ error: error.message }, { status: error.status });
-    }
-    console.error(error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
-  }
-}
 
-export async function GET(req: Request) {
-  const dbProvider = new DatabaseProvider();
+    const {
+      action,
+      email,
+      password,
+      teacherName,
+      studentName,
+      classId,
+      className,
+      teacherId,
+      title,
+      correctText,
+      dueDate,
+      studentId,
+      assignmentId,
+      typedText,
+      speed,
+      backspaces,
+      paragraphId,
+      mistakes,
+    } = body;
 
-  try {
-    const { searchParams } = new URL(req.url);
-    const action = searchParams.get('action');
-    const body = Object.fromEntries(searchParams);
+    if (!action) {
+      return NextResponse.json({ error: "Missing action" }, { status: 400 });
+    }
 
     switch (action) {
-      case 'getClasses':
-        const classesData = schemas.getClasses.parse({ action, ...body });
-        const classes = await dbProvider.getClasses(classesData.teacherId);
-        return NextResponse.json(classes);
+      case "register":
+        if (!email || !password || !teacherName) {
+          return NextResponse.json(
+            { error: "Missing required fields" },
+            { status: 400 }
+          );
+        }
 
-      case 'getAssignments':
-        const assignmentsData = schemas.getAssignments.parse({ action, ...body });
-        const assignments = await dbProvider.getAssignments(assignmentsData.classId);
-        return NextResponse.json(assignments);
+        const existingUser = await db
+          .collection<User>("users")
+          .findOne({ email });
+        if (existingUser) {
+          return NextResponse.json(
+            { error: "Email already registered" },
+            { status: 400 }
+          );
+        }
 
-      case 'getSubmissions':
-        const submissionsData = schemas.getSubmissions.parse({ action, ...body });
-        const submissions = await dbProvider.getSubmissions(submissionsData.assignmentId);
-        return NextResponse.json(submissions);
+        const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS);
+        const newTeacher: User = {
+          _id: new ObjectId(),
+          type: "teacher",
+          name: teacherName,
+          email,
+          password: hashedPassword,
+          classIds: [],
+        };
+        await db.collection<User>("users").insertOne(newTeacher);
 
-      case 'getTypingTests':
-        const testsData = schemas.getTypingTests.parse({ action, ...body });
-        const tests = await dbProvider.getTypingTests(testsData.studentId);
-        return NextResponse.json(tests);
+        return NextResponse.json(
+          {
+            id: newTeacher._id.toString(),
+            type: "teacher",
+            name: teacherName,
+            email,
+            classIds: [],
+          },
+          { status: 200 }
+        );
+
+      case "login":
+        if (!email || !password) {
+          return NextResponse.json(
+            { error: "Missing email or password" },
+            { status: 400 }
+          );
+        }
+
+        const user = await db.collection<User>("users").findOne({ email });
+        if (!user || !(await bcrypt.compare(password, user.password))) {
+          return NextResponse.json(
+            { error: "Invalid credentials" },
+            { status: 401 }
+          );
+        }
+
+        return NextResponse.json(
+          {
+            id: user._id.toString(),
+            type: user.type,
+            name: user.name,
+            email: user.email,
+            classIds: user.classIds,
+          },
+          { status: 200 }
+        );
+
+      case "createStudent":
+        if (!studentName || !classId || !teacherId) {
+          return NextResponse.json(
+            { error: "Missing required fields" },
+            { status: 400 }
+          );
+        }
+
+        const teacher = await db
+          .collection<User>("users")
+          .findOne({ _id: new ObjectId(teacherId), type: "teacher" });
+        if (!teacher) {
+          return NextResponse.json(
+            { error: "Invalid teacher" },
+            { status: 400 }
+          );
+        }
+
+        const classDoc = await db
+          .collection<Class>("classes")
+          .findOne({ _id: new ObjectId(classId), teacherId });
+        if (!classDoc) {
+          return NextResponse.json({ error: "Invalid class" }, { status: 400 });
+        }
+
+        const newStudentId = new ObjectId();
+        const studentPassword = Math.random().toString(36).slice(-8);
+        const hashedStudentPassword = await bcrypt.hash(
+          studentPassword,
+          SALT_ROUNDS
+        );
+        const newStudent: User = {
+          _id: newStudentId,
+          type: "student",
+          name: studentName,
+          classIds: [classId],
+          password: hashedStudentPassword,
+        };
+        await db.collection<User>("users").insertOne(newStudent);
+        await db
+          .collection<Class>("classes")
+          .updateOne(
+            { _id: new ObjectId(classId) },
+            { $push: { studentIds: newStudentId.toString() } }
+          );
+
+        return NextResponse.json(
+          {
+            id: newStudentId.toString(),
+            name: studentName,
+            password: studentPassword,
+            type: "student",
+            classIds: [classId],
+          },
+          { status: 200 }
+        );
+
+      case "createClass":
+        if (!className || !teacherId) {
+          return NextResponse.json(
+            { error: "Missing required fields" },
+            { status: 400 }
+          );
+        }
+
+        const teacherExists = await db
+          .collection<User>("users")
+          .findOne({ _id: new ObjectId(teacherId), type: "teacher" });
+        if (!teacherExists) {
+          return NextResponse.json(
+            { error: "Invalid teacher" },
+            { status: 400 }
+          );
+        }
+
+        const newClassId = new ObjectId();
+        const newClass: Class = {
+          _id: newClassId,
+          name: className,
+          teacherId,
+          studentIds: [],
+        };
+        await db.collection<Class>("classes").insertOne(newClass);
+        await db
+          .collection<User>("users")
+          .updateOne(
+            { _id: new ObjectId(teacherId) },
+            { $push: { classIds: newClassId.toString() } }
+          );
+
+        return NextResponse.json(
+          {
+            id: newClassId.toString(),
+            name: className,
+            teacherId,
+            studentIds: [],
+          },
+          { status: 200 }
+        );
+
+      case "createAssignment":
+        if (!classId || !title || !correctText || !dueDate) {
+          return NextResponse.json(
+            { error: "Missing required fields" },
+            { status: 400 }
+          );
+        }
+
+        const classExists = await db
+          .collection<Class>("classes")
+          .findOne({ _id: new ObjectId(classId) });
+        if (!classExists) {
+          return NextResponse.json(
+            { error: "Class not found" },
+            { status: 400 }
+          );
+        }
+
+        let imageUrl = "";
+        if (contentType?.includes("multipart/form-data")) {
+          const formData = await request.formData();
+          const imageFile = formData.get("image");
+          if (imageFile instanceof File) {
+            const buffer = Buffer.from(await imageFile.arrayBuffer());
+            const uploadResult = await new Promise<CloudinaryUploadResponse>(
+              (resolve, reject) => {
+                cloudinary.uploader
+                  .upload_stream(
+                    { resource_type: "image" },
+                    (error, result) => {
+                      if (error || !result) {
+                        reject(error || new Error("Upload failed"));
+                      } else {
+                        resolve(result);
+                      }
+                    }
+                  )
+                  .end(buffer);
+              }
+            );
+            imageUrl = uploadResult.secure_url;
+          }
+        }
+
+        const newAssignmentId = new ObjectId();
+        const newAssignment: Assignment = {
+          _id: newAssignmentId,
+          classId,
+          title,
+          imageUrl,
+          correctText,
+          dueDate: new Date(dueDate),
+        };
+        await db.collection<Assignment>("assignments").insertOne(newAssignment);
+
+        return NextResponse.json(
+          {
+            id: newAssignmentId.toString(),
+            classId,
+            title,
+            imageUrl,
+            correctText,
+            dueDate: newAssignment.dueDate,
+          },
+          { status: 200 }
+        );
+
+      case "submitAssignment":
+        if (
+          !studentId ||
+          !assignmentId ||
+          !typedText ||
+          speed === undefined ||
+          backspaces === undefined ||
+          mistakes === undefined
+        ) {
+          return NextResponse.json(
+            { error: "Missing required fields" },
+            { status: 400 }
+          );
+        }
+
+        const assignment = await db
+          .collection<Assignment>("assignments")
+          .findOne({ _id: new ObjectId(assignmentId) });
+        if (!assignment) {
+          return NextResponse.json(
+            { error: "Assignment not found" },
+            { status: 404 }
+          );
+        }
+
+        const submissionData: Submission = {
+          studentId,
+          assignmentId,
+          typedText,
+          mistakes,
+          speed,
+          backspaces,
+          timestamp: new Date(),
+        };
+        await firestore.collection("submissions").add(submissionData);
+
+        return NextResponse.json(submissionData, { status: 200 });
+
+      case "saveTypingTest":
+        if (
+          !studentId ||
+          !paragraphId ||
+          speed === undefined ||
+          mistakes === undefined ||
+          backspaces === undefined
+        ) {
+          return NextResponse.json(
+            { error: "Missing required fields" },
+            { status: 400 }
+          );
+        }
+
+        const typingTestData: TypingTest = {
+          studentId,
+          paragraphId,
+          speed,
+          mistakes,
+          backspaces,
+          timestamp: new Date(),
+        };
+        await firestore.collection("typing_tests").add(typingTestData);
+
+        return NextResponse.json(typingTestData, { status: 200 });
 
       default:
-        throw new AppError('Invalid action', 400);
+        return NextResponse.json({ error: "Invalid action" }, { status: 400 });
     }
   } catch (error) {
-    if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: error.errors }, { status: 400 });
+    console.error("API Error:", error instanceof Error ? error.message : error);
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 }
+    );
+  }
+}
+
+export async function GET(request: NextRequest) {
+  const client = await getMongoClient();
+  const db = client.db("stenomaster");
+
+  try {
+    const { searchParams } = new URL(request.url);
+    const action = searchParams.get("action");
+    const teacherId = searchParams.get("teacherId");
+    const classId = searchParams.get("classId");
+    const assignmentId = searchParams.get("assignmentId");
+    const studentId = searchParams.get("studentId");
+
+    if (!action) {
+      return NextResponse.json({ error: "Missing action" }, { status: 400 });
     }
-    if (error instanceof AppError) {
-      return NextResponse.json({ error: error.message }, { status: error.status });
+
+    switch (action) {
+      case "getClasses":
+        if (!teacherId) {
+          return NextResponse.json(
+            { error: "Missing teacherId" },
+            { status: 400 }
+          );
+        }
+        const classes = await db
+          .collection<Class>("classes")
+          .find({ teacherId })
+          .toArray();
+        return NextResponse.json(
+          classes.map((c) => ({
+            id: c._id.toString(),
+            name: c.name,
+            teacherId: c.teacherId,
+            studentIds: c.studentIds,
+          })),
+          { status: 200 }
+        );
+
+      case "getAssignments":
+        if (!classId) {
+          return NextResponse.json(
+            { error: "Missing classId" },
+            { status: 400 }
+          );
+        }
+        const assignments = await db
+          .collection<Assignment>("assignments")
+          .find({ classId })
+          .toArray();
+        return NextResponse.json(
+          assignments.map((a) => ({
+            id: a._id.toString(),
+            classId: a.classId,
+            title: a.title,
+            imageUrl: a.imageUrl,
+            correctText: a.correctText,
+            dueDate: a.dueDate,
+          })),
+          { status: 200 }
+        );
+
+      case "getSubmissions":
+        if (!assignmentId) {
+          return NextResponse.json(
+            { error: "Missing assignmentId" },
+            { status: 400 }
+          );
+        }
+        const submissionsSnapshot = await firestore
+          .collection("submissions")
+          .where("assignmentId", "==", assignmentId)
+          .get();
+        const submissions = submissionsSnapshot.docs.map((doc) =>
+          doc.data()
+        ) as Submission[];
+        return NextResponse.json(submissions, { status: 200 });
+
+      case "getTypingTests":
+        if (!studentId) {
+          return NextResponse.json(
+            { error: "Missing studentId" },
+            { status: 400 }
+          );
+        }
+        const typingTestsSnapshot = await firestore
+          .collection("typing_tests")
+          .where("studentId", "==", studentId)
+          .get();
+        const typingTests = typingTestsSnapshot.docs.map((doc) =>
+          doc.data()
+        ) as TypingTest[];
+        return NextResponse.json(typingTests, { status: 200 });
+
+      default:
+        return NextResponse.json({ error: "Invalid action" }, { status: 400 });
     }
-    console.error(error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  } catch (error) {
+    console.error("API Error:", error instanceof Error ? error.message : error);
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 }
+    );
   }
 }
