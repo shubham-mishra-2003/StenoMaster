@@ -11,9 +11,9 @@
 // dotenvConfig({ path: ".env" });
 
 // // Validate environment variables
-// const MONGODB_URI = process.env.MONGODB_URI;
-// if (!MONGODB_URI) {
-//   throw new Error("MONGODB_URI is not defined in environment variables");
+// const MONGODB_URL = process.env.MONGODB_URL;
+// if (!MONGODB_URL) {
+//   throw new Error("MONGODB_URL is not defined in environment variables");
 // }
 
 // const FIREBASE_CONFIG = {
@@ -50,10 +50,10 @@
 // let mongoClient: MongoClient | null = null;
 // async function getMongoClient(): Promise<MongoClient> {
 //   if (!mongoClient) {
-//     if (!MONGODB_URI) {
-//       throw new Error("MONGODB_URI is not defined");
+//     if (!MONGODB_URL) {
+//       throw new Error("MONGODB_URL is not defined");
 //     }
-//     mongoClient = new MongoClient(MONGODB_URI);
+//     mongoClient = new MongoClient(MONGODB_URL);
 //     await mongoClient.connect();
 //     console.log("MongoDB connected");
 //   }

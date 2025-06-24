@@ -2,13 +2,13 @@
 // import { getFirestore } from 'firebase-admin/firestore';
 // import { initializeApp, getApps, cert, App } from 'firebase-admin/app';
 
-// const MONGODB_URI = process.env.MONGODB_URI!;
+// const MONGODB_URL = process.env.MONGODB_URL!;
 // const FIREBASE_CONFIG = JSON.parse(process.env.FIREBASE_CONFIG!);
 
 // let mongoClient: MongoClient | null = null;
 // function getMongoClient(): MongoClient {
 //   if (!mongoClient) {
-//     mongoClient = new MongoClient(MONGODB_URI);
+//     mongoClient = new MongoClient(MONGODB_URL);
 //     mongoClient.connect().catch(error => {
 //       console.error('MongoDB connection error:', error);
 //       throw error;

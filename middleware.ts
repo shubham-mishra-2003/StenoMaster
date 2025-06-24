@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { MongoClient } from "mongodb";
 
-const MONGODB_URI = process.env.MONGODB_URI!;
-const mongoClient = new MongoClient(MONGODB_URI);
+const MONGODB_URL = process.env.MONGODB_URL!;
+const mongoClient = new MongoClient(MONGODB_URL);
 
 class AuthProvider {
   async getUser(userId: string) {
@@ -15,7 +15,7 @@ class AuthProvider {
       type: user.type,
       name: user.name,
       email: user.email,
-      classIds: user.classIds
+      classIds: user.classIds,
     };
   }
 }
@@ -121,5 +121,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/", "/dashboard/:path*"]
+  matcher: ["/", "/dashboard/:path*"],
 };
