@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { MongoClient } from "mongodb";
 
-const MONGODB_URI = process.env.MONGODB_URI!;
-const mongoClient = new MongoClient(MONGODB_URI);
+const MONGODB_URL = process.env.MONGODB_URL!;
+const mongoClient = new MongoClient(MONGODB_URL);
 
 class AuthProvider {
   async getUser(userId: string) {
