@@ -13,9 +13,9 @@ import { AuthProvider, useAuth } from "@/hooks/useAuth";
 import { usePathname } from "next/navigation";
 
 const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
-  const { colorScheme } = useTheme(); // Hook 1
-  const { isAuthenticated, user, logout } = useAuth(); // Hook 2
-  const pathname = usePathname(); // Hook 3
+  const { colorScheme } = useTheme();
+  const { isAuthenticated, user, logout } = useAuth();
+  const pathname = usePathname();
 
   const isAssignmentPage =
     pathname &&
@@ -23,7 +23,7 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
     pathname.split("/").length === 5;
 
   if (!isAuthenticated || !user) {
-    return null; // Early return after all hooks
+    return null;
   }
 
   return (
@@ -53,7 +53,7 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
                   {isAssignmentPage && <Logo />}
                   <div className="flex gap-2 justify-center items-center">
                     <User className="h-4 w-4" />
-                    <span className="hidden md:inline">{user.name}</span>
+                    <span className="hidden md:inline">{user.fullName}</span>
                   </div>
                 </div>
                 <div className="flex items-center space-x-2 lg:space-x-4">

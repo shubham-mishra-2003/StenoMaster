@@ -82,17 +82,17 @@ const AppSidebar = () => {
     },
   ];
 
-  const items = user?.type === "teacher" ? teacherItems : studentItems;
+  const items = user?.userType === "teacher" ? teacherItems : studentItems;
 
   const isActive = (url: string) => {
-    if (url === `/dashboard/${user?.type}`) {
+    if (url === `/dashboard/${user?.userType}`) {
       return pathname === url;
     }
     return pathname === url;
   };
 
   const handleQuickAction = () => {
-    const action = user?.type === "teacher" ? "assignments" : "speed-test";
+    const action = user?.userType === "teacher" ? "assignments" : "speed-test";
     setQuickAction(action);
     setQuickActionOpen(true);
   };
@@ -190,7 +190,7 @@ const AppSidebar = () => {
                 >
                   <Plus className="h-4 w-4 group-data-[collapsible=icon]:mr-0 group-data-[collapsible=expanded]:mr-2" />
                   <span className="group-data-[collapsible=icon]:sr-only">
-                    {user?.type === "teacher"
+                    {user?.userType === "teacher"
                       ? "Add Assignment"
                       : "Start Practice"}
                   </span>

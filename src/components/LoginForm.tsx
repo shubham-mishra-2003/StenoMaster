@@ -1,14 +1,15 @@
+"use client";
+
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { useAuth } from "@/hooks/useAuth";
 import { BookOpen, GraduationCap, LogIn, UserPlus } from "lucide-react";
 import { useTheme } from "@/hooks/ThemeProvider";
 import { toast } from "@/hooks/use-toast";
-import Logo from "./Logo";
 
 const LoginForm = () => {
   const userTypesNav = [
@@ -23,7 +24,7 @@ const LoginForm = () => {
 
   const { login, signup } = useAuth();
   const [studentCredentials, setStudentCredentials] = useState({
-    id: "",
+    email: "",
     password: "",
   });
   const [teacherCredentials, setTeacherCredentials] = useState({
@@ -31,7 +32,7 @@ const LoginForm = () => {
     password: "",
   });
   const [teacherSignup, setTeacherSignup] = useState({
-    name: "",
+    fullName: "",
     email: "",
     password: "",
     confirmPassword: "",
@@ -42,30 +43,22 @@ const LoginForm = () => {
   const handleStudentLogin = (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!studentCredentials.id.trim() || !studentCredentials.password.trim()) {
+    if (
+      !studentCredentials.email.trim() ||
+      !studentCredentials.password.trim()
+    ) {
       toast({
         title: "Error",
-        description: "Please enter both Student ID and password.",
+        description: "Please enter both email and password.",
         variant: "destructive",
       });
       return;
     }
 
-    const user = {
-      id: studentCredentials.id,
-      name: `${studentCredentials.id}`,
-      email: `${studentCredentials.id}@student.stenolearn.com`,
-      type: "student",
-    };
-
     login({
-      id: studentCredentials.id,
+      email: studentCredentials.email,
       password: studentCredentials.password,
-      type: "student",
-    });
-    toast({
-      title: "Welcome!",
-      description: `Logged in as ${user.name}`,
+      userType: "student",
     });
   };
 
@@ -84,21 +77,10 @@ const LoginForm = () => {
       return;
     }
 
-    const user = {
-      id: teacherCredentials.email,
-      name: "Teacher",
-      email: teacherCredentials.email,
-      type: "teacher",
-    };
-
     login({
       email: teacherCredentials.email,
       password: teacherCredentials.password,
-      type: "teacher",
-    });
-    toast({
-      title: "Welcome!",
-      description: `Logged in as ${user.name}`,
+      userType: "teacher",
     });
   };
 
@@ -106,7 +88,7 @@ const LoginForm = () => {
     e.preventDefault();
 
     if (
-      !teacherSignup.name.trim() ||
+      !teacherSignup.fullName.trim() ||
       !teacherSignup.email.trim() ||
       !teacherSignup.password.trim() ||
       !teacherSignup.confirmPassword.trim()
@@ -137,23 +119,11 @@ const LoginForm = () => {
       return;
     }
 
-    const user = {
-      id: teacherSignup.email,
-      name: teacherSignup.name,
-      email: teacherSignup.email,
-      type: "teacher",
-    };
-
     signup({
-      name: teacherSignup.name,
+      fullName: teacherSignup.fullName,
       email: teacherSignup.email,
       password: teacherSignup.password,
-      confirmPassword: teacherSignup.confirmPassword,
-    });
-
-    toast({
-      title: "Account Created!",
-      description: `Welcome to StenoLearn, ${user.name}!`,
+      userType: "teacher",
     });
   };
 
@@ -168,7 +138,7 @@ const LoginForm = () => {
       <CardHeader className="flex flex-col gap-2 justify-center items-center pb-2">
         <p
           className={`font-bold ${
-            colorScheme == "dark" ? "text-dark" : "text-light"
+            colorScheme === "dark" ? "text-dark" : "text-light"
           }`}
         >
           Welcome! Please authorize to continue.
@@ -182,7 +152,7 @@ const LoginForm = () => {
                 key={index}
                 value={nav.value}
                 className={`cursor-pointer p-1.5 data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-purple-500 data-[state=active]:text-white ${
-                  colorScheme == "dark" ? "bg-slate-900" : "bg-slate-300/80"
+                  colorScheme === "dark" ? "bg-slate-900" : "bg-slate-300/80"
                 }`}
               >
                 <nav.icon className="h-4 w-4 mr-2" />
@@ -193,16 +163,16 @@ const LoginForm = () => {
           <TabsContent value="student">
             <form onSubmit={handleStudentLogin} className="space-y-4 mt-2">
               <div className="space-y-2">
-                <Label htmlFor="student-id">Student ID</Label>
+                <Label htmlFor="student-email">Email</Label>
                 <Input
-                  id="student-id"
-                  type="text"
-                  placeholder="Enter your student ID"
-                  value={studentCredentials.id}
+                  id="student-email"
+                  type="email"
+                  placeholder="Enter your email"
+                  value={studentCredentials.email}
                   onChange={(e) =>
                     setStudentCredentials((prev) => ({
                       ...prev,
-                      id: e.target.value,
+                      email: e.target.value,
                     }))
                   }
                   className="bg-background/50 border-muted focus:border-blue-500 transition-colors"
@@ -238,7 +208,9 @@ const LoginForm = () => {
                   <TabsTrigger
                     key={index}
                     className={`cursor-pointer p-1.5 data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-purple-500 data-[state=active]:text-white ${
-                      colorScheme == "dark" ? "bg-slate-900" : "bg-slate-300/80"
+                      colorScheme === "dark"
+                        ? "bg-slate-900"
+                        : "bg-slate-300/80"
                     }`}
                     value={nav.value}
                   >
@@ -295,11 +267,11 @@ const LoginForm = () => {
                       id="signup-name"
                       type="text"
                       placeholder="Enter your full name"
-                      value={teacherSignup.name}
+                      value={teacherSignup.fullName}
                       onChange={(e) =>
                         setTeacherSignup((prev) => ({
                           ...prev,
-                          name: e.target.value,
+                          fullName: e.target.value,
                         }))
                       }
                       className="bg-background/50 border-muted focus:border-blue-500 transition-colors"

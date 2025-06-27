@@ -15,19 +15,21 @@ const UserButton = () => {
   const { colorScheme } = useTheme();
   const { user, logout } = useAuth();
 
+  if (!user || !user.fullName) return null;
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <SidebarMenuButton className="rounded-lg p-3 h-14 justify-center cursor-pointer overflow-hidden">
           <Avatar className="h-8 w-8 bg-gradient-to-br from-blue-500 via-purple-500 to-indigo-500">
             <AvatarFallback className="bg-transparent text-white font-semibold">
-              {user?.name.charAt(0).toUpperCase()}
+              {user?.fullName.charAt(0).toUpperCase()}
             </AvatarFallback>
           </Avatar>
           <div className="flex flex-col items-start w-full">
-            <span className="text-xs capitalize">{user?.type}</span>
+            <span className="text-xs capitalize">{user?.userType}</span>
             <span className="text-sm font-medium truncate capitalize w-full">
-              {user?.name}
+              {user?.fullName}
             </span>
           </div>
         </SidebarMenuButton>

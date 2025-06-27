@@ -35,7 +35,6 @@ interface AuthContextType extends AuthState {
     email: string;
     fullName: string;
     password: string;
-    confirmPassword: string;
     userType: "teacher" | "student";
     photo?: string;
   }) => Promise<void>;
@@ -43,7 +42,6 @@ interface AuthContextType extends AuthState {
     email: string;
     fullName: string;
     password: string;
-    confirmPassword: string;
     photo?: string;
   }) => Promise<void>;
   logout: () => Promise<void>;
@@ -62,7 +60,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   });
   const router = useRouter();
 
-  // Initialize auth state from localStorage
   useEffect(() => {
     const initializeAuth = async () => {
       const token = localStorage.getItem("StenoMaster-token");
@@ -77,7 +74,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       if (token && user) {
         try {
           const userData = JSON.parse(user);
-          // Verify session token with backend
           const response = await fetch("/api/auth/validate", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -85,10 +81,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
           });
           const result = await response.json();
           if (response.ok && result.status === "success") {
-            setAuthState({ isAuthenticated: true, user: userData, token });
-            console.log("[useAuth] Session validated, user:", userData);
+            setAuthState({
+              isAuthenticated: true,
+              user: result.data.user,
+              token,
+            });
+            console.log("[useAuth] Session validated, user:", result.data.user);
           } else {
-            // Invalid session, clear localStorage
             localStorage.removeItem("StenoMaster-token");
             localStorage.removeItem("StenoMaster-user");
             setAuthState({ isAuthenticated: false, user: null, token: null });
@@ -146,7 +145,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
               : "/dashboard/student";
           router.push(dashboardPath);
           router.refresh();
-
           toast({
             title: "Welcome!",
             description: `Logged in as ${user.fullName || user.email}`,
@@ -175,32 +173,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       email: string;
       fullName: string;
       password: string;
-      confirmPassword: string;
       userType: "teacher" | "student";
       photo?: string;
     }) => {
-      const { email, fullName, password, confirmPassword, userType, photo } =
-        credentials;
+      const { email, fullName, password, userType, photo } = credentials;
 
-      if (
-        !email.trim() ||
-        !fullName.trim() ||
-        !password.trim() ||
-        !confirmPassword.trim() ||
-        !userType
-      ) {
+      if (!email.trim() || !fullName.trim() || !password.trim() || !userType) {
         toast({
           title: "Error",
           description: "Please fill in all required fields.",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      if (password !== confirmPassword) {
-        toast({
-          title: "Error",
-          description: "Passwords do not match.",
           variant: "destructive",
         });
         return;
@@ -265,7 +246,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       email: string;
       fullName: string;
       password: string;
-      confirmPassword: string;
       photo?: string;
     }) => {
       if (
@@ -280,26 +260,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         return;
       }
 
-      const { email, fullName, password, confirmPassword, photo } = credentials;
+      const { email, fullName, password, photo } = credentials;
 
-      if (
-        !email.trim() ||
-        !fullName.trim() ||
-        !password.trim() ||
-        !confirmPassword.trim()
-      ) {
+      if (!email.trim() || !fullName.trim() || !password.trim()) {
         toast({
           title: "Error",
           description: "Please fill in all required fields.",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      if (password !== confirmPassword) {
-        toast({
-          title: "Error",
-          description: "Passwords do not match.",
           variant: "destructive",
         });
         return;
@@ -443,7 +409,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         const result = await response.json();
         if (response.ok && result.status === "success") {
           if (authState.user.userId === userId) {
-            // User deleted their own account
             setAuthState({ isAuthenticated: false, user: null, token: null });
             localStorage.removeItem("StenoMaster-token");
             localStorage.removeItem("StenoMaster-user");
