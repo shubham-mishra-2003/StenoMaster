@@ -73,7 +73,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
       if (token && user) {
         try {
+          // Check if user is a valid JSON string
+          if (typeof user !== "string" || user.trim() === "") {
+            throw new Error("Invalid user data in localStorage");
+          }
           const userData = JSON.parse(user);
+          // Verify userData has expected properties
+          if (
+            !userData._id ||
+            !userData.userId ||
+            !userData.email ||
+            !userData.userType
+          ) {
+            throw new Error("Incomplete user data in localStorage");
+          }
+          // Verify session token with backend
           const response = await fetch("/api/auth/validate", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -88,19 +102,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
             });
             console.log("[useAuth] Session validated, user:", result.data.user);
           } else {
-            localStorage.removeItem("StenoMaster-token");
-            localStorage.removeItem("StenoMaster-user");
-            setAuthState({ isAuthenticated: false, user: null, token: null });
-            console.log("[useAuth] Invalid session, cleared localStorage");
+            throw new Error(result.message || "Invalid session");
           }
-        } catch (error) {
-          console.error("[useAuth] Error validating session:", error);
+        } catch (error: any) {
+          console.error("[useAuth] Error validating session:", error.message);
           localStorage.removeItem("StenoMaster-token");
           localStorage.removeItem("StenoMaster-user");
           setAuthState({ isAuthenticated: false, user: null, token: null });
+          toast({
+            title: "Session Error",
+            description: "Invalid session data. Please log in again.",
+            variant: "destructive",
+          });
         }
       } else {
         console.log("[useAuth] No token or user found in localStorage");
+        setAuthState({ isAuthenticated: false, user: null, token: null });
       }
     };
 
@@ -346,7 +363,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         setAuthState({ isAuthenticated: false, user: null, token: null });
         localStorage.removeItem("StenoMaster-token");
         localStorage.removeItem("StenoMaster-user");
-        console.log("[useAuth] Logout successful");
+        console.log("[useAuth] Logout sucessful");
         router.push("/?showLogin=true");
         router.refresh();
 
