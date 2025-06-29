@@ -123,7 +123,7 @@ const AssignmentPractice = () => {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...score,
-          completedAt: score.completedAt.toISOString()
+          completedAt: (score.completedAt as Date).toISOString() // Type assertion to ensure completedAt is treated as Date
         })
       });
       if (!response.ok) {
