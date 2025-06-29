@@ -42,7 +42,8 @@ export interface Score {
   typedText: string;
   accuracy: number;
   wpm: number;
-  completedAt: Date;
+  completedAt: string | Date;
+  timeElapsed?: number;
 }
 
 export interface AuthState {

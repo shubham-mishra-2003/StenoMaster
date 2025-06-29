@@ -7,157 +7,167 @@ import { Textarea } from "@/components/ui/textarea";
 import { Progress } from "@/components/ui/progress";
 import { Clock, Target } from "lucide-react";
 import { Assignment, Score } from "@/types";
-import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "@/hooks/use-toast";
 import Image from "next/image";
 import { useRouter, useParams } from "next/navigation";
 
-// Force client-side rendering to ensure localStorage is available
-export const dynamic = "force-dynamic";
-
 const AssignmentPractice = () => {
   const params = useParams();
-  const assignmentID = params.assignmentID;
-  const [assignments] = useLocalStorage<Assignment[]>(
-    "stenolearn-assignments",
-    []
-  );
+  const assignmentID = params.assignmentID as string;
+  const [assignment, setAssignment] = useState<Assignment | null>(null);
   const [typedText, setTypedText] = useState("");
   const [startTime, setStartTime] = useState<Date | null>(null);
   const [isStarted, setIsStarted] = useState(false);
+  const [isCompleted, setIsCompleted] = useState(false);
   const [timeElapsed, setTimeElapsed] = useState(0);
-  const { user } = useAuth();
-  const [scores, setScores] = useLocalStorage<Score[]>("stenolearn-scores", []);
-  const router = useRouter();
   const [isLoading, setIsLoading] = useState(true);
-
-  // Normalize assignmentID to prevent comparison issues
-  const normalizedAssignmentID =
-    typeof assignmentID === "string" ? assignmentID.trim() : "";
+  const { user } = useAuth();
+  const router = useRouter();
 
   useEffect(() => {
-    setIsLoading(true);
-    console.log("Assignment Page - Raw useParams:", params);
-    console.log(
-      "Assignment Page - Assignment ID from URL:",
-      normalizedAssignmentID
-    );
-    console.log("Assignment Page - Type of assignmentID:", typeof assignmentID);
-    console.log("Assignment Page - Assignments loaded:", assignments);
-    console.log("Assignment Page - Assignments length:", assignments.length);
-    assignments.forEach((assignment, index) =>
-      console.log(
-        `Assignment Page - Assignment ${index + 1}: ID=${
-          assignment.id
-        }, Title=${assignment.title}, ID Type=${typeof assignment.id}`
-      )
-    );
-    const foundAssignment = assignments.find(
-      (a) => a.id === normalizedAssignmentID
-    );
-    console.log("Assignment Page - Found assignment:", foundAssignment);
-    setIsLoading(false);
-  }, [normalizedAssignmentID, assignments]);
-
-  const selectedAssignment = assignments.find(
-    (a) => a.id === normalizedAssignmentID
-  );
+    const fetchAssignment = async () => {
+      setIsLoading(true);
+      try {
+        const response = await fetch(
+          `/api/student/assignments?id=${assignmentID}`
+        );
+        if (!response.ok) {
+          throw new Error("Failed to fetch assignment");
+        }
+        const data = await response.json();
+        setAssignment(data);
+      } catch (error) {
+        console.error("Error fetching assignment:", error);
+        toast({
+          title: "Error",
+          description: "Failed to load assignment",
+          variant: "destructive"
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchAssignment();
+  }, [assignmentID]);
 
   useEffect(() => {
     let interval: NodeJS.Timeout;
-    if (isStarted && startTime) {
+    if (isStarted && startTime && !isCompleted) {
       interval = setInterval(() => {
         setTimeElapsed(Math.floor((Date.now() - startTime.getTime()) / 1000));
       }, 1000);
     }
     return () => clearInterval(interval);
-  }, [isStarted, startTime]);
+  }, [isStarted, startTime, isCompleted]);
 
   const calculateAccuracy = (typed: string, correct: string) => {
-    const typedWords = typed.trim().split(/\s+/);
-    const correctWords = correct.trim().split(/\s+/);
     let correctCount = 0;
-
-    typedWords.forEach((word, index) => {
-      if (correctWords[index] && word === correctWords[index]) {
+    for (let i = 0; i < Math.min(typed.length, correct.length); i++) {
+      if (typed[i] === correct[i]) {
         correctCount++;
       }
-    });
-
-    return Math.round((correctCount / correctWords.length) * 100);
+    }
+    return Math.round((correctCount / correct.length) * 100);
   };
 
   const calculateWPM = (typed: string, timeInSeconds: number) => {
+    if (timeInSeconds <= 0) return 0;
     const words = typed.trim().split(/\s+/).length;
-    return Math.round((words / timeInSeconds) * 60);
+    const minutes = timeInSeconds / 60;
+    return Math.round(words / minutes);
   };
 
   const handleStart = () => {
+    if (!user?.userId) {
+      toast({
+        title: "Authentication Required",
+        description: "Please log in to start the assignment.",
+        variant: "destructive"
+      });
+      return;
+    }
     setIsStarted(true);
     setStartTime(new Date());
     setTimeElapsed(0);
   };
 
-  const handleSubmit = () => {
-    if (!startTime || !user || !selectedAssignment) return;
+  const handleSubmit = async () => {
+    if (!startTime || !user?.userId || !assignment || isCompleted) {
+      toast({
+        title: "Error",
+        description:
+          "Cannot submit assignment. Ensure you are logged in and the assignment has started.",
+        variant: "destructive"
+      });
+      return;
+    }
 
-    const accuracy = calculateAccuracy(
-      typedText,
-      selectedAssignment.correctText
-    );
+    setIsCompleted(true);
+    const accuracy = calculateAccuracy(typedText, assignment.correctText);
     const wpm = calculateWPM(typedText, timeElapsed);
 
     const score: Score = {
       id: `score-${Date.now()}`,
-      studentId: user.id,
-      assignmentId: selectedAssignment.id,
+      studentId: user.userId,
+      assignmentId: assignment.id,
       typedText,
       accuracy,
       wpm,
-      completedAt: new Date(),
+      completedAt: new Date()
     };
 
-    const updatedScores = [...scores, score];
-    setScores(updatedScores);
-
-    toast({
-      title: "Assignment Completed!",
-      description: `Accuracy: ${accuracy}%, WPM: ${wpm}`,
-    });
-
-    // Reset form and navigate back to practice page
-    setTypedText("");
-    setIsStarted(false);
-    setStartTime(null);
-    setTimeElapsed(0);
-    router.push("/dashboard/student/practice");
+    try {
+      const response = await fetch("/api/student/scores", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...score,
+          completedAt: score.completedAt.toISOString()
+        })
+      });
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to save score");
+      }
+      toast({
+        title: "Assignment Completed!",
+        description: `Accuracy: ${accuracy}%, WPM: ${wpm}`
+      });
+      setTypedText("");
+      setIsStarted(false);
+      setIsCompleted(false);
+      setStartTime(null);
+      setTimeElapsed(0);
+      router.push("/dashboard/student/practice");
+    } catch (error: any) {
+      console.error("Error saving score:", error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to save score",
+        variant: "destructive"
+      });
+    }
   };
 
   const progress =
-    selectedAssignment && selectedAssignment.correctText.length > 0
-      ? Math.min(
-          (typedText.length / selectedAssignment.correctText.length) * 100,
-          100
-        )
+    assignment && assignment.correctText.length > 0
+      ? Math.min((typedText.length / assignment.correctText.length) * 100, 100)
       : 0;
 
   if (isLoading) {
     return (
       <div className="min-h-screen flex flex-col p-4 sm:p-6 lg:p-8 bg-gradient-to-br from-slate-50 via-blue-50 to-slate-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
         <Card className="max-w-7xl mx-auto w-full">
-          <CardHeader>
-            <CardTitle>Loading Assignment</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p>Loading assignment details...</p>
+          <CardContent className="flex flex-col items-center justify-center py-12">
+            <p className="text-muted-foreground">Loading assignment...</p>
           </CardContent>
         </Card>
       </div>
     );
   }
 
-  if (!selectedAssignment) {
+  if (!assignment) {
     return (
       <div className="min-h-screen flex flex-col p-4 sm:p-6 lg:p-8 bg-gradient-to-br from-slate-50 via-blue-50 to-slate-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
         <Card className="max-w-7xl mx-auto w-full">
@@ -165,10 +175,7 @@ const AssignmentPractice = () => {
             <CardTitle>Assignment Not Found</CardTitle>
           </CardHeader>
           <CardContent>
-            <p>
-              No assignment found with ID:{" "}
-              {normalizedAssignmentID || "undefined"}
-            </p>
+            <p>No assignment found with ID: {assignmentID || "undefined"}</p>
             <Button
               onClick={() => router.push("/dashboard/student/practice")}
               className="mt-4 gradient-button"
@@ -188,7 +195,7 @@ const AssignmentPractice = () => {
           <div className="flex items-center justify-between">
             <CardTitle className="flex items-center gap-2">
               <Clock className="h-5 w-5" />
-              {selectedAssignment.title}
+              {assignment.title}
             </CardTitle>
             <Button
               variant="outline"
@@ -212,9 +219,7 @@ const AssignmentPractice = () => {
                 Progress: {Math.round(progress)}%
               </div>
             </div>
-
             <Progress value={progress} className="w-full" />
-
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <div>
                 <h3 className="font-medium mb-2">Assignment Image</h3>
@@ -222,13 +227,12 @@ const AssignmentPractice = () => {
                   <Image
                     height={300}
                     width={300}
-                    src={selectedAssignment.imageUrl}
-                    alt={selectedAssignment.title}
+                    src={assignment.imageUrl}
+                    alt={assignment.title}
                     className="w-full h-auto rounded"
                   />
                 </div>
               </div>
-
               <div className="space-y-4">
                 <div>
                   <h3 className="font-medium mb-2">Type the text you see</h3>
@@ -237,23 +241,23 @@ const AssignmentPractice = () => {
                     onChange={(e) => setTypedText(e.target.value)}
                     placeholder="Start typing here..."
                     className="min-h-[500px]"
-                    disabled={!isStarted}
+                    disabled={!isStarted || isCompleted}
                   />
                 </div>
-
                 <div className="flex gap-2">
                   {!isStarted ? (
                     <Button
                       onClick={handleStart}
                       className="w-full gradient-button"
+                      disabled={!user?.userId}
                     >
                       Start Assignment
                     </Button>
                   ) : (
                     <Button
                       onClick={handleSubmit}
-                      className="w-full"
-                      disabled={typedText.trim().length === 0}
+                      className="w-full gradient-button"
+                      disabled={typedText.trim().length === 0 || isCompleted}
                     >
                       Submit Assignment
                     </Button>
