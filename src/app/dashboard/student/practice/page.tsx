@@ -8,55 +8,72 @@ import {
   SelectContent,
   SelectItem,
   SelectTrigger,
-  SelectValue,
+  SelectValue
 } from "@/components/ui/select";
 import { FileText } from "lucide-react";
 import { Assignment } from "@/types";
-import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { useTheme } from "@/hooks/ThemeProvider";
 import { useRouter } from "next/navigation";
+import { toast } from "@/hooks/use-toast";
 
 const PracticePage = () => {
-  const [assignments] = useLocalStorage<Assignment[]>(
-    "stenolearn-assignments",
-    []
-  );
+  const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [selectedAssignmentId, setSelectedAssignmentId] = useState<
     string | null
   >(null);
+  const [isLoading, setIsLoading] = useState(true);
   const { colorScheme } = useTheme();
   const router = useRouter();
 
   useEffect(() => {
-    console.log("Practice Page - Assignments loaded:", assignments);
-    assignments.forEach((assignment, index) =>
-      console.log(
-        `Practice Page - Assignment ${index + 1}: ID=${assignment.id}, Title=${
-          assignment.title
-        }`
-      )
-    );
-  }, [assignments]);
+    const fetchAssignments = async () => {
+      setIsLoading(true);
+      try {
+        const response = await fetch("/api/stuedent/assignments");
+        if (!response.ok) {
+          throw new Error("Failed to fetch assignments");
+        }
+        const data = await response.json();
+        setAssignments(data);
+      } catch (error) {
+        console.error("Error fetching assignments:", error);
+        toast({
+          title: "Error",
+          description: "Failed to load assignments",
+          variant: "destructive"
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchAssignments();
+  }, []);
 
   const handleStartPractice = () => {
     if (selectedAssignmentId) {
-      console.log(
-        "Practice Page - Navigating to assignment ID:",
-        selectedAssignmentId
-      );
       router.push(`/dashboard/student/practice/${selectedAssignmentId}`);
     }
   };
+
+  if (isLoading) {
+    return (
+      <Card>
+        <CardContent className="flex flex-col items-center justify-center py-12">
+          <p className="text-muted-foreground">Loading assignments...</p>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <div className="space-y-6">
       <div>
         <h4 className="gradient-text font-bold text-2xl">
-          Assignments assigned to you
+          Assignments Assigned to You
         </h4>
         <p
           className={
-            colorScheme == "dark" ? "text-dark-muted" : "text-light-muted"
+            colorScheme === "dark" ? "text-dark-muted" : "text-light-muted"
           }
         >
           Select and complete your assignments
@@ -76,12 +93,7 @@ const PracticePage = () => {
             </p>
           ) : (
             <div className="space-y-4">
-              <Select
-                onValueChange={(value) => {
-                  console.log("Practice Page - Selected assignment ID:", value);
-                  setSelectedAssignmentId(value);
-                }}
-              >
+              <Select onValueChange={(value) => setSelectedAssignmentId(value)}>
                 <SelectTrigger
                   className={`cursor-pointer border-2 h-12 rounded-xl ${
                     colorScheme === "dark"
