@@ -5,11 +5,11 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "./ui/dropdown-menu";
-import { SidebarMenuButton } from "./ui/sidebar";
 import { Avatar, AvatarFallback } from "./ui/avatar";
 import { LogOut } from "lucide-react";
 import { useTheme } from "@/hooks/ThemeProvider";
 import { useAuth } from "@/hooks/useAuth";
+import { Button } from "./ui/button";
 
 const UserButton = () => {
   const { colorScheme } = useTheme();
@@ -20,19 +20,19 @@ const UserButton = () => {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <SidebarMenuButton className="rounded-lg p-3 h-14 justify-center cursor-pointer overflow-hidden">
+        <Button className="rounded-lg p-3 h-14 justify-center cursor-pointer overflow-hidden">
           <Avatar className="h-8 w-8 bg-gradient-to-br from-blue-500 via-purple-500 to-indigo-500">
             <AvatarFallback className="bg-transparent text-white font-semibold">
               {user?.fullName.charAt(0).toUpperCase()}
             </AvatarFallback>
           </Avatar>
           <div className="flex flex-col items-start w-full">
-            <span className="text-xs capitalize">{user?.userType}</span>
             <span className="text-sm font-medium truncate capitalize w-full">
               {user?.fullName}
             </span>
+            <span className="text-xs capitalize">{user?.userType}</span>
           </div>
-        </SidebarMenuButton>
+        </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent
         align="end"

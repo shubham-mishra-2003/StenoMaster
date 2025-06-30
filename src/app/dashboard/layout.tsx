@@ -11,6 +11,7 @@ import { useTheme } from "@/hooks/ThemeProvider";
 import Logo from "@/components/Logo";
 import { AuthProvider, useAuth } from "@/hooks/useAuth";
 import { usePathname } from "next/navigation";
+import UserButton from "@/components/UserButton";
 
 const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
   const { colorScheme } = useTheme();
@@ -72,6 +73,7 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
                     <LogOut className="h-4 w-4" />
                     <span className="hidden lg:inline">Logout</span>
                   </Button>
+                  {/* <UserButton /> */}
                   <Button
                     variant="ghost"
                     size="sm"

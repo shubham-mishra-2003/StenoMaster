@@ -5,6 +5,7 @@ import { ThemeProvider } from "@/hooks/ThemeProvider";
 import { AuthProvider } from "@/hooks/useAuth";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
+import { ClassesProvider } from "@/hooks/useClasses";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -30,15 +31,18 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body suppressHydrationWarning
+      <body
+        suppressHydrationWarning
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <AuthProvider>
-          <ThemeProvider>
-            <Toaster />
-            <Sonner />
-            {children}
-          </ThemeProvider>
+          <ClassesProvider>
+            <ThemeProvider>
+              <Toaster />
+              <Sonner />
+              {children}
+            </ThemeProvider>
+          </ClassesProvider>
         </AuthProvider>
       </body>
     </html>

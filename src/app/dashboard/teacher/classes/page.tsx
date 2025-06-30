@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,26 +13,48 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { useLocalStorage } from "@/hooks/useLocalStorage";
-import { Class, Student } from "@/types";
 import { Plus, Users, Trash2 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import StudentManagement from "@/components/StudentManagement";
 import { useTheme } from "@/hooks/ThemeProvider";
+import { useAuth } from "@/hooks/useAuth";
+import { useClasses } from "@/hooks/useClasses";
+import { useRouter } from "next/navigation";
+import { Class } from "@/types";
 
 const ClassPage = () => {
-  const [classes, setClasses] = useLocalStorage<Class[]>(
-    "stenolearn-classes",
-    []
-  );
-  const [students] = useLocalStorage<Student[]>("stenolearn-students", []);
+  const { isAuthenticated, user } = useAuth();
+  const { classes, loading, error, createClass } = useClasses();
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [newClassName, setNewClassName] = useState("");
   const [selectedClass, setSelectedClass] = useState<Class | null>(null);
-
   const { colorScheme } = useTheme();
+  const router = useRouter();
 
-  const handleCreateClass = () => {
+  // Redirect if not authenticated or not a teacher
+  useEffect(() => {
+    if (!isAuthenticated || user?.userType !== "teacher") {
+      toast({
+        title: "Error",
+        description: "Only teachers can access class management.",
+        variant: "destructive",
+      });
+      router.push("/?showLogin=true");
+    }
+  }, [isAuthenticated, user, router]);
+
+  // Handle errors from useClasses
+  useEffect(() => {
+    if (error) {
+      toast({
+        title: "Error",
+        description: error,
+        variant: "destructive",
+      });
+    }
+  }, [error]);
+
+  const handleCreateClass = async () => {
     if (!newClassName.trim()) {
       toast({
         title: "Error",
@@ -42,35 +64,13 @@ const ClassPage = () => {
       return;
     }
 
-    const newClass: Class = {
-      id: `class-${Date.now()}`,
-      name: newClassName,
-      teacherId: "teacher-1",
-      students: [],
-      assignments: [],
-      createdAt: new Date(),
-    };
-
-    setClasses((prev) => [...prev, newClass]);
-    setNewClassName("");
-    setIsCreateDialogOpen(false);
-
-    toast({
-      title: "Success",
-      description: "Class created successfully.",
-    });
-  };
-
-  const handleDeleteClass = (classId: string) => {
-    setClasses((prev) => prev.filter((c) => c.id !== classId));
-    toast({
-      title: "Success",
-      description: "Class deleted successfully.",
-    });
-  };
-
-  const getClassStudents = (classId: string) => {
-    return students.filter((s) => s.classId === classId);
+    try {
+      await createClass(newClassName);
+      setNewClassName("");
+      setIsCreateDialogOpen(false);
+    } catch (err) {
+      // Error is handled in useClasses with toast
+    }
   };
 
   return (
@@ -82,8 +82,8 @@ const ClassPage = () => {
           </h2>
           <p
             className={`text-sm sm:text-base font-semibold ${
-              colorScheme == "dark" ? "text-dark-muted" : "text-light-muted"
-            } `}
+              colorScheme === "dark" ? "text-dark-muted" : "text-light-muted"
+            }`}
           >
             Create and manage your classes
           </p>
@@ -91,7 +91,12 @@ const ClassPage = () => {
 
         <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
           <DialogTrigger asChild>
-            <Button className="gradient-button">
+            <Button
+              className="gradient-button"
+              disabled={
+                loading || !isAuthenticated || user?.userType !== "teacher"
+              }
+            >
               <Plus className="h-4 w-4 mr-2" />
               Create Class
             </Button>
@@ -113,11 +118,14 @@ const ClassPage = () => {
                   value={newClassName}
                   onChange={(e) => setNewClassName(e.target.value)}
                   className={`focus:ring-2 focus:ring-blue-500 border-2 ${
-                    colorScheme == "dark"
+                    colorScheme === "dark"
                       ? "border-gray-700 bg-gray-800/60"
                       : "bg-white/60 border-gray-300"
                   }`}
                   onKeyPress={(e) => e.key === "Enter" && handleCreateClass()}
+                  disabled={
+                    loading || !isAuthenticated || user?.userType !== "teacher"
+                  }
                 />
               </div>
               <div className="flex flex-col sm:flex-row gap-2">
@@ -125,16 +133,22 @@ const ClassPage = () => {
                   variant="outline"
                   onClick={() => setIsCreateDialogOpen(false)}
                   className={`flex-1 cursor-pointer rounded-2xl ${
-                    colorScheme == "dark"
+                    colorScheme === "dark"
                       ? "border-gray-600 hover:bg-gray-800"
                       : "border-gray-300 hover:bg-gray-50"
                   }`}
+                  disabled={
+                    loading || !isAuthenticated || user?.userType !== "teacher"
+                  }
                 >
                   Cancel
                 </Button>
                 <Button
                   onClick={handleCreateClass}
                   className="flex-1 gradient-button"
+                  disabled={
+                    loading || !isAuthenticated || user?.userType !== "teacher"
+                  }
                 >
                   Create Class
                 </Button>
@@ -144,62 +158,9 @@ const ClassPage = () => {
         </Dialog>
       </div>
 
-      <div className="grid gap-4 sm:gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
-        {classes.map((classItem) => {
-          const classStudents = getClassStudents(classItem.id);
-          return (
-            <Card key={classItem.id}>
-              <CardHeader className="relative z-10">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-base sm:text-lg gradient-text">
-                    {classItem.name}
-                  </CardTitle>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleDeleteClass(classItem.id)}
-                    className="text-destructive hover:text-destructive cursor-pointer hover:bg-red-500 hover:text-white"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-4 relative z-10">
-                <div className="flex items-center space-x-2">
-                  <Users className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm text-muted-foreground">
-                    {classStudents.length} student
-                    {classStudents.length !== 1 ? "s" : ""}
-                  </span>
-                </div>
+      {loading && <div className="text-center">Loading classes...</div>}
 
-                <div className="flex items-center space-x-2">
-                  <Badge
-                    variant="secondary"
-                    className={`bg-gradient-to-r text-sm font-bold ${
-                      colorScheme == "dark"
-                        ? "text-blue-300 from-blue-900 to-purple-900"
-                        : "text-blue-700 from-blue-100 to-purple-100"
-                    } `}
-                  >
-                    {classItem.assignments.length} assignment
-                    {classItem.assignments.length === 1 ? "s" : ""}
-                  </Badge>
-                </div>
-                <Button
-                  variant="outline"
-                  className="w-full gradient-button"
-                  onClick={() => setSelectedClass(classItem)}
-                >
-                  Manage Students
-                </Button>
-              </CardContent>
-            </Card>
-          );
-        })}
-      </div>
-
-      {classes.length === 0 && (
+      {!loading && classes.length === 0 && (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12 relative z-10">
             <div className="w-16 h-16 bg-gradient-to-br from-blue-500 via-purple-500 to-indigo-500 rounded-full flex items-center justify-center mb-4 shadow-lg">
@@ -214,12 +175,76 @@ const ClassPage = () => {
             <Button
               onClick={() => setIsCreateDialogOpen(true)}
               className="gradient-button"
+              disabled={
+                loading || !isAuthenticated || user?.userType !== "teacher"
+              }
             >
               <Plus className="h-4 w-4 mr-2" />
               Create Your First Class
             </Button>
           </CardContent>
         </Card>
+      )}
+
+      {!loading && classes.length > 0 && (
+        <div className="grid gap-4 sm:gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+          {classes.map((classItem) => (
+            <Card key={classItem.id}>
+              <CardHeader className="relative z-10">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-base sm:text-lg gradient-text">
+                    {classItem.name}
+                  </CardTitle>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => useClasses().deleteClass(classItem.id)}
+                    className="text-destructive hover:text-destructive cursor-pointer hover:bg-red-500 hover:text-white"
+                    disabled={
+                      loading ||
+                      !isAuthenticated ||
+                      user?.userType !== "teacher"
+                    }
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4 relative z-10">
+                <div className="flex items-center space-x-2">
+                  <Users className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm text-muted-foreground">
+                    {classItem.students.length} student
+                    {classItem.students.length !== 1 ? "s" : ""}
+                  </span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Badge
+                    variant="secondary"
+                    className={`bg-gradient-to-r text-sm font-bold ${
+                      colorScheme === "dark"
+                        ? "text-blue-300 from-blue-900 to-purple-900"
+                        : "text-blue-700 from-blue-100 to-purple-100"
+                    }`}
+                  >
+                    {classItem.assignments.length} assignment
+                    {classItem.assignments.length === 1 ? "" : "s"}
+                  </Badge>
+                </div>
+                <Button
+                  variant="outline"
+                  className="w-full gradient-button"
+                  onClick={() => setSelectedClass(classItem)}
+                  disabled={
+                    loading || !isAuthenticated || user?.userType !== "teacher"
+                  }
+                >
+                  Manage Students
+                </Button>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
       )}
 
       {selectedClass && (
