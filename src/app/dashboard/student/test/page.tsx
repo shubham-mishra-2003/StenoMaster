@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Clock, Target, RotateCcw } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { useAssignments, AssignmentsProvider} from "@/hooks/use-StudentAssignments";
 import { toast } from "@/hooks/use-toast";
 import { useTheme } from "@/hooks/ThemeProvider";
 import { Score } from "@/types";
@@ -15,21 +16,21 @@ const sampleTexts = [
   "In a hole in the ground there lived a hobbit. Not a nasty, dirty, wet hole filled with the ends of worms and an oozy smell.",
   "It was the best of times, it was the worst of times, it was the age of wisdom, it was the age of foolishness.",
   "To be or not to be, that is the question. Whether 'tis nobler in the mind to suffer the slings and arrows of outrageous fortune.",
-  "Call me Ishmael. Some years ago never mind how long precisely having little or no money in my purse."
+  "Call me Ishmael. Some years ago never mind how long precisely having little or no money in my purse.",
 ];
 
-const TypingTest = () => {
+const TypingTestContent = () => {
   const [currentText, setCurrentText] = useState(sampleTexts[0]);
   const [typedText, setTypedText] = useState("");
   const [startTime, setStartTime] = useState<Date | null>(null);
   const [isStarted, setIsStarted] = useState(false);
   const [isCompleted, setIsCompleted] = useState(false);
   const [timeElapsed, setTimeElapsed] = useState(0);
-  const [testResults, setTestResults] = useState<Score[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const { user } = useAuth();
   const { colorScheme } = useTheme();
+  const { scores, getScores, createScore, error } = useAssignments();
 
   useEffect(() => {
     const fetchTestResults = async () => {
@@ -37,36 +38,36 @@ const TypingTest = () => {
         toast({
           title: "Authentication Required",
           description: "Please log in to view test results.",
-          variant: "destructive"
+          variant: "destructive",
         });
+        setIsLoading(false);
         return;
       }
       setIsLoading(true);
       try {
-        const response = await fetch(
-          `/api/student/scores?studentId=${user.userId}`
-        );
-        if (!response.ok) {
-          throw new Error("Failed to fetch test results");
-        }
-        const data: Score[] = await response.json();
-        const typingTestScores = data.filter(
-          (score) => score.assignmentId === "typing-test"
-        );
-        setTestResults(typingTestScores);
+        await getScores(user.userId);
       } catch (error) {
-        console.error("Error fetching test results:", error);
         toast({
           title: "Error",
-          description: "Failed to load test results",
-          variant: "destructive"
+          description: error instanceof Error ? error.message : "Failed to load test results",
+          variant: "destructive",
         });
       } finally {
         setIsLoading(false);
       }
     };
     fetchTestResults();
-  }, [user]);
+  }, [user, getScores]);
+
+  useEffect(() => {
+    if (error) {
+      toast({
+        title: "Error",
+        description: error,
+        variant: "destructive",
+      });
+    }
+  }, [error]);
 
   useEffect(() => {
     let interval: NodeJS.Timeout;
@@ -89,7 +90,7 @@ const TypingTest = () => {
       toast({
         title: "Authentication Required",
         description: "Please log in to start the typing test.",
-        variant: "destructive"
+        variant: "destructive",
       });
       return;
     }
@@ -103,9 +104,8 @@ const TypingTest = () => {
     if (!startTime || !user?.userId || isCompleted) {
       toast({
         title: "Error",
-        description:
-          "Cannot complete test. Ensure you are logged in and the test has started.",
-        variant: "destructive"
+        description: "Cannot complete test. Ensure you are logged in and the test has started.",
+        variant: "destructive",
       });
       return;
     }
@@ -121,33 +121,21 @@ const TypingTest = () => {
       typedText,
       accuracy,
       wpm,
-      completedAt: new Date()
+      completedAt: new Date(),
+      timeElapsed,
     };
 
     try {
-      const response = await fetch("/api/student/scores", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...result,
-          completedAt: (result.completedAt as Date).toISOString()
-        })
-      });
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to save test result");
-      }
-      setTestResults((prev) => [...prev, result]);
+      await createScore(result);
       toast({
         title: "Typing Test Completed!",
-        description: `WPM: ${wpm}, Accuracy: ${accuracy}%`
+        description: `WPM: ${wpm}, Accuracy: ${accuracy}%`,
       });
-    } catch (error: any) {
-      console.error("Error saving test result:", error);
+    } catch (error) {
       toast({
         title: "Error",
-        description: error.message || "Failed to save test result",
-        variant: "destructive"
+        description: error instanceof Error ? error.message : "Failed to save test result",
+        variant: "destructive",
       });
     }
   };
@@ -188,22 +176,12 @@ const TypingTest = () => {
       let className = "text-lg ";
       if (index < typedText.length) {
         if (typedText[index] === char) {
-          className += `${
-            colorScheme === "dark"
-              ? "bg-green-800 text-green-200"
-              : "bg-green-200 text-green-800"
-          }`;
+          className += `${colorScheme === "dark" ? "bg-green-800 text-green-200" : "bg-green-200 text-green-800"}`;
         } else {
-          className += `${
-            colorScheme === "dark"
-              ? "bg-red-800 text-red-200"
-              : "bg-red-200 text-red-800"
-          }`;
+          className += `${colorScheme === "dark" ? "bg-red-800 text-red-200" : "bg-red-200 text-red-800"}`;
         }
       } else if (index === typedText.length) {
-        className += `${
-          colorScheme === "dark" ? "bg-blue-800" : "bg-blue-200"
-        }`;
+        className += `${colorScheme === "dark" ? "bg-blue-800" : "bg-blue-200"}`;
       } else {
         className += `${colorScheme === "dark" ? "text-dark" : "text-light"}`;
       }
@@ -239,11 +217,7 @@ const TypingTest = () => {
               <Target className="h-5 w-5" />
               Typing Speed Test
             </CardTitle>
-            <Button
-              variant="outline"
-              onClick={handleReset}
-              className="gradient-button"
-            >
+            <Button variant="outline" onClick={handleReset} className="gradient-button">
               <RotateCcw className="h-4 w-4 mr-2" />
               New Test
             </Button>
@@ -253,9 +227,7 @@ const TypingTest = () => {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div
               className={`relative font-bold flex items-center gap-2 p-3 rounded-2xl overflow-hidden bg-gradient-to-br backdrop-blur-xl border-0 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1 ${
-                colorScheme === "dark"
-                  ? "from-gray-900/80 via-gray-800/60 to-gray-700/40"
-                  : "from-white/80 via-white/60 to-white/40"
+                colorScheme === "dark" ? "from-gray-900/80 via-gray-800/60 to-gray-700/40" : "from-white/80 via-white/60 to-white/40"
               }`}
             >
               <div className="absolute inset-0 bg-gradient-to-br from-blue-500 to-blue-600 opacity-5"></div>
@@ -263,93 +235,48 @@ const TypingTest = () => {
               <div>
                 <p className="text-sm">Time</p>
                 <p className="font-mono text-lg">
-                  {Math.floor(timeElapsed / 60)}:
-                  {(timeElapsed % 60).toString().padStart(2, "0")}
+                  {Math.floor(timeElapsed / 60)}:{(timeElapsed % 60).toString().padStart(2, "0")}
                 </p>
               </div>
             </div>
             <div
               className={`relative font-bold flex items-center gap-2 p-3 rounded-2xl overflow-hidden bg-gradient-to-br backdrop-blur-xl border-0 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1 ${
-                colorScheme === "dark"
-                  ? "from-gray-900/80 via-gray-800/60 to-gray-700/40"
-                  : "from-white/80 via-white/60 to-white/40"
+                colorScheme === "dark" ? "from-gray-900/80 via-gray-800/60 to-gray-700/40" : "from-white/80 via-white/60 to-white/40"
               }`}
             >
               <div className="absolute inset-0 bg-gradient-to-br from-green-500 to-green-600 opacity-5"></div>
               <Target className="h-4 w-4" />
               <div>
-                <p
-                  className={`text-sm ${
-                    colorScheme === "dark" ? "text-dark" : "text-light"
-                  }`}
-                >
-                  WPM
-                </p>
-                <p
-                  className={`font-mono text-lg ${
-                    colorScheme === "dark" ? "text-dark" : "text-light"
-                  }`}
-                >
-                  {currentWPM}
-                </p>
+                <p className={`text-sm ${colorScheme === "dark" ? "text-dark" : "text-light"}`}>WPM</p>
+                <p className={`font-mono text-lg ${colorScheme === "dark" ? "text-dark" : "text-light"}`}>{currentWPM}</p>
               </div>
             </div>
             <div
               className={`relative flex items-center gap-2 p-3 rounded-2xl overflow-hidden font-bold bg-gradient-to-br backdrop-blur-xl border-0 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1 ${
-                colorScheme === "dark"
-                  ? "from-gray-900/80 via-gray-800/60 to-gray-700/40"
-                  : "from-white/80 via-white/60 to-white/40"
+                colorScheme === "dark" ? "from-gray-900/80 via-gray-800/60 to-gray-700/40" : "from-white/80 via-white/60 to-white/40"
               }`}
             >
               <div className="absolute inset-0 bg-gradient-to-br from-orange-500 to-orange-600 opacity-5"></div>
               <Target className="h-4 w-4" />
               <div>
-                <p
-                  className={`text-sm ${
-                    colorScheme === "dark" ? "text-dark" : "text-light"
-                  }`}
-                >
-                  Accuracy
-                </p>
-                <p
-                  className={`font-mono text-lg ${
-                    colorScheme === "dark" ? "text-dark" : "text-light"
-                  }`}
-                >
-                  {currentAccuracy}%
-                </p>
+                <p className={`text-sm ${colorScheme === "dark" ? "text-dark" : "text-light"}`}>Accuracy</p>
+                <p className={`font-mono text-lg ${colorScheme === "dark" ? "text-dark" : "text-light"}`}>{currentAccuracy}%</p>
               </div>
             </div>
           </div>
           <div className="space-y-4">
             <div className={`flex items-center justify-between font-bold`}>
-              <span
-                className={`text-xl ${
-                  colorScheme === "dark" ? "text-dark" : "text-light"
-                }`}
-              >
-                Progress
-              </span>
-              <span
-                className={`text-xl ${
-                  colorScheme === "dark" ? "text-dark" : "text-light"
-                }`}
-              >
-                {Math.round(progress)}%
-              </span>
+              <span className={`text-xl ${colorScheme === "dark" ? "text-dark" : "text-light"}`}>Progress</span>
+              <span className={`text-xl ${colorScheme === "dark" ? "text-dark" : "text-light"}`}>{Math.round(progress)}%</span>
             </div>
             <Progress value={progress} className="w-full" />
           </div>
           <div
             className={`p-6 border rounded-lg bg-gradient-to-r backdrop-blur-sm ${
-              colorScheme === "dark"
-                ? "from-gray-800/30 to-blue-950/30 border-gray-500"
-                : "border-blue-500/60 from-blue-500/10 to-blue-50/10"
+              colorScheme === "dark" ? "from-gray-800/30 to-blue-950/30 border-gray-500" : "border-blue-500/60 from-blue-500/10 to-blue-50/10"
             }`}
           >
-            <div className="font-mono leading-relaxed select-none">
-              {renderText()}
-            </div>
+            <div className="font-mono leading-relaxed select-none">{renderText()}</div>
           </div>
           <div className="space-y-4">
             <input
@@ -359,22 +286,14 @@ const TypingTest = () => {
               onChange={handleTextChange}
               autoFocus={isStarted}
               className={`w-full p-4 border rounded-lg bg-gradient-to-r backdrop-blur-sm font-mono text-lg ${
-                colorScheme === "dark"
-                  ? "from-gray-800/30 to-blue-950/30 border-gray-500"
-                  : "border-blue-500/60 from-blue-500/10 to-blue-50/10"
+                colorScheme === "dark" ? "from-gray-800/30 to-blue-950/30 border-gray-500" : "border-blue-500/60 from-blue-500/10 to-blue-50/10"
               }`}
-              placeholder={
-                isStarted ? "Type here..." : "Click Start Test to begin"
-              }
+              placeholder={isStarted ? "Type here..." : "Click Start Test to begin"}
               disabled={!isStarted || isCompleted}
             />
             <div className="flex gap-2">
               {!isStarted ? (
-                <Button
-                  onClick={handleStart}
-                  className="w-full gradient-button rounded-2xl"
-                  disabled={!user?.userId}
-                >
+                <Button onClick={handleStart} className="w-full gradient-button rounded-2xl" disabled={!user?.userId}>
                   Start Test
                 </Button>
               ) : isCompleted ? (
@@ -397,44 +316,29 @@ const TypingTest = () => {
           </div>
         </CardContent>
       </Card>
-      {testResults.length > 0 && (
+      {scores.filter((score) => score.assignmentId === "typing-test").length > 0 && (
         <Card className="max-h-[70vh] overflow-auto bg-gradient-to-br from-purple-500/5 via-indigo-500/5 to-blue-500/5">
           <CardHeader>
             <CardTitle>Recent Test Results</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {testResults
+              {scores
+                .filter((score) => score.assignmentId === "typing-test")
                 .slice(-5)
                 .reverse()
                 .map((result) => (
                   <div
                     key={result.id}
                     className={`flex items-center justify-between p-3 bg-gradient-to-r rounded-lg backdrop-blur-sm border ${
-                      colorScheme === "dark"
-                        ? "from-gray-800/30 to-blue-950/30 border-gray-500"
-                        : "border-blue-500/60 from-blue-500/10 to-blue-50/10"
+                      colorScheme === "dark" ? "from-gray-800/30 to-blue-950/30 border-gray-500" : "border-blue-500/60 from-blue-500/10 to-blue-50/10"
                     }`}
                   >
                     <div>
-                      <p
-                        className={`font-semibold ${
-                          colorScheme === "dark" ? "text-dark" : "text-light"
-                        }`}
-                      >
-                        {result.wpm} WPM
-                      </p>
-                      <p
-                        className={`font-semibold text-sm ${
-                          colorScheme === "dark" ? "text-dark" : "text-light"
-                        }`}
-                      >
-                        {result.accuracy}% accuracy
-                      </p>
+                      <p className={`font-semibold ${colorScheme === "dark" ? "text-dark" : "text-light"}`}>{result.wpm} WPM</p>
+                      <p className={`font-semibold text-sm ${colorScheme === "dark" ? "text-dark" : "text-light"}`}>{result.accuracy}% accuracy</p>
                     </div>
-                    <p className="text-xs text-muted-foreground">
-                      {new Date(result.completedAt).toLocaleDateString()}
-                    </p>
+                    <p className="text-xs text-muted-foreground">{new Date(result.completedAt).toLocaleDateString()}</p>
                   </div>
                 ))}
             </div>
@@ -444,5 +348,12 @@ const TypingTest = () => {
     </div>
   );
 };
+
+const TypingTest: React.FC = () => (
+  <AssignmentsProvider>
+    <TypingTestContent />
+  </AssignmentsProvider>
+);
+
 
 export default TypingTest;

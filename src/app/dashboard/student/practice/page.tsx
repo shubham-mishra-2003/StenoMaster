@@ -8,46 +8,29 @@ import {
   SelectContent,
   SelectItem,
   SelectTrigger,
-  SelectValue
+  SelectValue,
 } from "@/components/ui/select";
 import { FileText } from "lucide-react";
-import { Assignment } from "@/types";
 import { useTheme } from "@/hooks/ThemeProvider";
 import { useRouter } from "next/navigation";
 import { toast } from "@/hooks/use-toast";
+import { useAssignments, AssignmentsProvider } from "@/hooks/use-StudentAssignments";
 
-const PracticePage = () => {
-  const [assignments, setAssignments] = useState<Assignment[]>([]);
-  const [selectedAssignmentId, setSelectedAssignmentId] = useState<
-    string | null
-  >(null);
-  const [isLoading, setIsLoading] = useState(true);
+const PracticePageContent = () => {
+  const [selectedAssignmentId, setSelectedAssignmentId] = useState<string | null>(null);
+  const { assignments, loading, error } = useAssignments();
   const { colorScheme } = useTheme();
   const router = useRouter();
 
   useEffect(() => {
-    const fetchAssignments = async () => {
-      setIsLoading(true);
-      try {
-        const response = await fetch("/api/stuedent/assignments");
-        if (!response.ok) {
-          throw new Error("Failed to fetch assignments");
-        }
-        const data = await response.json();
-        setAssignments(data);
-      } catch (error) {
-        console.error("Error fetching assignments:", error);
-        toast({
-          title: "Error",
-          description: "Failed to load assignments",
-          variant: "destructive"
-        });
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    fetchAssignments();
-  }, []);
+    if (error) {
+      toast({
+        title: "Error",
+        description: error,
+        variant: "destructive",
+      });
+    }
+  }, [error]);
 
   const handleStartPractice = () => {
     if (selectedAssignmentId) {
@@ -55,7 +38,7 @@ const PracticePage = () => {
     }
   };
 
-  if (isLoading) {
+  if (loading) {
     return (
       <Card>
         <CardContent className="flex flex-col items-center justify-center py-12">
@@ -68,14 +51,8 @@ const PracticePage = () => {
   return (
     <div className="space-y-6">
       <div>
-        <h4 className="gradient-text font-bold text-2xl">
-          Assignments Assigned to You
-        </h4>
-        <p
-          className={
-            colorScheme === "dark" ? "text-dark-muted" : "text-light-muted"
-          }
-        >
+        <h4 className="gradient-text font-bold text-2xl">Assignments Assigned to You</h4>
+        <p className={colorScheme === "dark" ? "text-dark-muted" : "text-light-muted"}>
           Select and complete your assignments
         </p>
       </div>
@@ -112,13 +89,13 @@ const PracticePage = () => {
                 >
                   {assignments.map((assignment) => (
                     <SelectItem
+                      key={assignment.id}
+                      value={assignment.id}
                       className={`cursor-pointer mb-2 border-2 h-12 rounded-xl ${
                         colorScheme === "dark"
                           ? "bg-slate-700 border-slate-600"
                           : "bg-slate-200 border-slate-300"
                       }`}
-                      key={assignment.id}
-                      value={assignment.id}
                     >
                       {assignment.title}
                     </SelectItem>
@@ -139,5 +116,11 @@ const PracticePage = () => {
     </div>
   );
 };
+
+const PracticePage = () => (
+  <AssignmentsProvider>
+    <PracticePageContent />
+  </AssignmentsProvider>
+);
 
 export default PracticePage;

@@ -1,84 +1,37 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db } from "../../firebase/FirebaseAdmin";
-import { Assignment } from "@/types";
-
-type FirestoreAssignment = Assignment & { [key: string]: any };
-
-const handleError = (error: any, message: string) => {
-  console.error(message, error);
-  return NextResponse.json({ error: message }, { status: 500 });
-};
+import { getAssignments, createAssignment, updateAssignment, deleteAssignment } from "@/lib/actions//studentassignments.actions";
 
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
     const id = searchParams.get("id");
-
-    if (id) {
-      const doc = await db.collection("assignments").doc(id).get();
-      if (!doc.exists) {
-        return NextResponse.json(
-          { error: "Assignment not found" },
-          { status: 404 }
-        );
-      }
-      return NextResponse.json({ id: doc.id, ...doc.data() });
-    }
-
-    const snapshot = await db.collection("assignments").get();
-    const assignments: Assignment[] = snapshot.docs.map(
-      (doc) =>
-        ({
-          id: doc.id,
-          ...doc.data()
-        } as Assignment)
-    );
+    const assignments = await getAssignments(id || undefined);
     return NextResponse.json(assignments);
   } catch (error) {
-    return handleError(error, "Error fetching assignments");
+    console.error("Error fetching assignments:", error);
+    return NextResponse.json({ error: error instanceof Error ? error.message : "Internal server error" }, { status: 500 });
   }
 }
 
 export async function POST(req: NextRequest) {
   try {
-    const assignment: FirestoreAssignment = await req.json();
-    if (
-      !assignment.id ||
-      !assignment.title ||
-      !assignment.correctText ||
-      !assignment.imageUrl
-    ) {
-      return NextResponse.json(
-        { error: "Missing required assignment fields" },
-        { status: 400 }
-      );
-    }
-    await db.collection("assignments").doc(assignment.id).set(assignment);
-    return NextResponse.json({
-      message: "Assignment created successfully",
-      id: assignment.id
-    });
+    const assignment = await req.json();
+    const result = await createAssignment(assignment);
+    return NextResponse.json({ message: "Assignment created successfully", id: result.id });
   } catch (error) {
-    return handleError(error, "Error creating assignment");
+    console.error("Error creating assignment:", error);
+    return NextResponse.json({ error: error instanceof Error ? error.message : "Internal server error" }, { status: 500 });
   }
 }
 
 export async function PUT(req: NextRequest) {
   try {
-    const assignment: FirestoreAssignment = await req.json();
-    if (!assignment.id) {
-      return NextResponse.json(
-        { error: "Assignment ID is required" },
-        { status: 400 }
-      );
-    }
-    await db.collection("assignments").doc(assignment.id).update(assignment);
-    return NextResponse.json({
-      message: "Assignment updated successfully",
-      id: assignment.id
-    });
+    const assignment = await req.json();
+    const result = await updateAssignment(assignment);
+    return NextResponse.json({ message: "Assignment updated successfully", id: result.id });
   } catch (error) {
-    return handleError(error, "Error updating assignment");
+    console.error("Error updating assignment:", error);
+    return NextResponse.json({ error: error instanceof Error ? error.message : "Internal server error" }, { status: 500 });
   }
 }
 
@@ -87,14 +40,12 @@ export async function DELETE(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const id = searchParams.get("id");
     if (!id) {
-      return NextResponse.json(
-        { error: "Assignment ID is required" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Assignment ID is required" }, { status: 400 });
     }
-    await db.collection("assignments").doc(id).delete();
+    await deleteAssignment(id);
     return NextResponse.json({ message: "Assignment deleted successfully" });
   } catch (error) {
-    return handleError(error, "Error deleting assignment");
+    console.error("Error deleting assignment:", error);
+    return NextResponse.json({ error: error instanceof Error ? error.message : "Internal server error" }, { status: 500 });
   }
 }

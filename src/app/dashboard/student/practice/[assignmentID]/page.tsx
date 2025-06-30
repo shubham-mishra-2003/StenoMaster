@@ -8,11 +8,12 @@ import { Progress } from "@/components/ui/progress";
 import { Clock, Target } from "lucide-react";
 import { Assignment, Score } from "@/types";
 import { useAuth } from "@/hooks/useAuth";
+import { useAssignments, AssignmentsProvider } from "@/hooks/use-StudentAssignments";
 import { toast } from "@/hooks/use-toast";
 import Image from "next/image";
 import { useRouter, useParams } from "next/navigation";
 
-const AssignmentPractice = () => {
+const AssignmentPracticeContent = () => {
   const params = useParams();
   const assignmentID = params.assignmentID as string;
   const [assignment, setAssignment] = useState<Assignment | null>(null);
@@ -23,33 +24,37 @@ const AssignmentPractice = () => {
   const [timeElapsed, setTimeElapsed] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const { user } = useAuth();
+  const { getAssignments, createScore, error } = useAssignments();
   const router = useRouter();
 
   useEffect(() => {
     const fetchAssignment = async () => {
       setIsLoading(true);
       try {
-        const response = await fetch(
-          `/api/student/assignments?id=${assignmentID}`
-        );
-        if (!response.ok) {
-          throw new Error("Failed to fetch assignment");
-        }
-        const data = await response.json();
-        setAssignment(data);
+        const data = await getAssignments(assignmentID);
+        setAssignment(data as Assignment);
       } catch (error) {
-        console.error("Error fetching assignment:", error);
         toast({
           title: "Error",
           description: "Failed to load assignment",
-          variant: "destructive"
+          variant: "destructive",
         });
       } finally {
         setIsLoading(false);
       }
     };
     fetchAssignment();
-  }, [assignmentID]);
+  }, [assignmentID, getAssignments]);
+
+  useEffect(() => {
+    if (error) {
+      toast({
+        title: "Error",
+        description: error,
+        variant: "destructive",
+      });
+    }
+  }, [error]);
 
   useEffect(() => {
     let interval: NodeJS.Timeout;
@@ -83,7 +88,7 @@ const AssignmentPractice = () => {
       toast({
         title: "Authentication Required",
         description: "Please log in to start the assignment.",
-        variant: "destructive"
+        variant: "destructive",
       });
       return;
     }
@@ -96,9 +101,8 @@ const AssignmentPractice = () => {
     if (!startTime || !user?.userId || !assignment || isCompleted) {
       toast({
         title: "Error",
-        description:
-          "Cannot submit assignment. Ensure you are logged in and the assignment has started.",
-        variant: "destructive"
+        description: "Cannot submit assignment. Ensure you are logged in and the assignment has started.",
+        variant: "destructive",
       });
       return;
     }
@@ -114,25 +118,15 @@ const AssignmentPractice = () => {
       typedText,
       accuracy,
       wpm,
-      completedAt: new Date()
+      completedAt: new Date(),
+      timeElapsed,
     };
 
     try {
-      const response = await fetch("/api/student/scores", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...score,
-          completedAt: (score.completedAt as Date).toISOString() // Type assertion to ensure completedAt is treated as Date
-        })
-      });
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to save score");
-      }
+      await createScore(score);
       toast({
         title: "Assignment Completed!",
-        description: `Accuracy: ${accuracy}%, WPM: ${wpm}`
+        description: `Accuracy: ${accuracy}%, WPM: ${wpm}`,
       });
       setTypedText("");
       setIsStarted(false);
@@ -140,12 +134,11 @@ const AssignmentPractice = () => {
       setStartTime(null);
       setTimeElapsed(0);
       router.push("/dashboard/student/practice");
-    } catch (error: any) {
-      console.error("Error saving score:", error);
+    } catch (error) {
       toast({
         title: "Error",
-        description: error.message || "Failed to save score",
-        variant: "destructive"
+        description: error instanceof Error ? error.message : "Failed to save score",
+        variant: "destructive",
       });
     }
   };
@@ -176,10 +169,7 @@ const AssignmentPractice = () => {
           </CardHeader>
           <CardContent>
             <p>No assignment found with ID: {assignmentID || "undefined"}</p>
-            <Button
-              onClick={() => router.push("/dashboard/student/practice")}
-              className="mt-4 gradient-button"
-            >
+            <Button onClick={() => router.push("/dashboard/student/practice")} className="mt-4 gradient-button">
               Back to Practice
             </Button>
           </CardContent>
@@ -197,11 +187,7 @@ const AssignmentPractice = () => {
               <Clock className="h-5 w-5" />
               {assignment.title}
             </CardTitle>
-            <Button
-              variant="outline"
-              onClick={() => router.push("/dashboard/student/practice")}
-              className="gradient-button"
-            >
+            <Button variant="outline" onClick={() => router.push("/dashboard/student/practice")} className="gradient-button">
               Back to Assignments
             </Button>
           </div>
@@ -211,8 +197,7 @@ const AssignmentPractice = () => {
             <div className="flex items-center gap-4 text-sm text-muted-foreground">
               <div className="flex items-center gap-1">
                 <Clock className="h-4 w-4" />
-                Time: {Math.floor(timeElapsed / 60)}:
-                {(timeElapsed % 60).toString().padStart(2, "0")}
+                Time: {Math.floor(timeElapsed / 60)}:{(timeElapsed % 60).toString().padStart(2, "0")}
               </div>
               <div className="flex items-center gap-1">
                 <Target className="h-4 w-4" />
@@ -224,13 +209,7 @@ const AssignmentPractice = () => {
               <div>
                 <h3 className="font-medium mb-2">Assignment Image</h3>
                 <div className="border rounded-lg p-4 bg-muted">
-                  <Image
-                    height={300}
-                    width={300}
-                    src={assignment.imageUrl}
-                    alt={assignment.title}
-                    className="w-full h-auto rounded"
-                  />
+                  <Image height={300} width={300} src={assignment.imageUrl} alt={assignment.title} className="w-full h-auto rounded" />
                 </div>
               </div>
               <div className="space-y-4">
@@ -246,11 +225,7 @@ const AssignmentPractice = () => {
                 </div>
                 <div className="flex gap-2">
                   {!isStarted ? (
-                    <Button
-                      onClick={handleStart}
-                      className="w-full gradient-button"
-                      disabled={!user?.userId}
-                    >
+                    <Button onClick={handleStart} className="w-full gradient-button" disabled={!user?.userId}>
                       Start Assignment
                     </Button>
                   ) : (
@@ -271,5 +246,11 @@ const AssignmentPractice = () => {
     </div>
   );
 };
+
+const AssignmentPractice = () => (
+  <AssignmentsProvider>
+    <AssignmentPracticeContent />
+  </AssignmentsProvider>
+);
 
 export default AssignmentPractice;
