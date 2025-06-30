@@ -39,7 +39,9 @@ const StudentProgressContent: React.FC = () => {
 
   const calculateImprovement = (): number => {
     if (scores.length < 2) return 0;
-    const sortedScores = [...scores].sort((a, b) => a.completedAt.getTime() - b.completedAt.getTime());
+    const sortedScores = [...scores].sort(
+      (a, b) => new Date(a.completedAt).getTime() - new Date(b.completedAt).getTime()
+    );
     const firstFive = sortedScores.slice(0, 5);
     const lastFive = sortedScores.slice(-5);
     const firstAvg = firstFive.reduce((sum, s) => sum + s.accuracy, 0) / firstFive.length;
@@ -152,42 +154,45 @@ const StudentProgressContent: React.FC = () => {
         <CardContent>
           <div className="space-y-3">
             {scores
-              .sort((a, b) => b.completedAt.getTime() - a.completedAt.getTime())
+              .sort((a, b) => new Date(b.completedAt).getTime() - new Date(a.completedAt).getTime())
               .slice(0, 10)
-              .map((score) => (
-                <div
-                  key={score.id}
-                  className={`flex items-center justify-between p-3 bg-gradient-to-r rounded-lg backdrop-blur-sm border ${
-                    colorScheme === "dark"
-                      ? "from-gray-800/30 to-blue-950/30 border-gray-500"
-                      : "from-blue-500/10 to-blue-50/10 border-blue-500/60"
-                  }`}
-                >
-                  <div>
-                    <p className={`font-medium ${colorScheme === "dark" ? "text-dark" : "text-light"}`}>{getAssignmentTitle(score.assignmentId)}</p>
-                    <p className={`text-sm ${colorScheme === "dark" ? "text-dark" : "text-light"}`}>
-                      {score.completedAt.toLocaleDateString("en-IN", { timeZone: "Asia/Kolkata" })} at{" "}
-                      {score.completedAt.toLocaleTimeString("en-IN", { timeZone: "Asia/Kolkata", hour: "2-digit", minute: "2-digit" })}
-                    </p>
-                  </div>
-                  <div className="text-right flex space-x-4 text-sm">
-                    <div className="text-center">
-                      <div className="flex items-center">
-                        <Target className="h-3 w-3 mr-1" />
-                        <p className={`font-bold ${colorScheme === "dark" ? "text-dark" : "text-light"}`}>{score.accuracy}%</p>
-                      </div>
-                      <div className={`text-sm ${colorScheme === "dark" ? "text-dark-muted" : "text-light-muted"}`}>Accuracy</div>
+              .map((score) => {
+                const completedAt = new Date(score.completedAt);
+                return (
+                  <div
+                    key={score.id}
+                    className={`flex items-center justify-between p-3 bg-gradient-to-r rounded-lg backdrop-blur-sm border ${
+                      colorScheme === "dark"
+                        ? "from-gray-800/30 to-blue-950/30 border-gray-500"
+                        : "from-blue-500/10 to-blue-50/10 border-blue-500/60"
+                    }`}
+                  >
+                    <div>
+                      <p className={`font-medium ${colorScheme === "dark" ? "text-dark" : "text-light"}`}>{getAssignmentTitle(score.assignmentId)}</p>
+                      <p className={`text-sm ${colorScheme === "dark" ? "text-dark" : "text-light"}`}>
+                        {completedAt.toLocaleDateString("en-IN", { timeZone: "Asia/Kolkata" })} at{" "}
+                        {completedAt.toLocaleTimeString("en-IN", { timeZone: "Asia/Kolkata", hour: "2-digit", minute: "2-digit" })}
+                      </p>
                     </div>
-                    <div className="text-center">
-                      <div className="flex items-center">
-                        <Clock className="h-3 w-3 mr-1" />
-                        <p className={`font-bold ${colorScheme === "dark" ? "text-dark" : "text-light"}`}>{score.wpm}</p>
+                    <div className="text-right flex space-x-4 text-sm">
+                      <div className="text-center">
+                        <div className="flex items-center">
+                          <Target className="h-3 w-3 mr-1" />
+                          <p className={`font-bold ${colorScheme === "dark" ? "text-dark" : "text-light"}`}>{score.accuracy}%</p>
+                        </div>
+                        <div className={`text-sm ${colorScheme === "dark" ? "text-dark-muted" : "text-light-muted"}`}>Accuracy</div>
                       </div>
-                      <div className={`text-sm ${colorScheme === "dark" ? "text-dark-muted" : "text-light-muted"}`}>WPM</div>
+                      <div className="text-center">
+                        <div className="flex items-center">
+                          <Clock className="h-3 w-3 mr-1" />
+                          <p className={`font-bold ${colorScheme === "dark" ? "text-dark" : "text-light"}`}>{score.wpm}</p>
+                        </div>
+                        <div className={`text-sm ${colorScheme === "dark" ? "text-dark-muted" : "text-light-muted"}`}>WPM</div>
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
           </div>
         </CardContent>
       </Card>
