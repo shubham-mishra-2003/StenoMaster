@@ -2,9 +2,9 @@ import { initializeApp, cert, getApps, App, ServiceAccount } from 'firebase-admi
 import { getFirestore, Firestore } from 'firebase-admin/firestore';
 
 const serviceAccount: ServiceAccount = {
-  projectId: process.env.PROJECT_ID,
-  privateKey: process.env.PRIVATE_KEY,
-  clientEmail: process.env.CLIENT_EMAIL,
+  projectId: process.env.FIREBASE_PROJECT_ID,
+  privateKey: process.env.FIREBASE_PRIVATE_KEY,
+  clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
 };
 
 const requiredEnvVars: (keyof ServiceAccount)[] = ['projectId', 'privateKey', 'clientEmail'];

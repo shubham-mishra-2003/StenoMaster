@@ -1,0 +1,4 @@
+student - fetch student daetails in classes, reassignment of classes to students
+teacher - assignment update (remove description and add deadline date and time) implementation at firebase
+
+students can only see documents from its own class, assignments and if due date is over it should show assignments with timed out.

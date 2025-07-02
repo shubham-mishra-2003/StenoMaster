@@ -1,3 +1,5 @@
+"use server";
+
 import { connectToDatabase } from "../database/mongoose";
 import { handleError } from "../utils";
 import { validateSessionToken } from "./user.action";
@@ -120,6 +122,36 @@ export async function removeStudentFromClass(
     }
     await removeStudentFromClassDoc(classId, studentId);
     return { success: true };
+  } catch (error) {
+    handleError(error);
+    throw error;
+  }
+}
+
+export async function getStudentsInClass(classId: string, token: string) {
+  try {
+    await connectToDatabase();
+    const user = await validateSessionToken(token);
+    if (user.userType !== "teacher") {
+      throw new Error("Only teachers can view students in a class");
+    }
+    const classData = await getClassDocById(classId);
+    if (!classData || classData.teacherId !== user.userId) {
+      throw new Error("Class not found or unauthorized");
+    }
+    const students = await User.find({
+      userId: { $in: classData.students },
+      userType: "student",
+    }).lean();
+    return students.map((student) => ({
+      _id: student._id,
+      userId: student.userId,
+      email: student.email,
+      fullName: student.fullName,
+      userType: student.userType,
+      photo: student.photo,
+      createdAt: student.createdAt,
+    }));
   } catch (error) {
     handleError(error);
     throw error;

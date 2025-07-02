@@ -6,8 +6,8 @@ import { deleteUser } from "@/lib/actions/user.action";
 import jwt from "jsonwebtoken";
 
 interface DeleteRequestBody {
-  userId: string; // Changed to userId for consistency
-  token: string; // Require token for authentication
+  userId: string;
+  token: string;
 }
 
 export async function POST(request: NextRequest) {
@@ -28,37 +28,52 @@ export async function POST(request: NextRequest) {
       body.token,
       process.env.JWT_SECRET || "fallback-secret-key"
     ) as { userId: string; userType: string };
-    if (decoded.userId !== body.userId) {
+
+    // Authenticate the requester
+    const requester = await User.findOne({
+      userId: decoded.userId,
+      sessionToken: body.token,
+    });
+    if (!requester) {
       return NextResponse.json(
-        { status: "error", message: "Invalid token" },
+        { status: "error", message: "Invalid or expired session token" },
         { status: 401 }
       );
     }
 
-    const user = await User.findOne({
-      userId: body.userId,
-      sessionToken: body.token,
-    });
-    if (!user) {
-      return NextResponse.json(
-        { status: "error", message: "User not found or invalid session" },
-        { status: 404 }
-      );
-    }
-
-    // Allow teachers to delete students, or users to delete their own account
-    if (decoded.userType === "teacher" || decoded.userId === body.userId) {
+    // If the requester is deleting their own account
+    if (decoded.userId === body.userId) {
       await deleteUser(body.userId);
       return NextResponse.json(
         { status: "success", message: "Account deleted successfully" },
         { status: 200 }
       );
-    } else {
+    }
+
+    // If the requester is a teacher, allow deleting any student account
+    if (decoded.userType === "teacher") {
+      const userToDelete = await User.findOne({
+        userId: body.userId,
+        userType: "student",
+      });
+      if (!userToDelete) {
+        return NextResponse.json(
+          { status: "error", message: "Student not found" },
+          { status: 404 }
+        );
+      }
+      await deleteUser(body.userId);
       return NextResponse.json(
-        { status: "error", message: "Unauthorized to delete this account" },
-        { status: 403 }
+        { status: "success", message: "Student account deleted successfully" },
+        { status: 200 }
       );
     }
+
+    // If neither self-deletion nor teacher, deny access
+    return NextResponse.json(
+      { status: "error", message: "Unauthorized to delete this account" },
+      { status: 403 }
+    );
   } catch (error: any) {
     handleError(error);
     return NextResponse.json(

@@ -13,64 +13,28 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
+import { Class } from "@/types";
 import { Plus, Users, Trash2 } from "lucide-react";
-import { toast } from "@/hooks/use-toast";
 import StudentManagement from "@/components/StudentManagement";
 import { useTheme } from "@/hooks/ThemeProvider";
-import { useAuth } from "@/hooks/useAuth";
-import { useClasses } from "@/hooks/useClasses";
-import { useRouter } from "next/navigation";
-import { Class } from "@/types";
+import { useClass } from "@/hooks/useClasses";
 
 const ClassPage = () => {
-  const { isAuthenticated, user } = useAuth();
-  const { classes, loading, error, createClass } = useClasses();
+  const { classes, isLoading, createClass, deleteClass, fetchClasses } =
+    useClass();
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [newClassName, setNewClassName] = useState("");
   const [selectedClass, setSelectedClass] = useState<Class | null>(null);
   const { colorScheme } = useTheme();
-  const router = useRouter();
 
-  // Redirect if not authenticated or not a teacher
   useEffect(() => {
-    if (!isAuthenticated || user?.userType !== "teacher") {
-      toast({
-        title: "Error",
-        description: "Only teachers can access class management.",
-        variant: "destructive",
-      });
-      router.push("/?showLogin=true");
-    }
-  }, [isAuthenticated, user, router]);
-
-  // Handle errors from useClasses
-  useEffect(() => {
-    if (error) {
-      toast({
-        title: "Error",
-        description: error,
-        variant: "destructive",
-      });
-    }
-  }, [error]);
+    fetchClasses();
+  }, [fetchClasses, isCreateDialogOpen]);
 
   const handleCreateClass = async () => {
-    if (!newClassName.trim()) {
-      toast({
-        title: "Error",
-        description: "Please enter a class name.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    try {
-      await createClass(newClassName);
-      setNewClassName("");
-      setIsCreateDialogOpen(false);
-    } catch (err) {
-      // Error is handled in useClasses with toast
-    }
+    await createClass(newClassName);
+    setNewClassName("");
+    setIsCreateDialogOpen(false);
   };
 
   return (
@@ -82,8 +46,8 @@ const ClassPage = () => {
           </h2>
           <p
             className={`text-sm sm:text-base font-semibold ${
-              colorScheme === "dark" ? "text-dark-muted" : "text-light-muted"
-            }`}
+              colorScheme == "dark" ? "text-dark-muted" : "text-light-muted"
+            } `}
           >
             Create and manage your classes
           </p>
@@ -91,12 +55,7 @@ const ClassPage = () => {
 
         <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
           <DialogTrigger asChild>
-            <Button
-              className="gradient-button"
-              disabled={
-                loading || !isAuthenticated || user?.userType !== "teacher"
-              }
-            >
+            <Button className="gradient-button" disabled={isLoading}>
               <Plus className="h-4 w-4 mr-2" />
               Create Class
             </Button>
@@ -118,14 +77,12 @@ const ClassPage = () => {
                   value={newClassName}
                   onChange={(e) => setNewClassName(e.target.value)}
                   className={`focus:ring-2 focus:ring-blue-500 border-2 ${
-                    colorScheme === "dark"
+                    colorScheme == "dark"
                       ? "border-gray-700 bg-gray-800/60"
                       : "bg-white/60 border-gray-300"
                   }`}
                   onKeyPress={(e) => e.key === "Enter" && handleCreateClass()}
-                  disabled={
-                    loading || !isAuthenticated || user?.userType !== "teacher"
-                  }
+                  disabled={isLoading}
                 />
               </div>
               <div className="flex flex-col sm:flex-row gap-2">
@@ -133,22 +90,18 @@ const ClassPage = () => {
                   variant="outline"
                   onClick={() => setIsCreateDialogOpen(false)}
                   className={`flex-1 cursor-pointer rounded-2xl ${
-                    colorScheme === "dark"
+                    colorScheme == "dark"
                       ? "border-gray-600 hover:bg-gray-800"
                       : "border-gray-300 hover:bg-gray-50"
                   }`}
-                  disabled={
-                    loading || !isAuthenticated || user?.userType !== "teacher"
-                  }
+                  disabled={isLoading}
                 >
                   Cancel
                 </Button>
                 <Button
                   onClick={handleCreateClass}
                   className="flex-1 gradient-button"
-                  disabled={
-                    loading || !isAuthenticated || user?.userType !== "teacher"
-                  }
+                  disabled={isLoading}
                 >
                   Create Class
                 </Button>
@@ -158,35 +111,9 @@ const ClassPage = () => {
         </Dialog>
       </div>
 
-      {loading && <div className="text-center">Loading classes...</div>}
-
-      {!loading && classes.length === 0 && (
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center py-12 relative z-10">
-            <div className="w-16 h-16 bg-gradient-to-br from-blue-500 via-purple-500 to-indigo-500 rounded-full flex items-center justify-center mb-4 shadow-lg">
-              <Users className="h-8 w-8 text-white" />
-            </div>
-            <h3 className="text-lg font-bold mb-2 gradient-text">
-              No classes yet
-            </h3>
-            <p className="text-muted-foreground text-center mb-4 max-w-sm">
-              Get started by creating your first class
-            </p>
-            <Button
-              onClick={() => setIsCreateDialogOpen(true)}
-              className="gradient-button"
-              disabled={
-                loading || !isAuthenticated || user?.userType !== "teacher"
-              }
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Create Your First Class
-            </Button>
-          </CardContent>
-        </Card>
-      )}
-
-      {!loading && classes.length > 0 && (
+      {isLoading ? (
+        <div className="text-center py-8">Loading classes...</div>
+      ) : (
         <div className="grid gap-4 sm:gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
           {classes.map((classItem) => (
             <Card key={classItem.id}>
@@ -198,13 +125,9 @@ const ClassPage = () => {
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => useClasses().deleteClass(classItem.id)}
+                    onClick={() => deleteClass(classItem.id)}
                     className="text-destructive hover:text-destructive cursor-pointer hover:bg-red-500 hover:text-white"
-                    disabled={
-                      loading ||
-                      !isAuthenticated ||
-                      user?.userType !== "teacher"
-                    }
+                    disabled={isLoading}
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>
@@ -222,22 +145,20 @@ const ClassPage = () => {
                   <Badge
                     variant="secondary"
                     className={`bg-gradient-to-r text-sm font-bold ${
-                      colorScheme === "dark"
+                      colorScheme == "dark"
                         ? "text-blue-300 from-blue-900 to-purple-900"
                         : "text-blue-700 from-blue-100 to-purple-100"
-                    }`}
+                    } `}
                   >
                     {classItem.assignments.length} assignment
-                    {classItem.assignments.length === 1 ? "" : "s"}
+                    {classItem.assignments.length !== 1 ? "s" : ""}
                   </Badge>
                 </div>
                 <Button
                   variant="outline"
                   className="w-full gradient-button"
                   onClick={() => setSelectedClass(classItem)}
-                  disabled={
-                    loading || !isAuthenticated || user?.userType !== "teacher"
-                  }
+                  disabled={isLoading}
                 >
                   Manage Students
                 </Button>
@@ -245,6 +166,30 @@ const ClassPage = () => {
             </Card>
           ))}
         </div>
+      )}
+
+      {classes.length === 0 && !isLoading && (
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center py-12 relative z-10">
+            <div className="w-16 h-16 bg-gradient-to-br from-blue-500 via-purple-500 to-indigo-500 rounded-full flex items-center justify-center mb-4 shadow-lg">
+              <Users className="h-8 w-8 text-white" />
+            </div>
+            <h3 className="text-lg font-bold mb-2 gradient-text">
+              No classes yet
+            </h3>
+            <p className="text-muted-foreground text-center mb-4 max-w-sm">
+              Get started by creating your first class
+            </p>
+            <Button
+              onClick={() => setIsCreateDialogOpen(true)}
+              className="gradient-button"
+              disabled={isLoading}
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Create Your First Class
+            </Button>
+          </CardContent>
+        </Card>
       )}
 
       {selectedClass && (

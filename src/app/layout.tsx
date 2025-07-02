@@ -5,7 +5,7 @@ import { ThemeProvider } from "@/hooks/ThemeProvider";
 import { AuthProvider } from "@/hooks/useAuth";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
-import { ClassesProvider } from "@/hooks/useClasses";
+import { ClassProvider } from "@/hooks/useClasses";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -36,13 +36,13 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <AuthProvider>
-          <ClassesProvider>
+          <ClassProvider>
             <ThemeProvider>
               <Toaster />
               <Sonner />
               {children}
             </ThemeProvider>
-          </ClassesProvider>
+          </ClassProvider>
         </AuthProvider>
       </body>
     </html>

@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getScores, createScore } from "@/lib/actions/studentassignments.actions";
+import {
+  getScores,
+  createScore,
+} from "@/lib/actions/studentassignments.actions";
 
 export async function GET(req: NextRequest) {
   try {
@@ -10,7 +13,10 @@ export async function GET(req: NextRequest) {
   } catch (error) {
     console.error("Error fetching scores:", error);
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Internal server error", details: error instanceof Error ? error.message : "Unknown error" },
+      {
+        error: error instanceof Error ? error.message : "Internal server error",
+        details: error instanceof Error ? error.message : "Unknown error",
+      },
       { status: 500 }
     );
   }
@@ -20,11 +26,17 @@ export async function POST(req: NextRequest) {
   try {
     const score = await req.json();
     const result = await createScore(score);
-    return NextResponse.json({ message: "Score created successfully", id: result.id });
+    return NextResponse.json({
+      message: "Score created successfully",
+      id: result.id,
+    });
   } catch (error) {
     console.error("Error creating score:", error);
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Internal server error", details: error instanceof Error ? error.message : "Unknown error" },
+      {
+        error: error instanceof Error ? error.message : "Internal server error",
+        details: error instanceof Error ? error.message : "Unknown error",
+      },
       { status: 500 }
     );
   }

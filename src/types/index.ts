@@ -55,7 +55,6 @@ export interface AuthState {
 export const STUDENT_ID_MAX_LENGTH = 20;
 export const STUDENT_ID_MIN_LENGTH = 3;
 
-
 export interface Class {
   id: string;
   name: string;
@@ -71,7 +70,6 @@ export interface Student {
   password: string;
   classId: string;
   scores: any[];
-  createdAt: Date;
 }
 
 export interface User {

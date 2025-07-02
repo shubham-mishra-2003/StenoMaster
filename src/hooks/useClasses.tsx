@@ -1,367 +1,361 @@
 "use client";
 
-import React, {
-  createContext,
-  useContext,
-  useState,
-  useEffect,
-  useCallback,
-} from "react";
+import React, { createContext, useContext, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "@/hooks/use-toast";
-import { Class } from "@/types";
-import { useAuth } from "@/hooks/useAuth";
+import { IClass } from "@/lib/database/models/class.model";
 
 interface ClassState {
-  classes: Class[];
-  loading: boolean;
-  error: string | null;
+  classes: IClass[];
+  isLoading: boolean;
 }
 
 interface ClassContextType extends ClassState {
   createClass: (name: string) => Promise<void>;
-  getClasses: () => Promise<Class[]>;
+  fetchClasses: () => Promise<void>;
   deleteClass: (classId: string) => Promise<void>;
   assignStudentToClass: (classId: string, studentId: string) => Promise<void>;
   removeStudentFromClass: (classId: string, studentId: string) => Promise<void>;
+  fetchStudentsInClass: (classId: string) => Promise<any[]>;
 }
 
 const ClassContext = createContext<ClassContextType | undefined>(undefined);
 
-export const ClassesProvider: React.FC<{ children: React.ReactNode }> = ({
+export const ClassProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
   const [classState, setClassState] = useState<ClassState>({
     classes: [],
-    loading: false,
-    error: null,
+    isLoading: false,
   });
-  const { isAuthenticated, user } = useAuth();
   const router = useRouter();
 
-  // Initialize classes on mount, only if authenticated and a teacher
-  useEffect(() => {
-    const initializeClasses = async () => {
-      if (!isAuthenticated || user?.userType !== "teacher") {
-        setClassState((prev) => ({ ...prev, classes: [], loading: false }));
-        return;
-      }
-
-      try {
-        const classes = await getClasses();
-        setClassState((prev) => ({ ...prev, classes }));
-      } catch (error) {
-        const errorMessage =
-          error instanceof Error ? error.message : "An error occurred";
-        console.error("[useClasses] Error initializing classes:", errorMessage);
-        setClassState((prev) => ({ ...prev, error: "Failed to load classes" }));
-      }
-    };
-    initializeClasses();
-  }, [isAuthenticated, user]);
+  const getToken = () => localStorage.getItem("StenoMaster-token");
 
   const createClass = useCallback(
     async (name: string) => {
-      setClassState((prev) => ({ ...prev, loading: true, error: null }));
-      try {
-        if (!isAuthenticated || user?.userType !== "teacher") {
-          throw new Error("Only teachers can create classes");
-        }
-        const token = localStorage.getItem("StenoMaster-token");
-        if (!token) {
-          throw new Error("No authentication token found");
-        }
-        if (!name.trim()) {
-          throw new Error("Class name is required");
-        }
+      if (!name.trim()) {
+        toast({
+          title: "Error",
+          description: "Please enter a class name.",
+          variant: "destructive",
+        });
+        return;
+      }
 
-        console.log("[useClasses] Creating class:", { name });
+      const token = getToken();
+      if (!token) {
+        toast({
+          title: "Error",
+          description: "You must be logged in to create a class.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      setClassState((prev) => ({ ...prev, isLoading: true }));
+      try {
         const response = await fetch("/api/classes/create", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
           body: JSON.stringify({ name, token }),
         });
 
         const result = await response.json();
-        console.log("[useClasses] POST /api/classes/create response:", result);
         if (response.ok && result.status === "success") {
-          const newClass = result.data as Class;
           setClassState((prev) => ({
             ...prev,
-            classes: [...prev.classes, newClass],
-            loading: false,
+            classes: [...prev.classes, result.data],
           }));
           toast({
             title: "Success",
-            description: "Class created successfully",
+            description: "Class created successfully.",
           });
+          router.refresh();
         } else {
-          throw new Error(result.message || "Failed to create class");
+          toast({
+            title: "Error",
+            description: result.message || "Failed to create class",
+            variant: "destructive",
+          });
         }
       } catch (error) {
-        const errorMessage =
-          error instanceof Error ? error.message : "An error occurred";
-        console.error("[useClasses] Create class error:", errorMessage);
-        setClassState((prev) => ({
-          ...prev,
-          loading: false,
-          error: errorMessage,
-        }));
+        console.error("[useClass] Create class error:", error);
         toast({
           title: "Error",
-          description: errorMessage,
+          description: "An unexpected error occurred while creating the class.",
           variant: "destructive",
         });
+      } finally {
+        setClassState((prev) => ({ ...prev, isLoading: false }));
       }
     },
-    [isAuthenticated, user]
+    [router]
   );
 
-  const getClasses = useCallback(async () => {
-    setClassState((prev) => ({ ...prev, loading: true, error: null }));
-    try {
-      const token = localStorage.getItem("StenoMaster-token");
-      if (!token) {
-        throw new Error("No authentication token found");
-      }
+  const fetchClasses = useCallback(async () => {
+    const token = getToken();
+    if (!token) {
+      toast({
+        title: "Error",
+        description: "You must be logged in to fetch classes.",
+        variant: "destructive",
+      });
+      return;
+    }
 
-      console.log("[useClasses] Fetching classes");
+    setClassState((prev) => ({ ...prev, isLoading: true }));
+    try {
       const response = await fetch("/api/classes", {
         method: "GET",
         headers: {
-          "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
       });
 
       const result = await response.json();
-      console.log("[useClasses] GET /api/classes response:", result);
       if (response.ok && result.status === "success") {
-        const classes = (result.data || []) as Class[];
-        setClassState((prev) => ({ ...prev, classes, loading: false }));
-        return classes;
+        setClassState((prev) => ({
+          ...prev,
+          classes: result.data,
+        }));
       } else {
-        throw new Error(result.message || "Failed to fetch classes");
+        toast({
+          title: "Error",
+          description: result.message || "Failed to fetch classes",
+          variant: "destructive",
+        });
       }
     } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : "An error occurred";
-      console.error("[useClasses] Get classes error:", errorMessage);
-      setClassState((prev) => ({
-        ...prev,
-        loading: false,
-        error: errorMessage,
-      }));
-      throw error;
+      console.error("[useClass] Fetch classes error:", error);
+      toast({
+        title: "Error",
+        description: "An unexpected error occurred while fetching classes.",
+        variant: "destructive",
+      });
+    } finally {
+      setClassState((prev) => ({ ...prev, isLoading: false }));
     }
   }, []);
 
   const deleteClass = useCallback(
     async (classId: string) => {
-      setClassState((prev) => ({ ...prev, loading: true, error: null }));
-      try {
-        if (!isAuthenticated || user?.userType !== "teacher") {
-          throw new Error("Only teachers can delete classes");
-        }
-        const token = localStorage.getItem("StenoMaster-token");
-        if (!token) {
-          throw new Error("No authentication token found");
-        }
-        if (!classId) {
-          throw new Error("Class ID is required");
-        }
+      const token = getToken();
+      if (!token) {
+        toast({
+          title: "Error",
+          description: "You must be logged in to delete a class.",
+          variant: "destructive",
+        });
+        return;
+      }
 
-        console.log("[useClasses] Deleting class:", { classId });
+      setClassState((prev) => ({ ...prev, isLoading: true }));
+      try {
         const response = await fetch("/api/classes/delete", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
           body: JSON.stringify({ classId, token }),
         });
 
         const result = await response.json();
-        console.log("[useClasses] POST /api/classes/delete response:", result);
         if (response.ok && result.status === "success") {
           setClassState((prev) => ({
             ...prev,
             classes: prev.classes.filter((c) => c.id !== classId),
-            loading: false,
           }));
           toast({
             title: "Success",
-            description: "Class deleted successfully",
+            description: "Class deleted successfully.",
           });
+          router.refresh;
         } else {
-          throw new Error(result.message || "Failed to delete class");
+          toast({
+            title: "Error",
+            description: result.message || "Failed to delete class",
+            variant: "destructive",
+          });
         }
       } catch (error) {
-        const errorMessage =
-          error instanceof Error ? error.message : "An error occurred";
-        console.error("[useClasses] Delete class error:", errorMessage);
-        setClassState((prev) => ({
-          ...prev,
-          loading: false,
-          error: errorMessage,
-        }));
+        console.error("[useClass] Delete class error:", error);
         toast({
           title: "Error",
-          description: errorMessage,
+          description: "An unexpected error occurred while deleting the class.",
           variant: "destructive",
         });
+      } finally {
+        setClassState((prev) => ({ ...prev, isLoading: false }));
       }
     },
-    [isAuthenticated, user]
+    [router]
   );
 
   const assignStudentToClass = useCallback(
     async (classId: string, studentId: string) => {
-      setClassState((prev) => ({ ...prev, loading: true, error: null }));
-      try {
-        if (!isAuthenticated || user?.userType !== "teacher") {
-          throw new Error("Only teachers can assign students");
-        }
-        const token = localStorage.getItem("StenoMaster-token");
-        if (!token) {
-          throw new Error("No authentication token found");
-        }
-        if (!classId || !studentId) {
-          throw new Error("Class ID and student ID are required");
-        }
-
-        console.log("[useClasses] Assigning student to class:", {
-          classId,
-          studentId,
+      const token = getToken();
+      if (!token) {
+        toast({
+          title: "Error",
+          description: "You must be logged in to assign a student.",
+          variant: "destructive",
         });
+        return;
+      }
+
+      setClassState((prev) => ({ ...prev, isLoading: true }));
+      try {
         const response = await fetch("/api/classes/assign-student", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
           body: JSON.stringify({ classId, studentId, token }),
         });
 
         const result = await response.json();
-        console.log(
-          "[useClasses] POST /api/classes/assign-student response:",
-          result
-        );
         if (response.ok && result.status === "success") {
-          setClassState((prev) => {
-            const updatedClasses = prev.classes.map((c) =>
-              c.id === classId
-                ? { ...c, students: [...c.students, studentId] }
-                : c
-            );
-            console.log("[useClasses] Updated classes state:", updatedClasses);
-            return {
-              ...prev,
-              classes: updatedClasses,
-              loading: false,
-            };
-          });
           toast({
             title: "Success",
-            description: "Student assigned to class successfully",
+            description: "Student assigned to class successfully.",
           });
+          router.refresh();
         } else {
-          throw new Error(result.message || "Failed to assign student");
+          toast({
+            title: "Error",
+            description: result.message || "Failed to assign student",
+            variant: "destructive",
+          });
         }
       } catch (error) {
-        const errorMessage =
-          error instanceof Error ? error.message : "An error occurred";
-        console.error("[useClasses] Assign student error:", errorMessage);
-        setClassState((prev) => ({
-          ...prev,
-          loading: false,
-          error: errorMessage,
-        }));
-        throw error;
+        console.error("[useClass] Assign student error:", error);
+        toast({
+          title: "Error",
+          description:
+            "An unexpected error occurred while assigning the student.",
+          variant: "destructive",
+        });
+      } finally {
+        setClassState((prev) => ({ ...prev, isLoading: false }));
       }
     },
-    [isAuthenticated, user]
+    [router]
   );
 
   const removeStudentFromClass = useCallback(
     async (classId: string, studentId: string) => {
-      setClassState((prev) => ({ ...prev, loading: true, error: null }));
-      try {
-        if (!isAuthenticated || user?.userType !== "teacher") {
-          throw new Error("Only teachers can remove students");
-        }
-        const token = localStorage.getItem("StenoMaster-token");
-        if (!token) {
-          throw new Error("No authentication token found");
-        }
-        if (!classId || !studentId) {
-          throw new Error("Class ID and student ID are required");
-        }
-
-        console.log("[useClasses] Removing student from class:", {
-          classId,
-          studentId,
+      const token = getToken();
+      if (!token) {
+        toast({
+          title: "Error",
+          description: "You must be logged in to remove a student.",
+          variant: "destructive",
         });
+        return;
+      }
+
+      setClassState((prev) => ({ ...prev, isLoading: true }));
+      try {
         const response = await fetch("/api/classes/remove-student", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
           body: JSON.stringify({ classId, studentId, token }),
         });
 
         const result = await response.json();
-        console.log(
-          "[useClasses] POST /api/classes/remove-student response:",
-          result
-        );
         if (response.ok && result.status === "success") {
-          setClassState((prev) => {
-            const updatedClasses = prev.classes.map((c) =>
-              c.id === classId
-                ? {
-                    ...c,
-                    students: c.students.filter(
-                      (id: string) => id !== studentId
-                    ),
-                  }
-                : c
-            );
-            console.log("[useClasses] Updated classes state:", updatedClasses);
-            return {
-              ...prev,
-              classes: updatedClasses,
-              loading: false,
-            };
-          });
           toast({
             title: "Success",
-            description: "Student removed from class successfully",
+            description: "Student removed from class successfully.",
           });
+          router.refresh();
         } else {
-          throw new Error(result.message || "Failed to remove student");
+          toast({
+            title: "Error",
+            description: result.message || "Failed to remove student",
+            variant: "destructive",
+          });
         }
       } catch (error) {
-        const errorMessage =
-          error instanceof Error ? error.message : "An error occurred";
-        console.error("[useClasses] Remove student error:", errorMessage);
-        setClassState((prev) => ({
-          ...prev,
-          loading: false,
-          error: errorMessage,
-        }));
+        console.error("[useClass] Remove student error:", error);
         toast({
           title: "Error",
-          description: errorMessage,
+          description:
+            "An unexpected error occurred while removing the student.",
           variant: "destructive",
         });
+      } finally {
+        setClassState((prev) => ({ ...prev, isLoading: false }));
       }
     },
-    [isAuthenticated, user]
+    [router]
   );
+
+  const fetchStudentsInClass = useCallback(async (classId: string) => {
+    const token = getToken();
+    if (!token) {
+      toast({
+        title: "Error",
+        description: "You must be logged in to fetch students.",
+        variant: "destructive",
+      });
+      return [];
+    }
+
+    setClassState((prev) => ({ ...prev, isLoading: true }));
+    try {
+      const response = await fetch("/api/classes/fetch-students", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ classId, token }),
+      });
+
+      const result = await response.json();
+      if (response.ok && result.status === "success") {
+        return result.data;
+      } else {
+        toast({
+          title: "Error",
+          description: result.message || "Failed to fetch students",
+          variant: "destructive",
+        });
+        return [];
+      }
+    } catch (error) {
+      console.error("[useClass] Fetch students error:", error);
+      toast({
+        title: "Error",
+        description: "An unexpected error occurred while fetching students.",
+        variant: "destructive",
+      });
+      return [];
+    } finally {
+      setClassState((prev) => ({ ...prev, isLoading: false }));
+    }
+  }, []);
 
   return (
     <ClassContext.Provider
       value={{
         ...classState,
         createClass,
-        getClasses,
+        fetchClasses,
         deleteClass,
         assignStudentToClass,
         removeStudentFromClass,
+        fetchStudentsInClass,
       }}
     >
       {children}
@@ -369,10 +363,10 @@ export const ClassesProvider: React.FC<{ children: React.ReactNode }> = ({
   );
 };
 
-export const useClasses = () => {
+export const useClass = () => {
   const context = useContext(ClassContext);
   if (context === undefined) {
-    throw new Error("useClasses must be used within a ClassesProvider");
+    throw new Error("useClass must be used within a ClassProvider");
   }
   return context;
 };
