@@ -22,11 +22,25 @@ import {
 } from "@/components/ui/dialog";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { Assignment, Class } from "@/types";
-import { Plus, Upload, FileText, Image, Trash2, Edit } from "lucide-react";
+import {
+  Plus,
+  Upload,
+  FileText,
+  Image,
+  Trash2,
+  Edit,
+  ChevronDownIcon,
+} from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 
 import { useTheme } from "@/hooks/ThemeProvider";
 import EditAssignmentModal from "@/components/EditAssignmentModal";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popver";
+import { Calendar } from "@/components/ui/calendar";
 
 const AssignmentPage = () => {
   const [assignments, setAssignments] = useLocalStorage<Assignment[]>(
@@ -36,6 +50,7 @@ const AssignmentPage = () => {
   const [classes] = useLocalStorage<Class[]>("stenolearn-classes", []);
 
   const { colorScheme } = useTheme();
+  const [datePickerOpen, setDatePickerOpen] = React.useState(false);
 
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [editingAssignment, setEditingAssignment] = useState<Assignment | null>(
@@ -43,7 +58,7 @@ const AssignmentPage = () => {
   );
   const [newAssignment, setNewAssignment] = useState({
     title: "",
-    description: "",
+    deadline: new Date(),
     correctText: "",
     classId: "",
     imageFile: null as File | null,
@@ -86,7 +101,7 @@ const AssignmentPage = () => {
     const assignment: Assignment = {
       id: `assignment-${Date.now()}`,
       title: newAssignment.title,
-      description: newAssignment.description,
+      deadline: newAssignment.deadline,
       imageUrl,
       correctText: newAssignment.correctText,
       classId: newAssignment.classId,
@@ -97,7 +112,7 @@ const AssignmentPage = () => {
     setAssignments((prev) => [...prev, assignment]);
     setNewAssignment({
       title: "",
-      description: "",
+      deadline: new Date(),
       correctText: "",
       classId: "",
       imageFile: null,
@@ -175,19 +190,49 @@ const AssignmentPage = () => {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="assignment-description">Description</Label>
-                    <Textarea
-                      id="assignment-description"
-                      placeholder="Enter assignment description"
-                      value={newAssignment.description}
-                      onChange={(e) =>
-                        setNewAssignment((prev) => ({
-                          ...prev,
-                          description: e.target.value,
-                        }))
-                      }
-                      rows={3}
-                    />
+                    <Label htmlFor="deadline-date">Set a deadline time</Label>
+                    <Popover
+                      open={datePickerOpen}
+                      onOpenChange={setDatePickerOpen}
+                    >
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          id="deadline-date"
+                          className={`w-full h-12 justify-between font-normal rounded-xl border-2 ${
+                            colorScheme == "dark"
+                              ? "border-slate-500 shadow-slate-950"
+                              : "border-slate-400 shadow-slate-400"
+                          }`}
+                        >
+                          {newAssignment.deadline
+                            ? newAssignment.deadline.toLocaleDateString()
+                            : "Select date"}
+                          <ChevronDownIcon />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent
+                        className={`w-full overflow-hidden p-0 bg-gradient-to-tr ${
+                          colorScheme == "dark"
+                            ? "from-gray-900 via-gray-800/90 to-gray-700/70 border-slate-700"
+                            : "from-white via-blue-100/100 to-white/90 border-slate-400"
+                        }`}
+                        align="start"
+                      >
+                        <Calendar
+                          mode="single"
+                          selected={newAssignment.deadline}
+                          captionLayout="dropdown"
+                          onSelect={(date) => {
+                            setNewAssignment((prev) => ({
+                              ...prev,
+                              deadline: date || new Date(),
+                            }));
+                            setDatePickerOpen(false);
+                          }}
+                        />
+                      </PopoverContent>
+                    </Popover>
                   </div>
 
                   <div className="space-y-2">
@@ -215,24 +260,29 @@ const AssignmentPage = () => {
                   </div>
                 </div>
 
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="image-upload">Stenography Image/PDF</Label>
-                    <div className="border-2 border-dashed border-border rounded-lg text-center">
+                <div className="space-y-4 h-full">
+                  <div className="space-y-2 h-full">
+                    <Label htmlFor="image-upload">
+                      Stenography Image (optional)
+                    </Label>
+                    <div className="border-2 border-dashed border-border rounded-lg text-center h-full flex justify-center">
                       <input
                         id="image-upload"
                         type="file"
-                        accept="image/*,.pdf"
+                        accept="image/*"
                         onChange={handleFileChange}
                         className="hidden"
                       />
-                      <Label htmlFor="image-upload" className="cursor-pointer p-6">
+                      <Label
+                        htmlFor="image-upload"
+                        className="cursor-pointer p-6 size-full"
+                      >
                         {newAssignment.imageUrl ? (
-                          <div className="space-y-2">
+                          <div className="space-y-2 flex items-center justify-center flex-col size-full">
                             <img
                               src={newAssignment.imageUrl}
                               alt="Preview"
-                              className="max-w-full h-32 object-cover mx-auto rounded"
+                              className="max-w-full h-32 object-cover rounded"
                             />
                             <p className="text-sm text-green-600">
                               {newAssignment.imageFile?.name ||
@@ -265,8 +315,8 @@ const AssignmentPage = () => {
                       correctText: e.target.value,
                     }))
                   }
-                  rows={6}
-                  className="font-mono"
+                  rows={10}
+                  className="font-mono min-h-56"
                 />
                 <p className={`text-xs text-${colorScheme}-muted`}>
                   {newAssignment.correctText.length} characters
@@ -340,10 +390,6 @@ const AssignmentPage = () => {
                     />
                   </div>
                 )}
-
-                <p className={`text-sm text-${colorScheme}-muted`}>
-                  {assignment.description}
-                </p>
 
                 <div className="flex items-center space-x-2">
                   <FileText

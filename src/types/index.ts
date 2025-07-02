@@ -27,7 +27,7 @@
 export interface Assignment {
   id: string;
   title: string;
-  description: string;
+  deadline: Date;
   imageUrl: string;
   correctText: string;
   classId: string;
