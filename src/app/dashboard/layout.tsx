@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useEffect } from "react";
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import AppSidebar from "@/components/AppSidebar";
 import { Button } from "@/components/ui/button";
@@ -23,8 +23,13 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
     pathname.startsWith("/dashboard/student/practice/") &&
     pathname.split("/").length === 5;
 
+  useEffect(() => {
+    if (!isAuthenticated || !user) {
+      router.push("/?showLogin=true");
+    }
+  }, [isAuthenticated, user, router]);
+
   if (!isAuthenticated || !user) {
-    router.push("/?showLogin=true");
     return null;
   }
 
@@ -74,7 +79,6 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
                     <LogOut className="h-4 w-4" />
                     <span className="hidden lg:inline">Logout</span>
                   </Button>
-                  {/* <UserButton /> */}
                   <Button
                     variant="ghost"
                     size="sm"

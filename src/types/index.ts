@@ -27,7 +27,7 @@
 export interface Assignment {
   id: string;
   title: string;
-  deadline: Date;
+  deadline: string;
   imageUrl: string;
   correctText: string;
   classId: string;
@@ -51,7 +51,6 @@ export interface AuthState {
   user: User | null;
 }
 
-// Student ID validation constants
 export const STUDENT_ID_MAX_LENGTH = 20;
 export const STUDENT_ID_MIN_LENGTH = 3;
 
@@ -59,14 +58,14 @@ export interface Class {
   id: string;
   name: string;
   teacherId: string;
-  students: string[]; // Array of userId strings from Firestore
+  students: string[];
   assignments: any[];
   createdAt: string | Date;
 }
 
 export interface Student {
-  id: string; // userId from MongoDB
-  name: string; // fullName from MongoDB
+  id: string;
+  name: string;
   password: string;
   classId: string;
   scores: any[];
@@ -74,7 +73,7 @@ export interface Student {
 
 export interface User {
   _id: string;
-  userId: string; // Matches id in Student and Class.students
+  userId: string;
   email: string;
   fullName?: string;
   userType: "student" | "teacher";

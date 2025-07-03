@@ -1,14 +1,14 @@
 import { useState, useCallback } from "react";
 import { Assignment } from "@/types";
 import { toast } from "@/hooks/use-toast";
-
+import moment from "moment";
 interface AssignmentFormData {
   title: string;
-  deadline: Date;
+  deadline: string; // Updated to string to match Assignment interface
   correctText: string;
   classId: string;
-  imageFile: File | null;
-  imageUrl: string;
+  imageFile?: File | null;
+  imageUrl?: string;
 }
 
 interface UseAssignmentReturn {
@@ -29,14 +29,8 @@ export const useAssignment = (): UseAssignmentReturn => {
   const [loading, setLoading] = useState(false);
 
   // Replace with your Cloudinary cloud name and upload preset
-  const CLOUDINARY_CLOUD_NAME = "duqkxqaij"; // e.g., "mycloudname"
-  const CLOUDINARY_UPLOAD_PRESET = "stenomaster"; // e.g., "ml_default" or the preset name you created
-
-  const setNoonTime = (date: Date): Date => {
-    const noonDate = new Date(date);
-    noonDate.setHours(12, 0, 0, 0); // Set to 12:00 PM
-    return noonDate;
-  };
+  const CLOUDINARY_CLOUD_NAME = "duqkxqaij";
+  const CLOUDINARY_UPLOAD_PRESET = "stenomaster";
 
   const uploadToCloudinary = async (file: File) => {
     try {
@@ -112,17 +106,18 @@ export const useAssignment = (): UseAssignmentReturn => {
         const formattedAssignments = result.data.map(
           (assignment: Assignment) => ({
             ...assignment,
-            deadline: new Date(assignment.deadline),
             createdAt: new Date(assignment.createdAt),
           })
         );
 
         // Process assignments for auto-inactivation and deletion
         for (const assignment of formattedAssignments) {
-          if (assignment.isActive && new Date(assignment.deadline) < now) {
+          const [, endDateStr] = assignment.deadline.split(" to ");
+          const endDate = moment(endDateStr, "DD/MM/YYYY, HH:mm").toDate();
+          if (assignment.isActive && endDate < now) {
             await toggleAssignmentStatus(assignment.id);
           }
-          if (!assignment.isActive && new Date(assignment.deadline) < now) {
+          if (!assignment.isActive && endDate < now) {
             await deleteAssignment(assignment.id);
           }
         }
@@ -144,7 +139,6 @@ export const useAssignment = (): UseAssignmentReturn => {
           setAssignments(
             refetchResult.data.map((assignment: Assignment) => ({
               ...assignment,
-              deadline: new Date(assignment.deadline),
               createdAt: new Date(assignment.createdAt),
             }))
           );
@@ -200,7 +194,8 @@ export const useAssignment = (): UseAssignmentReturn => {
       if (
         !formData.title.trim() ||
         !formData.correctText.trim() ||
-        !formData.classId
+        !formData.classId ||
+        !formData.deadline
       ) {
         toast({
           title: "Error",
@@ -220,14 +215,12 @@ export const useAssignment = (): UseAssignmentReturn => {
         }
       }
 
-      const deadlineNoon = setNoonTime(formData.deadline);
-
       const response = await fetch("/api/assignment/upload", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           title: formData.title,
-          deadline: deadlineNoon.toISOString(),
+          deadline: formData.deadline, // Use the string directly
           imageUrl:
             imageUrl ||
             `https://res.cloudinary.com/${CLOUDINARY_CLOUD_NAME}/image/upload/v1/sample`,
@@ -248,7 +241,6 @@ export const useAssignment = (): UseAssignmentReturn => {
           ...prev,
           {
             ...result.data,
-            deadline: new Date(result.data.deadline),
             createdAt: new Date(result.data.createdAt),
           },
         ]);
@@ -322,8 +314,7 @@ export const useAssignment = (): UseAssignmentReturn => {
 
       const body: any = { assignmentId, token };
       if (formData.title) body.title = formData.title;
-      if (formData.deadline)
-        body.deadline = setNoonTime(formData.deadline).toISOString();
+      if (formData.deadline) body.deadline = formData.deadline; // Use the string directly
       if (formData.correctText) body.correctText = formData.correctText;
       if (formData.classId) body.classId = formData.classId;
       if (imageUrl) body.imageUrl = imageUrl;
@@ -346,7 +337,6 @@ export const useAssignment = (): UseAssignmentReturn => {
             a.id === assignmentId
               ? {
                   ...result.data,
-                  deadline: new Date(result.data.deadline),
                   createdAt: new Date(result.data.createdAt),
                 }
               : a
@@ -412,7 +402,6 @@ export const useAssignment = (): UseAssignmentReturn => {
             a.id === assignmentId
               ? {
                   ...result.data,
-                  deadline: new Date(result.data.deadline),
                   createdAt: new Date(result.data.createdAt),
                 }
               : a

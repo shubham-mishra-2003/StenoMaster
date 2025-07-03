@@ -16,17 +16,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popver";
-import { Calendar } from "@/components/ui/calendar";
 import { Assignment, Class } from "@/types";
-import { Upload, Save, X, ChevronDownIcon } from "lucide-react";
+import { Upload, Save, X } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { useTheme } from "@/hooks/ThemeProvider";
 import { useAssignment } from "@/hooks/useAssignments";
+import Datetime from "react-datetime";
+import moment from "moment";
+import "react-datetime/css/react-datetime.css";
 
 interface EditAssignmentModalProps {
   assignment: Assignment | null;
@@ -45,10 +42,10 @@ const EditAssignmentModal = ({
 }: EditAssignmentModalProps) => {
   const { updateAssignment, loading } = useAssignment();
   const { colorScheme } = useTheme();
-  const [datePickerOpen, setDatePickerOpen] = useState(false);
   const [editForm, setEditForm] = useState({
     title: assignment?.title || "",
-    deadline: assignment?.deadline ? new Date(assignment.deadline) : new Date(),
+    deadlineStart: null as Date | null,
+    deadlineEnd: null as Date | null,
     correctText: assignment?.correctText || "",
     classId: assignment?.classId || "",
     imageFile: null as File | null,
@@ -57,9 +54,13 @@ const EditAssignmentModal = ({
 
   useEffect(() => {
     if (assignment) {
+      const [start, end] = assignment.deadline
+        ? assignment.deadline.split(" to ").map((d) => moment(d, "DD/MM/YYYY, HH:mm").toDate())
+        : [new Date(), new Date()];
       setEditForm({
         title: assignment.title,
-        deadline: new Date(assignment.deadline),
+        deadlineStart: start,
+        deadlineEnd: end,
         correctText: assignment.correctText,
         classId: assignment.classId,
         imageFile: null,
@@ -74,7 +75,7 @@ const EditAssignmentModal = ({
       setEditForm((prev) => ({
         ...prev,
         imageFile: file,
-        imageUrl: URL.createObjectURL(file), // Local preview
+        imageUrl: URL.createObjectURL(file),
       }));
     }
   };
@@ -84,20 +85,32 @@ const EditAssignmentModal = ({
       !assignment ||
       !editForm.title.trim() ||
       !editForm.correctText.trim() ||
-      !editForm.classId
+      !editForm.classId ||
+      !editForm.deadlineStart ||
+      !editForm.deadlineEnd
     ) {
       toast({
         title: "Error",
-        description: "Please fill in all required fields.",
+        description: "Please fill in all required fields, including deadline range.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (editForm.deadlineEnd <= editForm.deadlineStart) {
+      toast({
+        title: "Error",
+        description: "End date and time must be after start date and time.",
         variant: "destructive",
       });
       return;
     }
 
     try {
+      const updatedDeadline = `${moment(editForm.deadlineStart).format("DD/MM/YYYY, HH:mm")} to ${moment(editForm.deadlineEnd).format("DD/MM/YYYY, HH:mm")}`;
       await updateAssignment(assignment.id, {
         title: editForm.title,
-        deadline: editForm.deadline,
+        deadline: updatedDeadline,
         correctText: editForm.correctText,
         classId: editForm.classId,
         imageFile: editForm.imageFile,
@@ -106,7 +119,7 @@ const EditAssignmentModal = ({
       onSave({
         ...assignment,
         title: editForm.title,
-        deadline: editForm.deadline,
+        deadline: updatedDeadline,
         correctText: editForm.correctText,
         classId: editForm.classId,
         imageUrl: editForm.imageUrl,
@@ -151,48 +164,56 @@ const EditAssignmentModal = ({
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="deadline-date">Set a deadline time</Label>
-                <Popover open={datePickerOpen} onOpenChange={setDatePickerOpen}>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      id="deadline-date"
-                      className={`w-full h-12 justify-between font-normal rounded-xl border-2 ${
+                <Label htmlFor="deadline-range">Set a deadline time</Label>
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <Datetime
+                    value={editForm.deadlineStart ?? undefined}
+                    onChange={(value) => {
+                      const date = moment(value).isValid() ? moment(value).toDate() : null;
+                      setEditForm((prev) => ({
+                        ...prev,
+                        deadlineStart: date,
+                      }));
+                    }}
+                    inputProps={{
+                      id: "deadline-start",
+                      placeholder: "DD/MM/YYYY, HH:mm",
+                      className: `w-full h-12 px-3 font-normal rounded-xl border-2 ${
                         colorScheme === "dark"
-                          ? "border-slate-500 shadow-slate-950"
-                          : "border-slate-400 shadow-slate-400"
-                      }`}
-                      disabled={loading}
-                    >
-                      {editForm.deadline
-                        ? editForm.deadline.toLocaleDateString()
-                        : "Select date"}
-                      <ChevronDownIcon />
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent
-                    className={`w-full overflow-hidden p-0 bg-gradient-to-tr ${
-                      colorScheme === "dark"
-                        ? "from-gray-900 via-gray-800/90 to-gray-700/70 border-slate-700"
-                        : "from-white via-blue-100/100 to-white/90 border-slate-400"
-                    }`}
-                    align="start"
-                  >
-                    <Calendar
-                      mode="single"
-                      selected={editForm.deadline}
-                      captionLayout="dropdown"
-                      onSelect={(date) => {
-                        setEditForm((prev) => ({
-                          ...prev,
-                          deadline: date || new Date(),
-                        }));
-                        setDatePickerOpen(false);
-                      }}
-                      disabled={loading}
-                    />
-                  </PopoverContent>
-                </Popover>
+                          ? "border-slate-500 shadow-slate-950 bg-slate-800 text-white"
+                          : "border-slate-400 shadow-slate-400 bg-white text-black"
+                      }`,
+                      disabled: loading,
+                    }}
+                    dateFormat="DD/MM/YYYY"
+                    timeFormat="HH:mm"
+                    className="flex-1"
+                  />
+                  <span className="self-center text-muted-foreground">to</span>
+                  <Datetime
+                    value={editForm.deadlineEnd ?? undefined}
+                    onChange={(value) => {
+                      const date = moment(value).isValid() ? moment(value).toDate() : null;
+                      setEditForm((prev) => ({
+                        ...prev,
+                        deadlineEnd: date,
+                      }));
+                    }}
+                    inputProps={{
+                      id: "deadline-end",
+                      placeholder: "DD/MM/YYYY, HH:mm",
+                      className: `w-full h-12 px-3 font-normal rounded-xl border-2 ${
+                        colorScheme === "dark"
+                          ? "border-slate-500 shadow-slate-950 bg-slate-800 text-white"
+                          : "border-slate-400 shadow-slate-400 bg-white text-black"
+                      }`,
+                      disabled: loading,
+                    }}
+                    dateFormat="DD/MM/YYYY"
+                    timeFormat="HH:mm"
+                    className="flex-1"
+                  />
+                </div>
               </div>
 
               <div className="space-y-2">

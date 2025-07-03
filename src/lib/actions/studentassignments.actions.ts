@@ -1,10 +1,11 @@
-import { db } from "@/app/api/firebase/FirebaseAdmin";
+import { connectToFirebase } from "@/lib/database/firebase";
 import { Assignment, Score } from "@/types";
 import {
   Timestamp,
   CollectionReference,
   Query,
   DocumentData,
+  Firestore,
 } from "firebase-admin/firestore";
 
 type FirestoreAssignment = Assignment & { [key: string]: any };
@@ -17,10 +18,23 @@ type FirestoreScore = Omit<Score, "completedAt"> & {
   timeElapsed?: number;
 };
 
+function isFirestoreTimestampObject(
+  value: Timestamp | string | Date | { _seconds: number; _nanoseconds: number }
+): value is { _seconds: number; _nanoseconds: number } {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "_seconds" in value &&
+    "_nanoseconds" in value
+  );
+}
+
 export async function getAssignments(
   id?: string
 ): Promise<Assignment | Assignment[]> {
   try {
+    const db: Firestore = await connectToFirebase();
+
     if (id) {
       const doc = await db.collection("assignments").doc(id).get();
       if (!doc.exists) {
@@ -47,6 +61,8 @@ export async function createAssignment(
   assignment: FirestoreAssignment
 ): Promise<{ id: string }> {
   try {
+    const db: Firestore = await connectToFirebase();
+
     if (
       !assignment.id ||
       !assignment.title ||
@@ -55,7 +71,11 @@ export async function createAssignment(
     ) {
       throw new Error("Missing required assignment fields");
     }
-    await db.collection("assignments").doc(assignment.id).set(assignment);
+
+    await db.collection("assignments").doc(assignment.id).set({
+      ...assignment,
+      createdAt: Timestamp.now(),
+    });
     return { id: assignment.id };
   } catch (error) {
     throw new Error(
@@ -70,10 +90,16 @@ export async function updateAssignment(
   assignment: FirestoreAssignment
 ): Promise<{ id: string }> {
   try {
+    const db: Firestore = await connectToFirebase();
+
     if (!assignment.id) {
       throw new Error("Assignment ID is required");
     }
-    await db.collection("assignments").doc(assignment.id).update(assignment);
+
+    await db.collection("assignments").doc(assignment.id).update({
+      ...assignment,
+      updatedAt: Timestamp.now(),
+    });
     return { id: assignment.id };
   } catch (error) {
     throw new Error(
@@ -86,9 +112,12 @@ export async function updateAssignment(
 
 export async function deleteAssignment(id: string): Promise<void> {
   try {
+    const db: Firestore = await connectToFirebase();
+
     if (!id) {
       throw new Error("Assignment ID is required");
     }
+
     await db.collection("assignments").doc(id).delete();
   } catch (error) {
     throw new Error(
@@ -99,19 +128,10 @@ export async function deleteAssignment(id: string): Promise<void> {
   }
 }
 
-function isFirestoreTimestampObject(
-  value: Timestamp | string | Date | { _seconds: number; _nanoseconds: number }
-): value is { _seconds: number; _nanoseconds: number } {
-  return (
-    typeof value === "object" &&
-    value !== null &&
-    "_seconds" in value &&
-    "_nanoseconds" in value
-  );
-}
-
 export async function getScores(studentId?: string): Promise<Score[]> {
   try {
+    const db: Firestore = await connectToFirebase();
+
     let query: CollectionReference<DocumentData> | Query<DocumentData> =
       db.collection("scores");
     if (studentId) {
@@ -190,6 +210,8 @@ export async function createScore(
   score: FirestoreScore
 ): Promise<{ id: string }> {
   try {
+    const db: Firestore = await connectToFirebase();
+
     if (
       !score.id ||
       !score.studentId ||
@@ -216,9 +238,10 @@ export async function createScore(
     } else if (score.completedAt instanceof Date) {
       completedAt = Timestamp.fromDate(score.completedAt);
     } else if (isFirestoreTimestampObject(score.completedAt)) {
-      completedAt = Timestamp.fromMillis(
+      const date = new Date(
         score.completedAt._seconds * 1000 + score.completedAt._nanoseconds / 1e6
       );
+      completedAt = Timestamp.fromDate(date);
     } else {
       throw new Error("Invalid completedAt format");
     }
@@ -246,6 +269,7 @@ export async function createScore(
       wpm: score.wpm,
       completedAt,
       timeElapsed,
+      createdAt: Timestamp.now(),
     });
 
     return { id: score.id };

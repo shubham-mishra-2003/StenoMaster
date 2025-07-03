@@ -28,20 +28,15 @@ import {
   Image,
   Trash2,
   Edit,
-  ChevronDownIcon,
 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { useTheme } from "@/hooks/ThemeProvider";
 import EditAssignmentModal from "@/components/EditAssignmentModal";
-
-import { Calendar } from "@/components/ui/calendar";
 import { useAssignment } from "@/hooks/useAssignments";
 import { useClass } from "@/hooks/useClasses";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popver";
+import Datetime from "react-datetime";
+import moment from "moment";
+import "react-datetime/css/react-datetime.css";
 
 const AssignmentPage = () => {
   const {
@@ -55,14 +50,12 @@ const AssignmentPage = () => {
   } = useAssignment();
   const { classes, fetchClasses } = useClass();
   const { colorScheme } = useTheme();
-  const [datePickerOpen, setDatePickerOpen] = useState(false);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
-  const [editingAssignment, setEditingAssignment] = useState<Assignment | null>(
-    null
-  );
+  const [editingAssignment, setEditingAssignment] = useState<Assignment | null>(null);
   const [newAssignment, setNewAssignment] = useState({
     title: "",
-    deadline: new Date(),
+    deadlineStart: null as Date | null,
+    deadlineEnd: null as Date | null,
     correctText: "",
     classId: "",
     imageFile: null as File | null,
@@ -80,7 +73,7 @@ const AssignmentPage = () => {
       setNewAssignment((prev) => ({
         ...prev,
         imageFile: file,
-        imageUrl: URL.createObjectURL(file), // Local preview
+        imageUrl: URL.createObjectURL(file),
       }));
     }
   };
@@ -89,21 +82,36 @@ const AssignmentPage = () => {
     if (
       !newAssignment.title.trim() ||
       !newAssignment.correctText.trim() ||
-      !newAssignment.classId
+      !newAssignment.classId ||
+      !newAssignment.deadlineStart ||
+      !newAssignment.deadlineEnd
     ) {
       toast({
         title: "Error",
-        description: "Please fill in all required fields.",
+        description: "Please fill in all required fields, including deadline range.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (newAssignment.deadlineEnd <= newAssignment.deadlineStart) {
+      toast({
+        title: "Error",
+        description: "End date and time must be after start date and time.",
         variant: "destructive",
       });
       return;
     }
 
     try {
-      await createAssignment(newAssignment);
+      await createAssignment({
+        ...newAssignment,
+        deadline: `${moment(newAssignment.deadlineStart).format("DD/MM/YYYY, HH:mm")} to ${moment(newAssignment.deadlineEnd).format("DD/MM/YYYY, HH:mm")}`,
+      });
       setNewAssignment({
         title: "",
-        deadline: new Date(),
+        deadlineStart: null,
+        deadlineEnd: null,
         correctText: "",
         classId: "",
         imageFile: null,
@@ -119,7 +127,7 @@ const AssignmentPage = () => {
     try {
       await updateAssignment(updatedAssignment.id, {
         title: updatedAssignment.title,
-        deadline: new Date(updatedAssignment.deadline),
+        deadline: updatedAssignment.deadline,
         correctText: updatedAssignment.correctText,
         classId: updatedAssignment.classId,
         imageUrl: updatedAssignment.imageUrl,
@@ -173,51 +181,56 @@ const AssignmentPage = () => {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="deadline-date">Set a deadline time</Label>
-                    <Popover
-                      open={datePickerOpen}
-                      onOpenChange={setDatePickerOpen}
-                    >
-                      <PopoverTrigger asChild>
-                        <Button
-                          variant="outline"
-                          id="deadline-date"
-                          className={`w-full h-12 justify-between font-normal rounded-xl border-2 ${
+                    <Label htmlFor="deadline-range">Set a deadline time</Label>
+                    <div className="flex flex-col sm:flex-row gap-2">
+                      <Datetime
+                        value={newAssignment.deadlineStart ?? undefined}
+                        onChange={(value) => {
+                          const date = moment(value).isValid() ? moment(value).toDate() : null;
+                          setNewAssignment((prev) => ({
+                            ...prev,
+                            deadlineStart: date,
+                          }));
+                        }}
+                        inputProps={{
+                          id: "deadline-start",
+                          placeholder: "DD/MM/YYYY, HH:mm",
+                          className: `w-full h-12 px-3 font-normal rounded-xl border-2 ${
                             colorScheme === "dark"
-                              ? "border-slate-500 shadow-slate-950"
-                              : "border-slate-400 shadow-slate-400"
-                          }`}
-                          disabled={loading}
-                        >
-                          {newAssignment.deadline
-                            ? newAssignment.deadline.toLocaleDateString()
-                            : "Select date"}
-                          <ChevronDownIcon />
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent
-                        className={`w-full overflow-hidden p-0 bg-gradient-to-tr ${
-                          colorScheme === "dark"
-                            ? "from-gray-900 via-gray-800/90 to-gray-700/70 border-slate-700"
-                            : "from-white via-blue-100/100 to-white/90 border-slate-400"
-                        }`}
-                        align="start"
-                      >
-                        <Calendar
-                          mode="single"
-                          selected={newAssignment.deadline}
-                          captionLayout="dropdown"
-                          onSelect={(date) => {
-                            setNewAssignment((prev) => ({
-                              ...prev,
-                              deadline: date || new Date(),
-                            }));
-                            setDatePickerOpen(false);
-                          }}
-                          disabled={loading}
-                        />
-                      </PopoverContent>
-                    </Popover>
+                              ? "border-slate-500 shadow-slate-950 bg-slate-800 text-white"
+                              : "border-slate-400 shadow-slate-400 bg-white text-black"
+                          }`,
+                          disabled: loading,
+                        }}
+                        dateFormat="DD/MM/YYYY"
+                        timeFormat="HH:mm"
+                        className="flex-1"
+                      />
+                      <span className="self-center text-muted-foreground">to</span>
+                      <Datetime
+                        value={newAssignment.deadlineEnd ?? undefined}
+                        onChange={(value) => {
+                          const date = moment(value).isValid() ? moment(value).toDate() : null;
+                          setNewAssignment((prev) => ({
+                            ...prev,
+                            deadlineEnd: date,
+                          }));
+                        }}
+                        inputProps={{
+                          id: "deadline-end",
+                          placeholder: "DD/MM/YYYY, HH:mm",
+                          className: `w-full h-12 px-3 font-normal rounded-xl border-2 ${
+                            colorScheme === "dark"
+                              ? "border-slate-500 shadow-slate-950 bg-slate-800 text-white"
+                              : "border-slate-400 shadow-slate-400 bg-white text-black"
+                          }`,
+                          disabled: loading,
+                        }}
+                        dateFormat="DD/MM/YYYY"
+                        timeFormat="HH:mm"
+                        className="flex-1"
+                      />
+                    </div>
                   </div>
 
                   <div className="space-y-2">
@@ -272,8 +285,7 @@ const AssignmentPage = () => {
                               className="max-w-full h-32 object-cover rounded"
                             />
                             <p className="text-sm text-green-600">
-                              {newAssignment.imageFile?.name ||
-                                "Image uploaded"}
+                              {newAssignment.imageFile?.name || "Image uploaded"}
                             </p>
                           </div>
                         ) : (
@@ -294,7 +306,7 @@ const AssignmentPage = () => {
                 <Label htmlFor="correct-text">Correct Text</Label>
                 <Textarea
                   id="correct-text"
-                  placeholder="Enter the correct text for this stenography"
+                  placeholder=" permanecerá en la memoria de la humanidad por generaciones."
                   value={newAssignment.correctText}
                   onChange={(e) =>
                     setNewAssignment((prev) => ({
@@ -368,7 +380,7 @@ const AssignmentPage = () => {
       )}
 
       {!loading && assignments.length > 0 && (
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3" style={{ minWidth: '250px' }}>
           {assignments.map((assignment) => {
             const assignedClass = classes.find(
               (c) => c.id === assignment.classId
