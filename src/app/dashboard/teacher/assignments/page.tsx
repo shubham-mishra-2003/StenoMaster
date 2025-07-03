@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,7 +20,6 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { Assignment, Class } from "@/types";
 import {
   Plus,
@@ -32,26 +31,31 @@ import {
   ChevronDownIcon,
 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
-
 import { useTheme } from "@/hooks/ThemeProvider";
 import EditAssignmentModal from "@/components/EditAssignmentModal";
+
+import { Calendar } from "@/components/ui/calendar";
+import { useAssignment } from "@/hooks/useAssignments";
+import { useClass } from "@/hooks/useClasses";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popver";
-import { Calendar } from "@/components/ui/calendar";
 
 const AssignmentPage = () => {
-  const [assignments, setAssignments] = useLocalStorage<Assignment[]>(
-    "stenolearn-assignments",
-    []
-  );
-  const [classes] = useLocalStorage<Class[]>("stenolearn-classes", []);
-
+  const {
+    assignments,
+    loading,
+    fetchAssignments,
+    createAssignment,
+    toggleAssignmentStatus,
+    deleteAssignment,
+    updateAssignment,
+  } = useAssignment();
+  const { classes, fetchClasses } = useClass();
   const { colorScheme } = useTheme();
-  const [datePickerOpen, setDatePickerOpen] = React.useState(false);
-
+  const [datePickerOpen, setDatePickerOpen] = useState(false);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [editingAssignment, setEditingAssignment] = useState<Assignment | null>(
     null
@@ -65,22 +69,23 @@ const AssignmentPage = () => {
     imageUrl: "",
   });
 
+  useEffect(() => {
+    fetchAssignments();
+    fetchClasses();
+  }, [fetchAssignments, fetchClasses]);
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        setNewAssignment((prev) => ({
-          ...prev,
-          imageFile: file,
-          imageUrl: event.target?.result as string,
-        }));
-      };
-      reader.readAsDataURL(file);
+      setNewAssignment((prev) => ({
+        ...prev,
+        imageFile: file,
+        imageUrl: URL.createObjectURL(file), // Local preview
+      }));
     }
   };
 
-  const handleCreateAssignment = () => {
+  const handleCreateAssignment = async () => {
     if (
       !newAssignment.title.trim() ||
       !newAssignment.correctText.trim() ||
@@ -94,58 +99,35 @@ const AssignmentPage = () => {
       return;
     }
 
-    const imageUrl =
-      newAssignment.imageUrl ||
-      "https://images.unsplash.com/photo-1488590528505-98d2b5aba04b?w=400&h=300&fit=crop";
-
-    const assignment: Assignment = {
-      id: `assignment-${Date.now()}`,
-      title: newAssignment.title,
-      deadline: newAssignment.deadline,
-      imageUrl,
-      correctText: newAssignment.correctText,
-      classId: newAssignment.classId,
-      createdAt: new Date(),
-      isActive: true,
-    };
-
-    setAssignments((prev) => [...prev, assignment]);
-    setNewAssignment({
-      title: "",
-      deadline: new Date(),
-      correctText: "",
-      classId: "",
-      imageFile: null,
-      imageUrl: "",
-    });
-    setIsCreateDialogOpen(false);
-
-    toast({
-      title: "Success",
-      description: "Assignment created successfully.",
-    });
+    try {
+      await createAssignment(newAssignment);
+      setNewAssignment({
+        title: "",
+        deadline: new Date(),
+        correctText: "",
+        classId: "",
+        imageFile: null,
+        imageUrl: "",
+      });
+      setIsCreateDialogOpen(false);
+    } catch (err) {
+      // Error handled by hook's toast
+    }
   };
 
-  const handleEditAssignment = (updatedAssignment: Assignment) => {
-    setAssignments((prev) =>
-      prev.map((a) => (a.id === updatedAssignment.id ? updatedAssignment : a))
-    );
-  };
-
-  const toggleAssignmentStatus = (assignmentId: string) => {
-    setAssignments((prev) =>
-      prev.map((a) =>
-        a.id === assignmentId ? { ...a, isActive: !a.isActive } : a
-      )
-    );
-  };
-
-  const deleteAssignment = (assignmentId: string) => {
-    setAssignments((prev) => prev.filter((a) => a.id !== assignmentId));
-    toast({
-      title: "Success",
-      description: "Assignment deleted successfully.",
-    });
+  const handleEditAssignment = async (updatedAssignment: Assignment) => {
+    try {
+      await updateAssignment(updatedAssignment.id, {
+        title: updatedAssignment.title,
+        deadline: new Date(updatedAssignment.deadline),
+        correctText: updatedAssignment.correctText,
+        classId: updatedAssignment.classId,
+        imageUrl: updatedAssignment.imageUrl,
+      });
+      setEditingAssignment(null);
+    } catch (err) {
+      // Error handled by hook's toast
+    }
   };
 
   return (
@@ -162,7 +144,7 @@ const AssignmentPage = () => {
 
         <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
           <DialogTrigger asChild>
-            <Button className="gradient-button">
+            <Button className="gradient-button" disabled={loading}>
               <Plus className="h-4 w-4 mr-2" />
               Create Assignment
             </Button>
@@ -186,6 +168,7 @@ const AssignmentPage = () => {
                           title: e.target.value,
                         }))
                       }
+                      disabled={loading}
                     />
                   </div>
 
@@ -200,10 +183,11 @@ const AssignmentPage = () => {
                           variant="outline"
                           id="deadline-date"
                           className={`w-full h-12 justify-between font-normal rounded-xl border-2 ${
-                            colorScheme == "dark"
+                            colorScheme === "dark"
                               ? "border-slate-500 shadow-slate-950"
                               : "border-slate-400 shadow-slate-400"
                           }`}
+                          disabled={loading}
                         >
                           {newAssignment.deadline
                             ? newAssignment.deadline.toLocaleDateString()
@@ -213,7 +197,7 @@ const AssignmentPage = () => {
                       </PopoverTrigger>
                       <PopoverContent
                         className={`w-full overflow-hidden p-0 bg-gradient-to-tr ${
-                          colorScheme == "dark"
+                          colorScheme === "dark"
                             ? "from-gray-900 via-gray-800/90 to-gray-700/70 border-slate-700"
                             : "from-white via-blue-100/100 to-white/90 border-slate-400"
                         }`}
@@ -230,6 +214,7 @@ const AssignmentPage = () => {
                             }));
                             setDatePickerOpen(false);
                           }}
+                          disabled={loading}
                         />
                       </PopoverContent>
                     </Popover>
@@ -245,6 +230,7 @@ const AssignmentPage = () => {
                           classId: value,
                         }))
                       }
+                      disabled={loading}
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="Select a class" />
@@ -272,6 +258,7 @@ const AssignmentPage = () => {
                         accept="image/*"
                         onChange={handleFileChange}
                         className="hidden"
+                        disabled={loading}
                       />
                       <Label
                         htmlFor="image-upload"
@@ -293,7 +280,7 @@ const AssignmentPage = () => {
                           <>
                             <Upload className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
                             <p className="text-sm text-muted-foreground">
-                              Click to upload stenography image or PDF
+                              Click to upload stenography image
                             </p>
                           </>
                         )}
@@ -317,6 +304,7 @@ const AssignmentPage = () => {
                   }
                   rows={10}
                   className="font-mono min-h-56"
+                  disabled={loading}
                 />
                 <p className={`text-xs text-${colorScheme}-muted`}>
                   {newAssignment.correctText.length} characters
@@ -328,16 +316,18 @@ const AssignmentPage = () => {
                   variant="outline"
                   onClick={() => setIsCreateDialogOpen(false)}
                   className={`cursor-pointer border rounded-2xl text-[12px] sm:text-[14px] px-6 sm:px-8 py-4 ${
-                    colorScheme == "dark"
+                    colorScheme === "dark"
                       ? "bg-slate-900 border-slate-700 hover:bg-slate-800"
                       : "bg-slate-200 border-slate-300 hover:bg-slate-300"
                   }`}
+                  disabled={loading}
                 >
                   Cancel
                 </Button>
                 <Button
                   onClick={handleCreateAssignment}
                   className="gradient-button"
+                  disabled={loading}
                 >
                   Create Assignment
                 </Button>
@@ -347,104 +337,15 @@ const AssignmentPage = () => {
         </Dialog>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        {assignments.map((assignment) => {
-          const assignedClass = classes.find(
-            (c) => c.id === assignment.classId
-          );
+      {loading && (
+        <Card className={`gradient-card-${colorScheme}`}>
+          <CardContent className="flex justify-center py-12">
+            <p>Loading assignments...</p>
+          </CardContent>
+        </Card>
+      )}
 
-          return (
-            <Card
-              key={assignment.id}
-              className={`gradient-card-${colorScheme}`}
-            >
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-lg gradient-text">
-                    {assignment.title}
-                  </CardTitle>
-                  <div className="flex items-center space-x-2">
-                    <span
-                      className={`px-2 py-1 rounded-full text-xs font-medium ${
-                        assignment.isActive
-                          ? colorScheme === "dark"
-                            ? "bg-green-900 text-green-200"
-                            : "bg-green-100 text-green-800"
-                          : colorScheme === "dark"
-                          ? "bg-gray-800 text-gray-200"
-                          : "bg-gray-100 text-gray-800"
-                      }`}
-                    >
-                      {assignment.isActive ? "Active" : "Inactive"}
-                    </span>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {assignment.imageUrl && (
-                  <div className="aspect-video rounded-lg overflow-hidden bg-muted">
-                    <img
-                      src={assignment.imageUrl}
-                      alt={assignment.title}
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                )}
-
-                <div className="flex items-center space-x-2">
-                  <FileText
-                    className={`h-4 w-4 ${
-                      colorScheme == "dark"
-                        ? "text-dark-muted"
-                        : "text-light-muted"
-                    }`}
-                  />
-                  <span className="text-sm">
-                    Class: {assignedClass?.name || "Unknown"}
-                  </span>
-                </div>
-
-                <div className="flex items-center space-x-2">
-                  <Image className="h-4 w-4 text-muted-foreground" />
-                  <span className={`text-sm text-${colorScheme}-muted`}>
-                    {assignment.correctText.length} characters
-                  </span>
-                </div>
-
-                <div className="flex space-x-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setEditingAssignment(assignment)}
-                    className="flex-1 hover:bg-blue-50 hover:border-blue-200 dark:hover:bg-blue-950"
-                  >
-                    <Edit className="h-4 w-4 mr-2" />
-                    Edit
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => toggleAssignmentStatus(assignment.id)}
-                    className="flex-1"
-                  >
-                    {assignment.isActive ? "Deactivate" : "Activate"}
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => deleteAssignment(assignment.id)}
-                    className="text-destructive hover:text-destructive hover:bg-red-50 dark:hover:bg-red-950"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          );
-        })}
-      </div>
-
-      {assignments.length === 0 && (
+      {!loading && assignments.length === 0 && (
         <Card
           className={`gradient-card-cta-${colorScheme} backdrop-blur-lg border-0`}
         >
@@ -457,12 +358,115 @@ const AssignmentPage = () => {
             <Button
               onClick={() => setIsCreateDialogOpen(true)}
               className="gradient-button"
+              disabled={loading}
             >
               <Plus className="h-4 w-4 mr-2" />
               Create Your First Assignment
             </Button>
           </CardContent>
         </Card>
+      )}
+
+      {!loading && assignments.length > 0 && (
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          {assignments.map((assignment) => {
+            const assignedClass = classes.find(
+              (c) => c.id === assignment.classId
+            );
+
+            return (
+              <Card
+                key={assignment.id}
+                className={`gradient-card-${colorScheme}`}
+              >
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-lg gradient-text">
+                      {assignment.title}
+                    </CardTitle>
+                    <div className="flex items-center space-x-2">
+                      <span
+                        className={`px-2 py-1 rounded-full text-xs font-medium ${
+                          assignment.isActive
+                            ? colorScheme === "dark"
+                              ? "bg-green-900 text-green-200"
+                              : "bg-green-100 text-green-800"
+                            : colorScheme === "dark"
+                            ? "bg-gray-800 text-gray-200"
+                            : "bg-gray-100 text-gray-800"
+                        }`}
+                      >
+                        {assignment.isActive ? "Active" : "Inactive"}
+                      </span>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {assignment.imageUrl && (
+                    <div className="aspect-video rounded-lg overflow-hidden bg-muted">
+                      <img
+                        src={assignment.imageUrl}
+                        alt={assignment.title}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                  )}
+
+                  <div className="flex items-center space-x-2">
+                    <FileText
+                      className={`h-4 w-4 ${
+                        colorScheme === "dark"
+                          ? "text-dark-muted"
+                          : "text-light-muted"
+                      }`}
+                    />
+                    <span className="text-sm">
+                      Class: {assignedClass?.name || "Unknown"}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center space-x-2">
+                    <Image className="h-4 w-4 text-muted-foreground" />
+                    <span className={`text-sm text-${colorScheme}-muted`}>
+                      {assignment.correctText.length} characters
+                    </span>
+                  </div>
+
+                  <div className="flex space-x-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setEditingAssignment(assignment)}
+                      className="flex-1 hover:bg-blue-50 hover:border-blue-200 dark:hover:bg-blue-950"
+                      disabled={loading}
+                    >
+                      <Edit className="h-4 w-4 mr-2" />
+                      Edit
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => toggleAssignmentStatus(assignment.id)}
+                      className="flex-1"
+                      disabled={loading}
+                    >
+                      {assignment.isActive ? "Deactivate" : "Activate"}
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => deleteAssignment(assignment.id)}
+                      className="text-destructive hover:text-destructive hover:bg-red-50 dark:hover:bg-red-950"
+                      disabled={loading}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
       )}
 
       <EditAssignmentModal

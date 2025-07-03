@@ -1,5 +1,4 @@
-
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -10,10 +9,24 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popver";
+import { Calendar } from "@/components/ui/calendar";
 import { Assignment, Class } from "@/types";
-import { Upload, Save, X } from "lucide-react";
+import { Upload, Save, X, ChevronDownIcon } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
+import { useTheme } from "@/hooks/ThemeProvider";
+import { useAssignment } from "@/hooks/useAssignments";
 
 interface EditAssignmentModalProps {
   assignment: Assignment | null;
@@ -28,26 +41,29 @@ const EditAssignmentModal = ({
   isOpen,
   onClose,
   onSave,
-  classes
+  classes,
 }: EditAssignmentModalProps) => {
+  const { updateAssignment, loading } = useAssignment();
+  const { colorScheme } = useTheme();
+  const [datePickerOpen, setDatePickerOpen] = useState(false);
   const [editForm, setEditForm] = useState({
     title: assignment?.title || "",
-    description: assignment?.description || "",
+    deadline: assignment?.deadline ? new Date(assignment.deadline) : new Date(),
     correctText: assignment?.correctText || "",
     classId: assignment?.classId || "",
     imageFile: null as File | null,
-    imageUrl: assignment?.imageUrl || ""
+    imageUrl: assignment?.imageUrl || "",
   });
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (assignment) {
       setEditForm({
         title: assignment.title,
-        description: assignment.description,
+        deadline: new Date(assignment.deadline),
         correctText: assignment.correctText,
         classId: assignment.classId,
         imageFile: null,
-        imageUrl: assignment.imageUrl
+        imageUrl: assignment.imageUrl,
       });
     }
   }, [assignment]);
@@ -55,20 +71,21 @@ const EditAssignmentModal = ({
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        setEditForm(prev => ({ 
-          ...prev, 
-          imageFile: file,
-          imageUrl: event.target?.result as string
-        }));
-      };
-      reader.readAsDataURL(file);
+      setEditForm((prev) => ({
+        ...prev,
+        imageFile: file,
+        imageUrl: URL.createObjectURL(file), // Local preview
+      }));
     }
   };
 
-  const handleSave = () => {
-    if (!assignment || !editForm.title.trim() || !editForm.correctText.trim() || !editForm.classId) {
+  const handleSave = async () => {
+    if (
+      !assignment ||
+      !editForm.title.trim() ||
+      !editForm.correctText.trim() ||
+      !editForm.classId
+    ) {
       toast({
         title: "Error",
         description: "Please fill in all required fields.",
@@ -77,22 +94,27 @@ const EditAssignmentModal = ({
       return;
     }
 
-    const updatedAssignment: Assignment = {
-      ...assignment,
-      title: editForm.title,
-      description: editForm.description,
-      correctText: editForm.correctText,
-      classId: editForm.classId,
-      imageUrl: editForm.imageUrl || assignment.imageUrl
-    };
-
-    onSave(updatedAssignment);
-    onClose();
-    
-    toast({
-      title: "Success",
-      description: "Assignment updated successfully.",
-    });
+    try {
+      await updateAssignment(assignment.id, {
+        title: editForm.title,
+        deadline: editForm.deadline,
+        correctText: editForm.correctText,
+        classId: editForm.classId,
+        imageFile: editForm.imageFile,
+        imageUrl: editForm.imageUrl,
+      });
+      onSave({
+        ...assignment,
+        title: editForm.title,
+        deadline: editForm.deadline,
+        correctText: editForm.correctText,
+        classId: editForm.classId,
+        imageUrl: editForm.imageUrl,
+      });
+      onClose();
+    } catch (err) {
+      // Error handled by hook's toast
+    }
   };
 
   if (!assignment) return null;
@@ -103,7 +125,12 @@ const EditAssignmentModal = ({
         <DialogHeader>
           <div className="flex items-center justify-between">
             <DialogTitle>Edit Assignment</DialogTitle>
-            <Button variant="ghost" size="sm" onClick={onClose}>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onClose}
+              disabled={loading}
+            >
               <X className="h-4 w-4" />
             </Button>
           </div>
@@ -116,23 +143,67 @@ const EditAssignmentModal = ({
                 <Input
                   id="edit-title"
                   value={editForm.title}
-                  onChange={(e) => setEditForm(prev => ({ ...prev, title: e.target.value }))}
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="edit-description">Description</Label>
-                <Textarea
-                  id="edit-description"
-                  value={editForm.description}
-                  onChange={(e) => setEditForm(prev => ({ ...prev, description: e.target.value }))}
-                  rows={3}
+                  onChange={(e) =>
+                    setEditForm((prev) => ({ ...prev, title: e.target.value }))
+                  }
+                  disabled={loading}
                 />
               </div>
 
               <div className="space-y-2">
+                <Label htmlFor="deadline-date">Set a deadline time</Label>
+                <Popover open={datePickerOpen} onOpenChange={setDatePickerOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      id="deadline-date"
+                      className={`w-full h-12 justify-between font-normal rounded-xl border-2 ${
+                        colorScheme === "dark"
+                          ? "border-slate-500 shadow-slate-950"
+                          : "border-slate-400 shadow-slate-400"
+                      }`}
+                      disabled={loading}
+                    >
+                      {editForm.deadline
+                        ? editForm.deadline.toLocaleDateString()
+                        : "Select date"}
+                      <ChevronDownIcon />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent
+                    className={`w-full overflow-hidden p-0 bg-gradient-to-tr ${
+                      colorScheme === "dark"
+                        ? "from-gray-900 via-gray-800/90 to-gray-700/70 border-slate-700"
+                        : "from-white via-blue-100/100 to-white/90 border-slate-400"
+                    }`}
+                    align="start"
+                  >
+                    <Calendar
+                      mode="single"
+                      selected={editForm.deadline}
+                      captionLayout="dropdown"
+                      onSelect={(date) => {
+                        setEditForm((prev) => ({
+                          ...prev,
+                          deadline: date || new Date(),
+                        }));
+                        setDatePickerOpen(false);
+                      }}
+                      disabled={loading}
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+
+              <div className="space-y-2">
                 <Label htmlFor="edit-class">Select Class</Label>
-                <Select value={editForm.classId} onValueChange={(value) => setEditForm(prev => ({ ...prev, classId: value }))}>
+                <Select
+                  value={editForm.classId}
+                  onValueChange={(value) =>
+                    setEditForm((prev) => ({ ...prev, classId: value }))
+                  }
+                  disabled={loading}
+                >
                   <SelectTrigger>
                     <SelectValue placeholder="Select a class" />
                   </SelectTrigger>
@@ -149,21 +220,22 @@ const EditAssignmentModal = ({
 
             <div className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="edit-image-upload">Update Image/PDF</Label>
+                <Label htmlFor="edit-image-upload">Update Image</Label>
                 <div className="border-2 border-dashed border-border rounded-lg p-6 text-center">
                   <input
                     id="edit-image-upload"
                     type="file"
-                    accept="image/*,.pdf"
+                    accept="image/*"
                     onChange={handleFileChange}
                     className="hidden"
+                    disabled={loading}
                   />
                   <Label htmlFor="edit-image-upload" className="cursor-pointer">
                     {editForm.imageUrl ? (
                       <div className="space-y-2">
-                        <img 
-                          src={editForm.imageUrl} 
-                          alt="Preview" 
+                        <img
+                          src={editForm.imageUrl}
+                          alt="Preview"
                           className="max-w-full h-32 object-cover mx-auto rounded"
                         />
                         <p className="text-sm text-green-600">
@@ -174,7 +246,7 @@ const EditAssignmentModal = ({
                       <>
                         <Upload className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
                         <p className="text-sm text-muted-foreground">
-                          Click to upload new image or PDF
+                          Click to upload new image
                         </p>
                       </>
                     )}
@@ -189,9 +261,15 @@ const EditAssignmentModal = ({
             <Textarea
               id="edit-correct-text"
               value={editForm.correctText}
-              onChange={(e) => setEditForm(prev => ({ ...prev, correctText: e.target.value }))}
+              onChange={(e) =>
+                setEditForm((prev) => ({
+                  ...prev,
+                  correctText: e.target.value,
+                }))
+              }
               rows={6}
               className="font-mono"
+              disabled={loading}
             />
             <p className="text-xs text-muted-foreground">
               {editForm.correctText.length} characters
@@ -199,10 +277,10 @@ const EditAssignmentModal = ({
           </div>
 
           <div className="flex justify-end space-x-2">
-            <Button variant="outline" onClick={onClose}>
+            <Button variant="outline" onClick={onClose} disabled={loading}>
               Cancel
             </Button>
-            <Button onClick={handleSave}>
+            <Button onClick={handleSave} disabled={loading}>
               <Save className="h-4 w-4 mr-2" />
               Save Changes
             </Button>

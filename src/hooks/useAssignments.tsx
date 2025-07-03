@@ -1,0 +1,516 @@
+import { useState, useCallback } from "react";
+import { Assignment } from "@/types";
+import { toast } from "@/hooks/use-toast";
+
+interface AssignmentFormData {
+  title: string;
+  deadline: Date;
+  correctText: string;
+  classId: string;
+  imageFile: File | null;
+  imageUrl: string;
+}
+
+interface UseAssignmentReturn {
+  assignments: Assignment[];
+  loading: boolean;
+  fetchAssignments: (classId?: string) => Promise<void>;
+  createAssignment: (formData: AssignmentFormData) => Promise<void>;
+  updateAssignment: (
+    assignmentId: string,
+    formData: Partial<AssignmentFormData>
+  ) => Promise<void>;
+  toggleAssignmentStatus: (assignmentId: string) => Promise<void>;
+  deleteAssignment: (assignmentId: string) => Promise<void>;
+}
+
+export const useAssignment = (): UseAssignmentReturn => {
+  const [assignments, setAssignments] = useState<Assignment[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  // Replace with your Cloudinary cloud name and upload preset
+  const CLOUDINARY_CLOUD_NAME = "duqkxqaij"; // e.g., "mycloudname"
+  const CLOUDINARY_UPLOAD_PRESET = "stenomaster"; // e.g., "ml_default" or the preset name you created
+
+  const setNoonTime = (date: Date): Date => {
+    const noonDate = new Date(date);
+    noonDate.setHours(12, 0, 0, 0); // Set to 12:00 PM
+    return noonDate;
+  };
+
+  const uploadToCloudinary = async (file: File) => {
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("upload_preset", CLOUDINARY_UPLOAD_PRESET);
+      formData.append("cloud_name", CLOUDINARY_CLOUD_NAME);
+
+      const response = await fetch(
+        `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`,
+        {
+          method: "POST",
+          body: formData,
+        }
+      );
+
+      const text = await response.text();
+      const result = text
+        ? JSON.parse(text)
+        : { status: "error", message: "Empty response from Cloudinary" };
+
+      if (!response.ok) {
+        console.error("[useAssignment] Cloudinary error:", result.message);
+        toast({
+          title: "Error",
+          description: result.message || "Failed to upload image to Cloudinary",
+          variant: "destructive",
+        });
+        return null;
+      }
+
+      return result.secure_url;
+    } catch (error) {
+      console.error("[useAssignment] Cloudinary upload error:", error);
+      toast({
+        title: "Error",
+        description: "An unexpected error occurred during image upload.",
+        variant: "destructive",
+      });
+      return null;
+    }
+  };
+
+  const fetchAssignments = useCallback(async (classId?: string) => {
+    setLoading(true);
+    try {
+      const token = localStorage.getItem("StenoMaster-token");
+      if (!token || typeof token !== "string" || token.trim() === "") {
+        console.error("[useAssignment] Invalid token in localStorage");
+        toast({
+          title: "Error",
+          description: "Invalid session. Please log in again.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const body = classId ? { token, classId } : { token };
+      const response = await fetch("/api/assignment/fetch", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+        signal: AbortSignal.timeout(5000),
+      });
+
+      const text = await response.text();
+      const result = text
+        ? JSON.parse(text)
+        : { status: "error", message: "Empty response from server" };
+
+      if (response.ok && result.status === "success") {
+        const now = new Date();
+        const formattedAssignments = result.data.map(
+          (assignment: Assignment) => ({
+            ...assignment,
+            deadline: new Date(assignment.deadline),
+            createdAt: new Date(assignment.createdAt),
+          })
+        );
+
+        // Process assignments for auto-inactivation and deletion
+        for (const assignment of formattedAssignments) {
+          if (assignment.isActive && new Date(assignment.deadline) < now) {
+            await toggleAssignmentStatus(assignment.id);
+          }
+          if (!assignment.isActive && new Date(assignment.deadline) < now) {
+            await deleteAssignment(assignment.id);
+          }
+        }
+
+        // Refetch assignments after processing
+        const refetchResponse = await fetch("/api/assignment/fetch", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+          signal: AbortSignal.timeout(5000),
+        });
+
+        const refetchText = await refetchResponse.text();
+        const refetchResult = refetchText
+          ? JSON.parse(refetchText)
+          : { status: "error", message: "Empty response from server" };
+
+        if (refetchResponse.ok && refetchResult.status === "success") {
+          setAssignments(
+            refetchResult.data.map((assignment: Assignment) => ({
+              ...assignment,
+              deadline: new Date(assignment.deadline),
+              createdAt: new Date(assignment.createdAt),
+            }))
+          );
+        } else {
+          console.error(
+            "[useAssignment] Refetch assignments error:",
+            refetchResult.message
+          );
+          toast({
+            title: "Error",
+            description:
+              refetchResult.message || "Failed to refetch assignments",
+            variant: "destructive",
+          });
+        }
+      } else {
+        console.error(
+          "[useAssignment] Fetch assignments error:",
+          result.message
+        );
+        toast({
+          title: "Error",
+          description: result.message || "Failed to fetch assignments",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error("[useAssignment] Fetch assignments error:", error);
+      toast({
+        title: "Error",
+        description: "An unexpected error occurred while fetching assignments.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const createAssignment = async (formData: AssignmentFormData) => {
+    setLoading(true);
+    try {
+      const token = localStorage.getItem("StenoMaster-token");
+      if (!token || typeof token !== "string" || token.trim() === "") {
+        console.error("[useAssignment] Invalid token in localStorage");
+        toast({
+          title: "Error",
+          description: "Invalid session. Please log in again.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (
+        !formData.title.trim() ||
+        !formData.correctText.trim() ||
+        !formData.classId
+      ) {
+        toast({
+          title: "Error",
+          description: "Please fill in all required fields.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      let imageUrl = formData.imageUrl;
+      if (formData.imageFile) {
+        const uploadedUrl = await uploadToCloudinary(formData.imageFile);
+        if (uploadedUrl) {
+          imageUrl = uploadedUrl;
+        } else {
+          return; // Toast already shown in uploadToCloudinary
+        }
+      }
+
+      const deadlineNoon = setNoonTime(formData.deadline);
+
+      const response = await fetch("/api/assignment/upload", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: formData.title,
+          deadline: deadlineNoon.toISOString(),
+          imageUrl:
+            imageUrl ||
+            `https://res.cloudinary.com/${CLOUDINARY_CLOUD_NAME}/image/upload/v1/sample`,
+          correctText: formData.correctText,
+          classId: formData.classId,
+          token,
+        }),
+        signal: AbortSignal.timeout(5000),
+      });
+
+      const text = await response.text();
+      const result = text
+        ? JSON.parse(text)
+        : { status: "error", message: "Empty response from server" };
+
+      if (response.ok && result.status === "success") {
+        setAssignments((prev) => [
+          ...prev,
+          {
+            ...result.data,
+            deadline: new Date(result.data.deadline),
+            createdAt: new Date(result.data.createdAt),
+          },
+        ]);
+        toast({
+          title: "Success",
+          description: "Assignment created successfully.",
+        });
+      } else {
+        console.error(
+          "[useAssignment] Create assignment error:",
+          result.message
+        );
+        toast({
+          title: "Error",
+          description: result.message || "Failed to create assignment",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error("[useAssignment] Create assignment error:", error);
+      toast({
+        title: "Error",
+        description:
+          "An unexpected error occurred while creating the assignment.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const updateAssignment = async (
+    assignmentId: string,
+    formData: Partial<AssignmentFormData>
+  ) => {
+    setLoading(true);
+    try {
+      const token = localStorage.getItem("StenoMaster-token");
+      if (!token || typeof token !== "string" || token.trim() === "") {
+        console.error("[useAssignment] Invalid token in localStorage");
+        toast({
+          title: "Error",
+          description: "Invalid session. Please log in again.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (
+        !formData.title?.trim() ||
+        !formData.correctText?.trim() ||
+        !formData.classId
+      ) {
+        toast({
+          title: "Error",
+          description: "Please fill in all required fields.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      let imageUrl = formData.imageUrl;
+      if (formData.imageFile) {
+        const uploadedUrl = await uploadToCloudinary(formData.imageFile);
+        if (uploadedUrl) {
+          imageUrl = uploadedUrl;
+        } else {
+          return; // Toast already shown in uploadToCloudinary
+        }
+      }
+
+      const body: any = { assignmentId, token };
+      if (formData.title) body.title = formData.title;
+      if (formData.deadline)
+        body.deadline = setNoonTime(formData.deadline).toISOString();
+      if (formData.correctText) body.correctText = formData.correctText;
+      if (formData.classId) body.classId = formData.classId;
+      if (imageUrl) body.imageUrl = imageUrl;
+
+      const response = await fetch("/api/assignment/update", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+        signal: AbortSignal.timeout(5000),
+      });
+
+      const text = await response.text();
+      const result = text
+        ? JSON.parse(text)
+        : { status: "error", message: "Empty response from server" };
+
+      if (response.ok && result.status === "success") {
+        setAssignments((prev) =>
+          prev.map((a) =>
+            a.id === assignmentId
+              ? {
+                  ...result.data,
+                  deadline: new Date(result.data.deadline),
+                  createdAt: new Date(result.data.createdAt),
+                }
+              : a
+          )
+        );
+        toast({
+          title: "Success",
+          description: "Assignment updated successfully.",
+        });
+      } else {
+        console.error(
+          "[useAssignment] Update assignment error:",
+          result.message
+        );
+        toast({
+          title: "Error",
+          description: result.message || "Failed to update assignment",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error("[useAssignment] Update assignment error:", error);
+      toast({
+        title: "Error",
+        description:
+          "An unexpected error occurred while updating the assignment.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const toggleAssignmentStatus = async (assignmentId: string) => {
+    setLoading(true);
+    try {
+      const token = localStorage.getItem("StenoMaster-token");
+      if (!token || typeof token !== "string" || token.trim() === "") {
+        console.error("[useAssignment] Invalid token in localStorage");
+        toast({
+          title: "Error",
+          description: "Invalid session. Please log in again.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const response = await fetch("/api/assignment/toggle", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ assignmentId, token }),
+        signal: AbortSignal.timeout(5000),
+      });
+
+      const text = await response.text();
+      const result = text
+        ? JSON.parse(text)
+        : { status: "error", message: "Empty response from server" };
+
+      if (response.ok && result.status === "success") {
+        setAssignments((prev) =>
+          prev.map((a) =>
+            a.id === assignmentId
+              ? {
+                  ...result.data,
+                  deadline: new Date(result.data.deadline),
+                  createdAt: new Date(result.data.createdAt),
+                }
+              : a
+          )
+        );
+        toast({
+          title: "Success",
+          description: `Assignment ${
+            result.data.isActive ? "activated" : "deactivated"
+          } successfully.`,
+        });
+      } else {
+        console.error(
+          "[useAssignment] Toggle assignment error:",
+          result.message
+        );
+        toast({
+          title: "Error",
+          description: result.message || "Failed to toggle assignment status",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error("[useAssignment] Toggle assignment error:", error);
+      toast({
+        title: "Error",
+        description:
+          "An unexpected error occurred while toggling the assignment.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const deleteAssignment = async (assignmentId: string) => {
+    setLoading(true);
+    try {
+      const token = localStorage.getItem("StenoMaster-token");
+      if (!token || typeof token !== "string" || token.trim() === "") {
+        console.error("[useAssignment] Invalid token in localStorage");
+        toast({
+          title: "Error",
+          description: "Invalid session. Please log in again.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const response = await fetch("/api/assignment/delete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ assignmentId, token }),
+        signal: AbortSignal.timeout(5000),
+      });
+
+      const text = await response.text();
+      const result = text
+        ? JSON.parse(text)
+        : { status: "error", message: "Empty response from server" };
+
+      if (response.ok && result.status === "success") {
+        setAssignments((prev) => prev.filter((a) => a.id !== assignmentId));
+        toast({
+          title: "Success",
+          description: "Assignment deleted successfully.",
+        });
+      } else {
+        console.error(
+          "[useAssignment] Delete assignment error:",
+          result.message
+        );
+        toast({
+          title: "Error",
+          description: result.message || "Failed to delete assignment",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error("[useAssignment] Delete assignment error:", error);
+      toast({
+        title: "Error",
+        description:
+          "An unexpected error occurred while deleting the assignment.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return {
+    assignments,
+    loading,
+    fetchAssignments,
+    createAssignment,
+    updateAssignment,
+    toggleAssignmentStatus,
+    deleteAssignment,
+  };
+};
