@@ -10,13 +10,13 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { useTheme } from "@/hooks/ThemeProvider";
 import Logo from "@/components/Logo";
 import { AuthProvider, useAuth } from "@/hooks/useAuth";
-import { usePathname } from "next/navigation";
-import UserButton from "@/components/UserButton";
+import { usePathname, useRouter } from "next/navigation";
 
 const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
   const { colorScheme } = useTheme();
   const { isAuthenticated, user, logout } = useAuth();
   const pathname = usePathname();
+  const router = useRouter();
 
   const isAssignmentPage =
     pathname &&
@@ -24,6 +24,7 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
     pathname.split("/").length === 5;
 
   if (!isAuthenticated || !user) {
+    router.push("/?showLogin=true");
     return null;
   }
 

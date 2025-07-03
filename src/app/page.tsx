@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, Suspense } from "react";
+import React, { useState, useEffect, Suspense, use } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -22,9 +22,9 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import LoginForm from "@/components/LoginForm";
 import { useTheme } from "@/hooks/ThemeProvider";
 import Logo from "@/components/Logo";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useAuth } from "@/hooks/useAuth";
 
-// Component to handle useSearchParams with Suspense
 function LoginDialogContent({
   isLoginOpen,
   setIsLoginOpen,
@@ -66,6 +66,11 @@ function LoginDialogContent({
 const Page = () => {
   const { colorScheme } = useTheme();
   const [isLoginOpen, setIsLoginOpen] = useState(false);
+
+  const [isLoading, setIsLoading] = useState(true);
+
+  const router = useRouter();
+  const { isAuthenticated, user } = useAuth();
 
   const features = [
     {
@@ -110,6 +115,23 @@ const Page = () => {
       gradient: "from-violet-500 to-purple-500",
     },
   ];
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      if (user) {
+        router.push(`/dashboard/${user.userType}`);
+      }
+    }
+    setIsLoading(false);
+  }, [isAuthenticated, user, router]);
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-lg font-semibold text-gray-500">Loading...</div>
+      </div>
+    );
+  }
 
   return (
     <div

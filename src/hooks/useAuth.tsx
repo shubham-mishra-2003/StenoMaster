@@ -73,6 +73,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
       if (token && user) {
         try {
+          if (typeof token !== "string" || token.trim() === "") {
+            throw new Error("Invalid token in localStorage");
+          }
           if (typeof user !== "string" || user.trim() === "") {
             throw new Error("Invalid user data in localStorage");
           }
@@ -85,13 +88,41 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
           ) {
             throw new Error("Incomplete user data in localStorage");
           }
+
           const response = await fetch("/api/auth/validate", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ token }),
+            signal: AbortSignal.timeout(5000), // 5-second timeout
           });
-          const result = await response.json();
-          if (response.ok && result.status === "success") {
+
+          console.log(
+            "[useAuth] Validate response status:",
+            response.status,
+            response.statusText
+          );
+
+          if (!response.ok) {
+            throw new Error(
+              `HTTP error: ${response.status} ${response.statusText}`
+            );
+          }
+
+          const text = await response.text();
+          console.log("[useAuth] Validate response body:", text);
+
+          if (!text) {
+            throw new Error("Empty response from server");
+          }
+
+          let result;
+          try {
+            result = JSON.parse(text);
+          } catch (parseError) {
+            throw new Error("Invalid JSON response from server");
+          }
+
+          if (result.status === "success") {
             setAuthState({
               isAuthenticated: true,
               user: result.data.user,
@@ -145,7 +176,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
           body: JSON.stringify({ email, password, userType }),
         });
 
-        const result = await response.json();
+        const text = await response.text();
+        console.log("[useAuth] Login response body:", text);
+        const result = text
+          ? JSON.parse(text)
+          : { status: "error", message: "Empty response from server" };
+
         if (response.ok && result.status === "success") {
           const { user, token } = result.data;
           setAuthState({ isAuthenticated: true, user, token });
@@ -217,7 +253,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
           body: JSON.stringify({ email, fullName, password, userType, photo }),
         });
 
-        const result = await response.json();
+        const text = await response.text();
+        console.log("[useAuth] Signup response body:", text);
+        const result = text
+          ? JSON.parse(text)
+          : { status: "error", message: "Empty response from server" };
+
         if (response.ok && result.status === "success") {
           const { user, token } = result.data;
           setAuthState({ isAuthenticated: true, user, token });
@@ -310,7 +351,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
           }),
         });
 
-        const result = await response.json();
+        const text = await response.text();
+        console.log("[useAuth] Create student response body:", text);
+        const result = text
+          ? JSON.parse(text)
+          : { status: "error", message: "Empty response from server" };
+
         if (response.ok && result.status === "success") {
           const { user } = result.data;
           toast({
@@ -360,6 +406,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         }),
       });
 
+      const text = await response.text();
+      console.log("[useAuth] Logout response body:", text);
+      const result = text
+        ? JSON.parse(text)
+        : { status: "error", message: "Empty response from server" };
+
       if (response.ok) {
         setAuthState({ isAuthenticated: false, user: null, token: null });
         localStorage.removeItem("StenoMaster-token");
@@ -373,7 +425,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
           description: "You have been logged out successfully.",
         });
       } else {
-        const result = await response.json();
         toast({
           title: "Error",
           description: result.message || "Logout failed",
@@ -424,7 +475,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
           body: JSON.stringify({ userId, token: authState.token }),
         });
 
-        const result = await response.json();
+        const text = await response.text();
+        console.log("[useAuth] Delete account response body:", text);
+        const result = text
+          ? JSON.parse(text)
+          : { status: "error", message: "Empty response from server" };
+
         if (response.ok && result.status === "success") {
           if (authState.user.userId === userId) {
             setAuthState({ isAuthenticated: false, user: null, token: null });

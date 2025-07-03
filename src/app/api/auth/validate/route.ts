@@ -12,15 +12,31 @@ export async function POST(request: NextRequest) {
     await connectToDatabase();
     const body: ValidateRequestBody = await request.json();
 
-    if (!body.token) {
+    if (
+      !body.token ||
+      typeof body.token !== "string" ||
+      body.token.trim() === ""
+    ) {
+      console.log("[validate] Missing or invalid token:", body.token);
       return NextResponse.json(
         { status: "error", message: "Token is required" },
-        { status: 400 }
+        { status: 400, headers: { "Content-Type": "application/json" } }
       );
     }
 
     const user = await validateSessionToken(body.token);
+    if (!user || !user._id || !user.userId || !user.email || !user.userType) {
+      console.log(
+        "[validate] Invalid user data from validateSessionToken:",
+        user
+      );
+      return NextResponse.json(
+        { status: "error", message: "Invalid or expired token" },
+        { status: 401, headers: { "Content-Type": "application/json" } }
+      );
+    }
 
+    console.log("[validate] Session validated for user:", user.userId);
     return NextResponse.json(
       {
         status: "success",
@@ -36,13 +52,16 @@ export async function POST(request: NextRequest) {
           },
         },
       },
-      { status: 200 }
+      { status: 200, headers: { "Content-Type": "application/json" } }
     );
   } catch (error: any) {
+    console.error("[validate] Error in POST /api/auth/validate:", error);
     handleError(error);
+    const message =
+      typeof error.message === "string" ? error.message : "Invalid session";
     return NextResponse.json(
-      { status: "error", message: error.message || "Invalid session" },
-      { status: 401 }
+      { status: "error", message },
+      { status: 401, headers: { "Content-Type": "application/json" } }
     );
   }
 }
