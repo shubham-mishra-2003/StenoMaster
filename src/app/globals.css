@@ -84,3 +84,63 @@
 .text-light-muted {
   @apply text-slate-500;
 }
+
+.rdt {
+  position: relative;
+}
+
+.rdtPicker {
+  background: var(--bg-color, #ffffff);
+  color: var(--text-color, #1f2937);
+  border: 1px solid var(--border-color, #d1d5db);
+  border-radius: 0.75rem;
+  box-shadow: var(--shadow, 0 4px 6px rgba(0, 0, 0, 0.1));
+  padding: 1rem;
+}
+
+.rdtPicker thead tr th {
+  color: var(--header-color, #4b5563);
+  font-weight: 600;
+}
+
+.rdtPicker td.rdtDay:hover,
+.rdtPicker td.rdtHour:hover,
+.rdtPicker td.rdtMinute:hover {
+  background: var(--hover-bg, #f3f4f6);
+  color: var(--hover-text, #1f2937);
+}
+
+.rdtPicker td.rdtActive,
+.rdtPicker td.rdtActive:hover {
+  background: var(--active-bg, #2563eb);
+  color: #ffffff;
+}
+
+.rdtPicker td.rdtToday:before {
+  border-bottom-color: var(--today-indicator, #3b82f6);
+}
+
+.rdtPicker .rdtTimeToggle {
+  color: var(--toggle-color, #2563eb);
+}
+
+.rdtPicker .rdtCounter .rdtBtn:hover {
+  background: var(--hover-bg, #f3f4f6);
+}
+
+.rdtPicker .rdtCounter .rdtBtn {
+  color: var(--text-color, #1f2937);
+}
+
+[data-theme="dark"] .rdtPicker {
+  --bg-color: #1e293b;
+  --text-color: #e2e8f0;
+  --border-color: #475569;
+  --shadow: 0 4px 6px rgba(0, 0, 0, 0.5);
+  --header-color: #94a3b8;
+  --hover-bg: #334155;
+  --hover-text: #e2e8f0;
+  --active-bg: #3b82f6;
+  --today-indicator: #60a5fa;
+  --toggle-color: #60a5fa;
+}
