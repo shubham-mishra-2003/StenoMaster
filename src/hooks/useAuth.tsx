@@ -17,6 +17,7 @@ interface User {
   fullName?: string;
   userType: "student" | "teacher";
   photo?: string;
+  teacherId?: string; // Added to include teacherId
 }
 
 interface AuthState {
@@ -93,7 +94,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ token }),
-            signal: AbortSignal.timeout(5000), // 5-second timeout
+            signal: AbortSignal.timeout(5000),
           });
 
           console.log(
@@ -348,6 +349,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
             password,
             userType: "student",
             photo,
+            teacherId: authState.user?.userId, // Include authenticated teacher's userId
           }),
         });
 

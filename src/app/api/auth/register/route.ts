@@ -11,15 +11,13 @@ interface RegisterRequestBody {
   photo?: string;
   password: string;
   userType: "teacher" | "student";
+  teacherId?: string; // Added for student creation
 }
 
 export async function POST(request: NextRequest) {
   try {
     await connectToDatabase();
     const body: RegisterRequestBody = await request.json();
-
-    // Normalize email
-    body.email = body.email.toLowerCase();
 
     // Check required fields
     if (!body.email || !body.fullName || !body.password || !body.userType) {
@@ -32,8 +30,31 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Normalize email
+    body.email = body.email.toLowerCase();
+
     // Validate userType
     validateUserType(body.userType);
+
+    // If creating a student, ensure teacherId is provided and valid
+    if (body.userType === "student") {
+      if (!body.teacherId) {
+        return NextResponse.json(
+          { status: "error", message: "teacherId is required for students" },
+          { status: 400 }
+        );
+      }
+      const teacher = await User.findOne({
+        userId: body.teacherId,
+        userType: "teacher",
+      });
+      if (!teacher) {
+        return NextResponse.json(
+          { status: "error", message: "Invalid teacherId" },
+          { status: 400 }
+        );
+      }
+    }
 
     console.log("Register input:", body);
 
@@ -51,6 +72,7 @@ export async function POST(request: NextRequest) {
       photo: body.photo,
       password: body.password,
       userType: body.userType,
+      teacherId: body.userType === "student" ? body.teacherId : undefined,
     });
 
     if (!newUser) {
@@ -86,6 +108,7 @@ export async function POST(request: NextRequest) {
             fullName: newUser.fullName,
             userType: newUser.userType,
             photo: newUser.photo,
+            teacherId: newUser.teacherId, // Include teacherId in response
           },
           token,
         },

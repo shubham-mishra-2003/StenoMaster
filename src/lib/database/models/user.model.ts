@@ -8,7 +8,8 @@ export interface IUser extends Document {
   fullName?: string;
   password: string;
   userType: "student" | "teacher";
-  sessionToken?: string; // Added for session management
+  sessionToken?: string;
+  teacherId?: string;
 }
 
 const UserSchema = new Schema<IUser>({
@@ -41,7 +42,13 @@ const UserSchema = new Schema<IUser>({
   sessionToken: {
     type: String,
     unique: true,
-    sparse: true, // Allows multiple users to have null sessionToken
+    sparse: true,
+  },
+  teacherId: {
+    type: String,
+    required: function () {
+      return this.userType === "student";
+    },
   },
 });
 
