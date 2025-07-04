@@ -17,13 +17,14 @@ interface User {
   fullName?: string;
   userType: "student" | "teacher";
   photo?: string;
-  teacherId?: string; // Added to include teacherId
+  teacherId?: string;
 }
 
 interface AuthState {
   isAuthenticated: boolean;
   user: User | null;
   token: string | null;
+  loading: boolean;
 }
 
 interface AuthContextType extends AuthState {
@@ -47,6 +48,7 @@ interface AuthContextType extends AuthState {
   }) => Promise<User>;
   logout: () => Promise<void>;
   deleteAccount: (userId: string) => Promise<void>;
+  validate: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -58,100 +60,115 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     isAuthenticated: false,
     user: null,
     token: null,
+    loading: false,
   });
   const router = useRouter();
 
-  useEffect(() => {
-    const initializeAuth = async () => {
-      const token = localStorage.getItem("StenoMaster-token");
-      const user = localStorage.getItem("StenoMaster-user");
-      console.log(
-        "[useAuth] Initial localStorage check - token:",
-        token,
-        "user:",
-        user
-      );
+  const validate = useCallback(async () => {
+    setAuthState((prev) => ({ ...prev, loading: true }));
+    const maxRetries = 3;
+    let attempt = 1;
 
-      if (token && user) {
-        try {
-          if (typeof token !== "string" || token.trim() === "") {
-            throw new Error("Invalid token in localStorage");
-          }
-          if (typeof user !== "string" || user.trim() === "") {
-            throw new Error("Invalid user data in localStorage");
-          }
-          const userData = JSON.parse(user);
-          if (
-            !userData._id ||
-            !userData.userId ||
-            !userData.email ||
-            !userData.userType
-          ) {
-            throw new Error("Incomplete user data in localStorage");
-          }
-
-          const response = await fetch("/api/auth/validate", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ token }),
-            signal: AbortSignal.timeout(5000),
-          });
-
-          console.log(
-            "[useAuth] Validate response status:",
-            response.status,
-            response.statusText
-          );
-
-          if (!response.ok) {
-            throw new Error(
-              `HTTP error: ${response.status} ${response.statusText}`
-            );
-          }
-
-          const text = await response.text();
-          console.log("[useAuth] Validate response body:", text);
-
-          if (!text) {
-            throw new Error("Empty response from server");
-          }
-
-          let result;
-          try {
-            result = JSON.parse(text);
-          } catch (parseError) {
-            throw new Error("Invalid JSON response from server");
-          }
-
-          if (result.status === "success") {
-            setAuthState({
-              isAuthenticated: true,
-              user: result.data.user,
-              token,
-            });
-            console.log("[useAuth] Session validated, user:", result.data.user);
-          } else {
-            throw new Error(result.message || "Invalid session");
-          }
-        } catch (error: any) {
-          console.error("[useAuth] Error validating session:", error.message);
-          localStorage.removeItem("StenoMaster-token");
-          localStorage.removeItem("StenoMaster-user");
-          setAuthState({ isAuthenticated: false, user: null, token: null });
+    while (attempt <= maxRetries) {
+      try {
+        const token = localStorage.getItem("StenoMaster-token");
+        if (!token || typeof token !== "string" || token.trim() === "") {
+          console.error("[useAuth] Invalid token in localStorage");
           toast({
             title: "Session Error",
-            description: "Invalid session data. Please log in again.",
+            description: "Invalid session. Please log in again.",
             variant: "destructive",
           });
+          setAuthState((prev) => ({
+            ...prev,
+            isAuthenticated: false,
+            user: null,
+            token: null,
+            loading: false,
+          }));
+          localStorage.removeItem("StenoMaster-token");
+          localStorage.removeItem("StenoMaster-user");
+          router.push("/?showLogin=true");
+          router.refresh();
+          return;
         }
-      } else {
-        console.log("[useAuth] No token or user found in localStorage");
-        setAuthState({ isAuthenticated: false, user: null, token: null });
-      }
-    };
 
-    initializeAuth();
-  }, []);
+        console.log(
+          `[useAuth] Validation attempt ${attempt} with token:`,
+          token
+        );
+        const response = await fetch("/api/auth/validate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ token }),
+          signal: AbortSignal.timeout(10000), // Increased to 10 seconds
+        });
+
+        const text = await response.text();
+        console.log("[useAuth] Validate response body:", text);
+        const result = text
+          ? JSON.parse(text)
+          : { status: "error", message: "Empty response from server" };
+
+        if (response.ok && result.status === "success") {
+          setAuthState({
+            isAuthenticated: true,
+            user: result.data.user,
+            token,
+            loading: false,
+          });
+          localStorage.setItem(
+            "StenoMaster-user",
+            JSON.stringify(result.data.user)
+          );
+          console.log("[useAuth] Session validated, user:", result.data.user);
+          toast({
+            title: "Success",
+            description: "Session validated successfully.",
+          });
+          return;
+        } else {
+          console.error("[useAuth] Validate error:", result.message);
+          toast({
+            title: "Session Error",
+            description: result.message || "Failed to validate session",
+            variant: "destructive",
+          });
+          throw new Error(result.message || "Failed to validate session");
+        }
+      } catch (error: any) {
+        console.error(`[useAuth] Validate attempt ${attempt} failed:`, error);
+        if (attempt === maxRetries) {
+          toast({
+            title: "Session Error",
+            description:
+              error.message === "signal timed out"
+                ? "Validation request timed out. Please check your connection and try again."
+                : "An unexpected error occurred while validating session.",
+            variant: "destructive",
+          });
+          setAuthState({
+            isAuthenticated: false,
+            user: null,
+            token: null,
+            loading: false,
+          });
+          localStorage.removeItem("StenoMaster-token");
+          localStorage.removeItem("StenoMaster-user");
+          router.push("/?showLogin=true");
+          router.refresh();
+          return;
+        }
+        attempt++;
+        // Wait before retrying
+        await new Promise((resolve) => setTimeout(resolve, 1000 * attempt));
+      }
+    }
+  }, [router]);
+
+  useEffect(() => {
+    validate();
+  }, [validate]);
 
   const login = useCallback(
     async (credentials: {
@@ -159,6 +176,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       password: string;
       userType: "student" | "teacher";
     }) => {
+      setAuthState((prev) => ({ ...prev, loading: true }));
       const { email, password, userType } = credentials;
 
       if (!email?.trim() || !password.trim() || !userType) {
@@ -167,6 +185,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
           description: "Please enter email, password, and user type.",
           variant: "destructive",
         });
+        setAuthState((prev) => ({ ...prev, loading: false }));
         return;
       }
 
@@ -175,6 +194,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ email, password, userType }),
+          signal: AbortSignal.timeout(10000),
         });
 
         const text = await response.text();
@@ -185,7 +205,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
         if (response.ok && result.status === "success") {
           const { user, token } = result.data;
-          setAuthState({ isAuthenticated: true, user, token });
+          setAuthState({ isAuthenticated: true, user, token, loading: false });
           localStorage.setItem("StenoMaster-token", token);
           localStorage.setItem("StenoMaster-user", JSON.stringify(user));
           console.log("[useAuth] Login successful, user:", user);
@@ -206,6 +226,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
             description: result.message || "Login failed",
             variant: "destructive",
           });
+          setAuthState((prev) => ({ ...prev, loading: false }));
         }
       } catch (error) {
         console.error("[useAuth] Login error:", error);
@@ -214,6 +235,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
           description: "An unexpected error occurred during login.",
           variant: "destructive",
         });
+        setAuthState((prev) => ({ ...prev, loading: false }));
       }
     },
     [router]
@@ -227,6 +249,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       userType: "teacher" | "student";
       photo?: string;
     }) => {
+      setAuthState((prev) => ({ ...prev, loading: true }));
       const { email, fullName, password, userType, photo } = credentials;
 
       if (!email.trim() || !fullName.trim() || !password.trim() || !userType) {
@@ -235,6 +258,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
           description: "Please fill in all required fields.",
           variant: "destructive",
         });
+        setAuthState((prev) => ({ ...prev, loading: false }));
         return;
       }
 
@@ -244,6 +268,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
           description: "Password must be at least 6 characters long.",
           variant: "destructive",
         });
+        setAuthState((prev) => ({ ...prev, loading: false }));
         return;
       }
 
@@ -252,6 +277,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ email, fullName, password, userType, photo }),
+          signal: AbortSignal.timeout(10000),
         });
 
         const text = await response.text();
@@ -262,7 +288,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
         if (response.ok && result.status === "success") {
           const { user, token } = result.data;
-          setAuthState({ isAuthenticated: true, user, token });
+          setAuthState({ isAuthenticated: true, user, token, loading: false });
           localStorage.setItem("StenoMaster-token", token);
           localStorage.setItem("StenoMaster-user", JSON.stringify(user));
           console.log("[useAuth] Signup successful, user:", user);
@@ -284,6 +310,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
             description: result.message || "Signup failed",
             variant: "destructive",
           });
+          setAuthState((prev) => ({ ...prev, loading: false }));
         }
       } catch (error) {
         console.error("[useAuth] Signup error:", error);
@@ -292,6 +319,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
           description: "An unexpected error occurred during signup.",
           variant: "destructive",
         });
+        setAuthState((prev) => ({ ...prev, loading: false }));
       }
     },
     [router]
@@ -304,6 +332,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       password: string;
       photo?: string;
     }) => {
+      setAuthState((prev) => ({ ...prev, loading: true }));
       if (
         !authState.isAuthenticated ||
         authState.user?.userType !== "teacher"
@@ -313,6 +342,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
           description: "Only teachers can create student accounts.",
           variant: "destructive",
         });
+        setAuthState((prev) => ({ ...prev, loading: false }));
         throw new Error("Only teachers can create student accounts.");
       }
 
@@ -324,6 +354,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
           description: "Please fill in all required fields.",
           variant: "destructive",
         });
+        setAuthState((prev) => ({ ...prev, loading: false }));
         throw new Error("Please fill in all required fields.");
       }
 
@@ -333,6 +364,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
           description: "Password must be at least 6 characters long.",
           variant: "destructive",
         });
+        setAuthState((prev) => ({ ...prev, loading: false }));
         throw new Error("Password must be at least 6 characters long.");
       }
 
@@ -349,8 +381,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
             password,
             userType: "student",
             photo,
-            teacherId: authState.user?.userId, // Include authenticated teacher's userId
+            teacherId: authState.user?.userId,
           }),
+          signal: AbortSignal.timeout(10000),
         });
 
         const text = await response.text();
@@ -365,6 +398,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
             title: "Success",
             description: `Student ${fullName} created successfully!`,
           });
+          setAuthState((prev) => ({ ...prev, loading: false }));
           return user as User;
         } else {
           toast({
@@ -372,6 +406,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
             description: result.message || "Failed to create student",
             variant: "destructive",
           });
+          setAuthState((prev) => ({ ...prev, loading: false }));
           throw new Error(result.message || "Failed to create student");
         }
       } catch (error) {
@@ -382,6 +417,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
             "An unexpected error occurred while creating the student.",
           variant: "destructive",
         });
+        setAuthState((prev) => ({ ...prev, loading: false }));
         throw error;
       }
     },
@@ -389,8 +425,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   );
 
   const logout = useCallback(async () => {
+    setAuthState((prev) => ({ ...prev, loading: true }));
     if (!authState.isAuthenticated || !authState.user || !authState.token) {
-      setAuthState({ isAuthenticated: false, user: null, token: null });
+      setAuthState({
+        isAuthenticated: false,
+        user: null,
+        token: null,
+        loading: false,
+      });
       localStorage.removeItem("StenoMaster-token");
       localStorage.removeItem("StenoMaster-user");
       router.push("/?showLogin=true");
@@ -406,6 +448,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
           userId: authState.user.userId,
           token: authState.token,
         }),
+        signal: AbortSignal.timeout(10000),
       });
 
       const text = await response.text();
@@ -415,7 +458,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         : { status: "error", message: "Empty response from server" };
 
       if (response.ok) {
-        setAuthState({ isAuthenticated: false, user: null, token: null });
+        setAuthState({
+          isAuthenticated: false,
+          user: null,
+          token: null,
+          loading: false,
+        });
         localStorage.removeItem("StenoMaster-token");
         localStorage.removeItem("StenoMaster-user");
         console.log("[useAuth] Logout successful");
@@ -432,6 +480,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
           description: result.message || "Logout failed",
           variant: "destructive",
         });
+        setAuthState((prev) => ({ ...prev, loading: false }));
       }
     } catch (error) {
       console.error("[useAuth] Logout error:", error);
@@ -440,17 +489,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         description: "An unexpected error occurred during logout.",
         variant: "destructive",
       });
+      setAuthState((prev) => ({ ...prev, loading: false }));
     }
   }, [authState, router]);
 
   const deleteAccount = useCallback(
     async (userId: string) => {
+      setAuthState((prev) => ({ ...prev, loading: true }));
       if (!authState.isAuthenticated || !authState.user || !authState.token) {
         toast({
           title: "Error",
           description: "You must be logged in to delete an account.",
           variant: "destructive",
         });
+        setAuthState((prev) => ({ ...prev, loading: false }));
         return;
       }
 
@@ -464,6 +516,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
             "You can only delete your own account or student accounts as a teacher.",
           variant: "destructive",
         });
+        setAuthState((prev) => ({ ...prev, loading: false }));
         return;
       }
 
@@ -475,6 +528,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
             Authorization: `Bearer ${authState.token}`,
           },
           body: JSON.stringify({ userId, token: authState.token }),
+          signal: AbortSignal.timeout(10000),
         });
 
         const text = await response.text();
@@ -485,7 +539,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
         if (response.ok && result.status === "success") {
           if (authState.user.userId === userId) {
-            setAuthState({ isAuthenticated: false, user: null, token: null });
+            setAuthState({
+              isAuthenticated: false,
+              user: null,
+              token: null,
+              loading: false,
+            });
             localStorage.removeItem("StenoMaster-token");
             localStorage.removeItem("StenoMaster-user");
             router.push("/?showLogin=true");
@@ -499,6 +558,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
               title: "Success",
               description: "Student account deleted successfully.",
             });
+            setAuthState((prev) => ({ ...prev, loading: false }));
           }
         } else {
           toast({
@@ -506,6 +566,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
             description: result.message || "Failed to delete account",
             variant: "destructive",
           });
+          setAuthState((prev) => ({ ...prev, loading: false }));
         }
       } catch (error) {
         console.error("[useAuth] Delete account error:", error);
@@ -515,6 +576,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
             "An unexpected error occurred while deleting the account.",
           variant: "destructive",
         });
+        setAuthState((prev) => ({ ...prev, loading: false }));
       }
     },
     [authState, router]
@@ -529,6 +591,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         createStudent,
         logout,
         deleteAccount,
+        validate,
       }}
     >
       {children}

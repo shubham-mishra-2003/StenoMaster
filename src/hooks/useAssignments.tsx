@@ -2,9 +2,10 @@ import { useState, useCallback } from "react";
 import { Assignment } from "@/types";
 import { toast } from "@/hooks/use-toast";
 import moment from "moment";
+
 interface AssignmentFormData {
   title: string;
-  deadline: string; // Updated to string to match Assignment interface
+  deadline: string;
   correctText: string;
   classId: string;
   imageFile?: File | null;
@@ -28,7 +29,6 @@ export const useAssignment = (): UseAssignmentReturn => {
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [loading, setLoading] = useState(false);
 
-  // Replace with your Cloudinary cloud name and upload preset
   const CLOUDINARY_CLOUD_NAME = "duqkxqaij";
   const CLOUDINARY_UPLOAD_PRESET = "stenomaster";
 
@@ -110,10 +110,11 @@ export const useAssignment = (): UseAssignmentReturn => {
           })
         );
 
-        // Process assignments for auto-inactivation and deletion
         for (const assignment of formattedAssignments) {
-          const [, endDateStr] = assignment.deadline.split(" to ");
-          const endDate = moment(endDateStr, "DD/MM/YYYY, HH:mm").toDate();
+          const endDate = moment(
+            assignment.deadline,
+            "DD/MM/YYYY, HH:mm"
+          ).toDate();
           if (assignment.isActive && endDate < now) {
             await toggleAssignmentStatus(assignment.id);
           }
@@ -122,7 +123,6 @@ export const useAssignment = (): UseAssignmentReturn => {
           }
         }
 
-        // Refetch assignments after processing
         const refetchResponse = await fetch("/api/assignment/fetch", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -211,7 +211,7 @@ export const useAssignment = (): UseAssignmentReturn => {
         if (uploadedUrl) {
           imageUrl = uploadedUrl;
         } else {
-          return; // Toast already shown in uploadToCloudinary
+          return;
         }
       }
 
@@ -220,7 +220,7 @@ export const useAssignment = (): UseAssignmentReturn => {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           title: formData.title,
-          deadline: formData.deadline, // Use the string directly
+          deadline: formData.deadline,
           imageUrl:
             imageUrl ||
             `https://res.cloudinary.com/${CLOUDINARY_CLOUD_NAME}/image/upload/v1/sample`,
@@ -308,13 +308,13 @@ export const useAssignment = (): UseAssignmentReturn => {
         if (uploadedUrl) {
           imageUrl = uploadedUrl;
         } else {
-          return; // Toast already shown in uploadToCloudinary
+          return;
         }
       }
 
       const body: any = { assignmentId, token };
       if (formData.title) body.title = formData.title;
-      if (formData.deadline) body.deadline = formData.deadline; // Use the string directly
+      if (formData.deadline) body.deadline = formData.deadline;
       if (formData.correctText) body.correctText = formData.correctText;
       if (formData.classId) body.classId = formData.classId;
       if (imageUrl) body.imageUrl = imageUrl;

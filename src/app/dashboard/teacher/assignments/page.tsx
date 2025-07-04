@@ -20,23 +20,15 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Assignment, Class } from "@/types";
-import {
-  Plus,
-  Upload,
-  FileText,
-  Image,
-  Trash2,
-  Edit,
-} from "lucide-react";
+import { Assignment } from "@/types";
+import { Plus, Upload, FileText, Image, Trash2, Edit } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { useTheme } from "@/hooks/ThemeProvider";
 import EditAssignmentModal from "@/components/EditAssignmentModal";
 import { useAssignment } from "@/hooks/useAssignments";
 import { useClass } from "@/hooks/useClasses";
-import Datetime from "react-datetime";
+import { Calendar24 } from "@/components/ui/calendar";
 import moment from "moment";
-import "react-datetime/css/react-datetime.css";
 
 const AssignmentPage = () => {
   const {
@@ -51,11 +43,12 @@ const AssignmentPage = () => {
   const { classes, fetchClasses } = useClass();
   const { colorScheme } = useTheme();
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
-  const [editingAssignment, setEditingAssignment] = useState<Assignment | null>(null);
+  const [editingAssignment, setEditingAssignment] = useState<Assignment | null>(
+    null
+  );
   const [newAssignment, setNewAssignment] = useState({
     title: "",
-    deadlineStart: null as Date | null,
-    deadlineEnd: null as Date | null,
+    deadline: null as Date | null,
     correctText: "",
     classId: "",
     imageFile: null as File | null,
@@ -83,21 +76,11 @@ const AssignmentPage = () => {
       !newAssignment.title.trim() ||
       !newAssignment.correctText.trim() ||
       !newAssignment.classId ||
-      !newAssignment.deadlineStart ||
-      !newAssignment.deadlineEnd
+      !newAssignment.deadline
     ) {
       toast({
         title: "Error",
-        description: "Please fill in all required fields, including deadline range.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (newAssignment.deadlineEnd <= newAssignment.deadlineStart) {
-      toast({
-        title: "Error",
-        description: "End date and time must be after start date and time.",
+        description: "Please fill in all required fields, including deadline.",
         variant: "destructive",
       });
       return;
@@ -106,12 +89,11 @@ const AssignmentPage = () => {
     try {
       await createAssignment({
         ...newAssignment,
-        deadline: `${moment(newAssignment.deadlineStart).format("DD/MM/YYYY, HH:mm")} to ${moment(newAssignment.deadlineEnd).format("DD/MM/YYYY, HH:mm")}`,
+        deadline: moment(newAssignment.deadline).format("DD/MM/YYYY, HH:mm"),
       });
       setNewAssignment({
         title: "",
-        deadlineStart: null,
-        deadlineEnd: null,
+        deadline: null,
         correctText: "",
         classId: "",
         imageFile: null,
@@ -181,56 +163,23 @@ const AssignmentPage = () => {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="deadline-range">Set a deadline time</Label>
-                    <div className="flex flex-col sm:flex-row gap-2">
-                      <Datetime
-                        value={newAssignment.deadlineStart ?? undefined}
-                        onChange={(value) => {
-                          const date = moment(value).isValid() ? moment(value).toDate() : null;
+                    <Label htmlFor="deadline">Set deadline</Label>
+                    <Calendar24
+                      onChange={(date: Date | undefined, time: string) => {
+                        if (date) {
+                          const [hours, minutes, seconds] = time
+                            .split(":")
+                            .map(Number);
+                          const newDate = new Date(date);
+                          newDate.setHours(hours, minutes, seconds || 0);
                           setNewAssignment((prev) => ({
                             ...prev,
-                            deadlineStart: date,
+                            deadline: newDate,
                           }));
-                        }}
-                        inputProps={{
-                          id: "deadline-start",
-                          placeholder: "DD/MM/YYYY, HH:mm",
-                          className: `w-full h-12 px-3 font-normal rounded-xl border-2 ${
-                            colorScheme === "dark"
-                              ? "border-slate-500 shadow-slate-950 bg-slate-800 text-white"
-                              : "border-slate-400 shadow-slate-400 bg-white text-black"
-                          }`,
-                          disabled: loading,
-                        }}
-                        dateFormat="DD/MM/YYYY"
-                        timeFormat="HH:mm"
-                        className="flex-1"
-                      />
-                      <span className="self-center text-muted-foreground">to</span>
-                      <Datetime
-                        value={newAssignment.deadlineEnd ?? undefined}
-                        onChange={(value) => {
-                          const date = moment(value).isValid() ? moment(value).toDate() : null;
-                          setNewAssignment((prev) => ({
-                            ...prev,
-                            deadlineEnd: date,
-                          }));
-                        }}
-                        inputProps={{
-                          id: "deadline-end",
-                          placeholder: "DD/MM/YYYY, HH:mm",
-                          className: `w-full h-12 px-3 font-normal rounded-xl border-2 ${
-                            colorScheme === "dark"
-                              ? "border-slate-500 shadow-slate-950 bg-slate-800 text-white"
-                              : "border-slate-400 shadow-slate-400 bg-white text-black"
-                          }`,
-                          disabled: loading,
-                        }}
-                        dateFormat="DD/MM/YYYY"
-                        timeFormat="HH:mm"
-                        className="flex-1"
-                      />
-                    </div>
+                        }
+                      }}
+                      disabled={loading}
+                    />
                   </div>
 
                   <div className="space-y-2">
@@ -285,7 +234,8 @@ const AssignmentPage = () => {
                               className="max-w-full h-32 object-cover rounded"
                             />
                             <p className="text-sm text-green-600">
-                              {newAssignment.imageFile?.name || "Image uploaded"}
+                              {newAssignment.imageFile?.name ||
+                                "Image uploaded"}
                             </p>
                           </div>
                         ) : (
@@ -380,7 +330,10 @@ const AssignmentPage = () => {
       )}
 
       {!loading && assignments.length > 0 && (
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3" style={{ minWidth: '250px' }}>
+        <div
+          className="grid gap-6 md:grid-cols-2 lg:grid-cols-3"
+          style={{ minWidth: "250px" }}
+        >
           {assignments.map((assignment) => {
             const assignedClass = classes.find(
               (c) => c.id === assignment.classId
@@ -449,7 +402,11 @@ const AssignmentPage = () => {
                       variant="outline"
                       size="sm"
                       onClick={() => setEditingAssignment(assignment)}
-                      className="flex-1 hover:bg-blue-50 hover:border-blue-200 dark:hover:bg-blue-950"
+                      className={`flex-1 cursor-pointer ${
+                        colorScheme == "dark"
+                          ? "text-blue-200 bg-slate-800 hover:bg-slate-900"
+                          : "text-blue-800 bg-slate-100 hover:bg-slate-200"
+                      }`}
                       disabled={loading}
                     >
                       <Edit className="h-4 w-4 mr-2" />
@@ -459,7 +416,11 @@ const AssignmentPage = () => {
                       variant="outline"
                       size="sm"
                       onClick={() => toggleAssignmentStatus(assignment.id)}
-                      className="flex-1"
+                      className={`flex-1 cursor-pointer ${
+                        colorScheme == "dark"
+                          ? "text-green-200 bg-slate-800 hover:bg-slate-900"
+                          : "text-green-800 bg-slate-100 hover:bg-slate-200"
+                      }`}
                       disabled={loading}
                     >
                       {assignment.isActive ? "Deactivate" : "Activate"}
@@ -468,7 +429,7 @@ const AssignmentPage = () => {
                       variant="ghost"
                       size="sm"
                       onClick={() => deleteAssignment(assignment.id)}
-                      className="text-destructive hover:text-destructive hover:bg-red-50 dark:hover:bg-red-950"
+                      className="text-destructive hover:text-destructive cursor-pointer hover:bg-red-500 hover:text-white"
                       disabled={loading}
                     >
                       <Trash2 className="h-4 w-4" />

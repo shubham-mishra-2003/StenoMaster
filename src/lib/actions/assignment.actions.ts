@@ -45,9 +45,9 @@ export async function createAssignment(assignmentData: {
       classId: assignmentData.classId,
       teacherId: user.userId,
       isActive: true,
+      createdAt: new Date().toISOString(),
     });
 
-    // Update the class document to include the new assignment ID
     await updateClassDoc(assignmentData.classId, {
       assignments: [...(classData.assignments || []), assignmentId],
     });
@@ -159,7 +159,6 @@ export async function deleteAssignment(assignmentId: string, token: string) {
     if (!assignment || assignment.teacherId !== user.userId) {
       throw new Error("Assignment not found or unauthorized");
     }
-    // Remove the assignment ID from the class's assignments array
     const classData = await getClassDocById(assignment.classId);
     if (classData) {
       await updateClassDoc(assignment.classId, {

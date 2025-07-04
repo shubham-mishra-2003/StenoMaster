@@ -1,15 +1,23 @@
-"use client"
+"use client";
 
-import * as React from "react"
+import * as React from "react";
 import {
   ChevronDownIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
-} from "lucide-react"
-import { DayButton, DayPicker, getDefaultClassNames } from "react-day-picker"
-
-import { cn } from "@/lib/utils"
-import { Button, buttonVariants } from "@/components/ui/button"
+} from "lucide-react";
+import { DayButton, DayPicker, getDefaultClassNames } from "react-day-picker";
+import { cn } from "@/lib/utils";
+import { Button, buttonVariants } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import moment from "moment";
+import { useTheme } from "@/hooks/ThemeProvider";
 
 function Calendar({
   className,
@@ -21,15 +29,16 @@ function Calendar({
   components,
   ...props
 }: React.ComponentProps<typeof DayPicker> & {
-  buttonVariant?: React.ComponentProps<typeof Button>["variant"]
+  buttonVariant?: React.ComponentProps<typeof Button>["variant"];
 }) {
-  const defaultClassNames = getDefaultClassNames()
+  const defaultClassNames = getDefaultClassNames();
+  const { colorScheme } = useTheme();
 
   return (
     <DayPicker
       showOutsideDays={showOutsideDays}
       className={cn(
-        "bg-background group/calendar p-3 [--cell-size:--spacing(8)] [[data-slot=card-content]_&]:bg-transparent [[data-slot=popover-content]_&]:bg-transparent",
+        "group/calendar p-3 [--cell-size:--spacing(8)] [[data-slot=card-content]_&]:bg-transparent [[data-slot=popover-content]_&]:bg-transparent",
         String.raw`rtl:**:[.rdp-button\_next>svg]:rotate-180`,
         String.raw`rtl:**:[.rdp-button\_previous>svg]:rotate-180`,
         className
@@ -97,27 +106,31 @@ function Calendar({
           defaultClassNames.week_number
         ),
         day: cn(
-          "relative w-full h-full p-0 text-center [&:first-child[data-selected=true]_button]:rounded-l-md [&:last-child[data-selected=true]_button]:rounded-r-md group/day aspect-square select-none",
-          defaultClassNames.day
+          "relative w-full h-full p-0 text-center [&:first-child[data-selected=true]_button]:rounded-l-md [&:last-child[data-selected=true]_button]:rounded-r-md group/day aspect-square select-none rounded-md",
+          defaultClassNames.day,
+          colorScheme === "dark"
+            ? "hover:bg-gray-700 hover:text-white"
+            : "hover:bg-gray-300 hover:text-black",
+          "transition-colors duration-200"
         ),
         range_start: cn(
-          "rounded-l-md bg-accent",
+          "rounded-l-md bg-blue-600",
           defaultClassNames.range_start
         ),
-        range_middle: cn("rounded-none", defaultClassNames.range_middle),
-        range_end: cn("rounded-r-md bg-accent", defaultClassNames.range_end),
+        range_middle: cn(
+          "rounded-none bg-blue-600",
+          defaultClassNames.range_middle
+        ),
+        range_end: cn("rounded-r-md bg-blue-600", defaultClassNames.range_end),
         today: cn(
-          "bg-accent text-accent-foreground rounded-md data-[selected=true]:rounded-none",
+          "bg-yellow-400 text-black rounded-md data-[selected=true]:rounded-none",
           defaultClassNames.today
         ),
         outside: cn(
-          "text-muted-foreground aria-selected:text-muted-foreground",
+          "text-gray-500 aria-selected:text-gray-500",
           defaultClassNames.outside
         ),
-        disabled: cn(
-          "text-muted-foreground opacity-50",
-          defaultClassNames.disabled
-        ),
+        disabled: cn("text-gray-400 opacity-50", defaultClassNames.disabled),
         hidden: cn("invisible", defaultClassNames.hidden),
         ...classNames,
       }}
@@ -130,27 +143,44 @@ function Calendar({
               className={cn(className)}
               {...props}
             />
-          )
+          );
         },
         Chevron: ({ className, orientation, ...props }) => {
           if (orientation === "left") {
             return (
-              <ChevronLeftIcon className={cn("size-4", className)} {...props} />
-            )
+              <ChevronLeftIcon
+                className={cn(
+                  `cursor-pointer size-6 rounded-full ${
+                    colorScheme === "dark"
+                      ? "bg-slate-900/70 hover:bg-black/60 border-slate-700 text-white"
+                      : "bg-slate-200 hover:bg-slate-300 border-slate-300 text-black"
+                  }`,
+                  className
+                )}
+                {...props}
+              />
+            );
           }
 
           if (orientation === "right") {
             return (
               <ChevronRightIcon
-                className={cn("size-4", className)}
+                className={cn(
+                  `cursor-pointer size-6 rounded-full ${
+                    colorScheme === "dark"
+                      ? "bg-slate-900/70 hover:bg-black/60 border-slate-700 text-white"
+                      : "bg-slate-200 hover:bg-slate-300 border-slate-300 text-black"
+                  }`,
+                  className
+                )}
                 {...props}
               />
-            )
+            );
           }
 
           return (
             <ChevronDownIcon className={cn("size-4", className)} {...props} />
-          )
+          );
         },
         DayButton: CalendarDayButton,
         WeekNumber: ({ children, ...props }) => {
@@ -160,13 +190,13 @@ function Calendar({
                 {children}
               </div>
             </td>
-          )
+          );
         },
         ...components,
       }}
       {...props}
     />
-  )
+  );
 }
 
 function CalendarDayButton({
@@ -175,36 +205,126 @@ function CalendarDayButton({
   modifiers,
   ...props
 }: React.ComponentProps<typeof DayButton>) {
-  const defaultClassNames = getDefaultClassNames()
+  const defaultClassNames = getDefaultClassNames();
+  const { colorScheme } = useTheme();
+  const today = moment().startOf("day").toDate(); // 01:06 AM IST, July 05, 2025
 
-  const ref = React.useRef<HTMLButtonElement>(null)
-  React.useEffect(() => {
-    if (modifiers.focused) ref.current?.focus()
-  }, [modifiers.focused])
+  const isToday = day.date.toDateString() === today.toDateString();
+  const isSelected =
+    modifiers.selected &&
+    !modifiers.range_start &&
+    !modifiers.range_end &&
+    !modifiers.range_middle;
 
   return (
     <Button
-      ref={ref}
+      ref={null}
       variant="ghost"
       size="icon"
       data-day={day.date.toLocaleDateString()}
-      data-selected-single={
-        modifiers.selected &&
-        !modifiers.range_start &&
-        !modifiers.range_end &&
-        !modifiers.range_middle
-      }
+      data-selected-single={isSelected}
       data-range-start={modifiers.range_start}
       data-range-end={modifiers.range_end}
       data-range-middle={modifiers.range_middle}
       className={cn(
-        "data-[selected-single=true]:bg-primary data-[selected-single=true]:text-primary-foreground data-[range-middle=true]:bg-accent data-[range-middle=true]:text-accent-foreground data-[range-start=true]:bg-primary data-[range-start=true]:text-primary-foreground data-[range-end=true]:bg-primary data-[range-end=true]:text-primary-foreground group-data-[focused=true]/day:border-ring group-data-[focused=true]/day:ring-ring/50 dark:hover:text-accent-foreground flex aspect-square size-auto w-full min-w-(--cell-size) flex-col gap-1 leading-none font-normal group-data-[focused=true]/day:relative group-data-[focused=true]/day:z-10 group-data-[focused=true]/day:ring-[3px] data-[range-end=true]:rounded-md data-[range-end=true]:rounded-r-md data-[range-middle=true]:rounded-none data-[range-start=true]:rounded-md data-[range-start=true]:rounded-l-md [&>span]:text-xs [&>span]:opacity-70",
+        "data-[selected-single=true]:bg-blue-600 data-[selected-single=true]:text-white data-[range-middle=true]:bg-blue-600 data-[range-middle=true]:text-white data-[range-start=true]:bg-blue-600 data-[range-start=true]:text-white data-[range-end=true]:bg-blue-600 data-[range-end=true]:text-white group-data-[focused=true]/day:border-blue-400 group-data-[focused=true]/day:ring-blue-400/50 flex aspect-square size-auto w-full min-w-(--cell-size) flex-col gap-1 leading-none font-normal group-data-[focused=true]/day:relative group-data-[focused=true]/day:z-10 group-data-[focused=true]/day:ring-[3px] data-[range-end=true]:rounded-md data-[range-end=true]:rounded-r-md data-[range-middle=true]:rounded-none data-[range-start=true]:rounded-md data-[range-start=true]:rounded-l-md [&>span]:text-xs [&>span]:opacity-70",
+        isToday && !isSelected
+          ? colorScheme === "dark"
+            ? "bg-yellow-400 text-black"
+            : "bg-yellow-400 text-black"
+          : "",
         defaultClassNames.day,
         className
       )}
       {...props}
     />
-  )
+  );
 }
 
-export { Calendar, CalendarDayButton }
+export function Calendar24({
+  value,
+  onChange,
+  disabled,
+}: {
+  value?: Date;
+  onChange?: (date: Date | undefined, time: string) => void;
+  disabled?: boolean;
+}) {
+  const [open, setOpen] = React.useState(false);
+  const [date, setDate] = React.useState<Date | undefined>(value);
+  const [time, setTime] = React.useState<string>(
+    value ? moment(value).format("HH:mm:ss") : "10:30:00"
+  );
+
+  React.useEffect(() => {
+    setDate(value);
+    if (value) {
+      setTime(moment(value).format("HH:mm:ss"));
+    }
+  }, [value]);
+
+  const { colorScheme } = useTheme();
+
+  return (
+    <div className="flex gap-4">
+      <div className="flex flex-col gap-3">
+        <Label htmlFor="date-picker" className="px-1">
+          Date
+        </Label>
+        <Popover open={open} onOpenChange={setOpen}>
+          <PopoverTrigger asChild>
+            <Button
+              variant="outline"
+              id="date-picker"
+              className={`cursor-pointer h-12 border-2 rounded-xl ${
+                colorScheme === "dark"
+                  ? "bg-slate-900/70 hover:bg-black/60 border-slate-700 text-white"
+                  : "bg-slate-200 hover:bg-slate-300 border-slate-300 text-black"
+              }`}
+              disabled={disabled}
+            >
+              {date ? date.toLocaleDateString() : "Select date"}
+              <ChevronDownIcon />
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto overflow-hidden p-0" align="start">
+            <Calendar
+              mode="single"
+              selected={date}
+              captionLayout="dropdown"
+              onSelect={(newDate) => {
+                setDate(newDate);
+                if (newDate && onChange) {
+                  onChange(newDate, time);
+                }
+                setOpen(false);
+              }}
+            />
+          </PopoverContent>
+        </Popover>
+      </div>
+      <div className="flex flex-col gap-3">
+        <Label htmlFor="time-picker" className="px-1">
+          Time
+        </Label>
+        <Input
+          type="time"
+          id="time-picker"
+          step="1"
+          value={time}
+          onChange={(e) => {
+            const newTime = e.target.value;
+            setTime(newTime);
+            if (date && onChange) {
+              onChange(date, newTime);
+            }
+          }}
+          disabled={disabled}
+          className="bg-background appearance-none [&::-webkit-calendar-picker-indicator]:hidden [&::-webkit-calendar-picker-indicator]:appearance-none"
+        />
+      </div>
+    </div>
+  );
+}
+
+export { Calendar, CalendarDayButton };

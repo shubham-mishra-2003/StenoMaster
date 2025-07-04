@@ -17,13 +17,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Assignment, Class } from "@/types";
-import { Upload, Save, X } from "lucide-react";
+import { Upload, Save } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { useTheme } from "@/hooks/ThemeProvider";
 import { useAssignment } from "@/hooks/useAssignments";
-import Datetime from "react-datetime";
+import { Calendar24 } from "@/components/ui/calendar";
 import moment from "moment";
-import "react-datetime/css/react-datetime.css";
 
 interface EditAssignmentModalProps {
   assignment: Assignment | null;
@@ -44,8 +43,7 @@ const EditAssignmentModal = ({
   const { colorScheme } = useTheme();
   const [editForm, setEditForm] = useState({
     title: assignment?.title || "",
-    deadlineStart: null as Date | null,
-    deadlineEnd: null as Date | null,
+    deadline: undefined as Date | undefined,
     correctText: assignment?.correctText || "",
     classId: assignment?.classId || "",
     imageFile: null as File | null,
@@ -54,13 +52,12 @@ const EditAssignmentModal = ({
 
   useEffect(() => {
     if (assignment) {
-      const [start, end] = assignment.deadline
-        ? assignment.deadline.split(" to ").map((d) => moment(d, "DD/MM/YYYY, HH:mm").toDate())
-        : [new Date(), new Date()];
+      const deadline = assignment.deadline
+        ? moment(assignment.deadline, "DD/MM/YYYY, HH:mm").toDate()
+        : undefined;
       setEditForm({
         title: assignment.title,
-        deadlineStart: start,
-        deadlineEnd: end,
+        deadline,
         correctText: assignment.correctText,
         classId: assignment.classId,
         imageFile: null,
@@ -86,28 +83,20 @@ const EditAssignmentModal = ({
       !editForm.title.trim() ||
       !editForm.correctText.trim() ||
       !editForm.classId ||
-      !editForm.deadlineStart ||
-      !editForm.deadlineEnd
+      !editForm.deadline
     ) {
       toast({
         title: "Error",
-        description: "Please fill in all required fields, including deadline range.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (editForm.deadlineEnd <= editForm.deadlineStart) {
-      toast({
-        title: "Error",
-        description: "End date and time must be after start date and time.",
+        description: "Please fill in all required fields, including deadline.",
         variant: "destructive",
       });
       return;
     }
 
     try {
-      const updatedDeadline = `${moment(editForm.deadlineStart).format("DD/MM/YYYY, HH:mm")} to ${moment(editForm.deadlineEnd).format("DD/MM/YYYY, HH:mm")}`;
+      const updatedDeadline = moment(editForm.deadline).format(
+        "DD/MM/YYYY, HH:mm"
+      );
       await updateAssignment(assignment.id, {
         title: editForm.title,
         deadline: updatedDeadline,
@@ -136,17 +125,7 @@ const EditAssignmentModal = ({
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <div className="flex items-center justify-between">
-            <DialogTitle>Edit Assignment</DialogTitle>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={onClose}
-              disabled={loading}
-            >
-              <X className="h-4 w-4" />
-            </Button>
-          </div>
+          <DialogTitle>Edit Assignment</DialogTitle>
         </DialogHeader>
         <div className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -164,56 +143,24 @@ const EditAssignmentModal = ({
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="deadline-range">Set a deadline time</Label>
-                <div className="flex flex-col sm:flex-row gap-2">
-                  <Datetime
-                    value={editForm.deadlineStart ?? undefined}
-                    onChange={(value) => {
-                      const date = moment(value).isValid() ? moment(value).toDate() : null;
+                <Label htmlFor="deadline">Set deadline</Label>
+                <Calendar24
+                  value={editForm.deadline}
+                  onChange={(date: Date | undefined, time: string) => {
+                    if (date) {
+                      const [hours, minutes, seconds] = time
+                        .split(":")
+                        .map(Number);
+                      const newDate = new Date(date);
+                      newDate.setHours(hours, minutes, seconds || 0);
                       setEditForm((prev) => ({
                         ...prev,
-                        deadlineStart: date,
+                        deadline: newDate,
                       }));
-                    }}
-                    inputProps={{
-                      id: "deadline-start",
-                      placeholder: "DD/MM/YYYY, HH:mm",
-                      className: `w-full h-12 px-3 font-normal rounded-xl border-2 ${
-                        colorScheme === "dark"
-                          ? "border-slate-500 shadow-slate-950 bg-slate-800 text-white"
-                          : "border-slate-400 shadow-slate-400 bg-white text-black"
-                      }`,
-                      disabled: loading,
-                    }}
-                    dateFormat="DD/MM/YYYY"
-                    timeFormat="HH:mm"
-                    className="flex-1"
-                  />
-                  <span className="self-center text-muted-foreground">to</span>
-                  <Datetime
-                    value={editForm.deadlineEnd ?? undefined}
-                    onChange={(value) => {
-                      const date = moment(value).isValid() ? moment(value).toDate() : null;
-                      setEditForm((prev) => ({
-                        ...prev,
-                        deadlineEnd: date,
-                      }));
-                    }}
-                    inputProps={{
-                      id: "deadline-end",
-                      placeholder: "DD/MM/YYYY, HH:mm",
-                      className: `w-full h-12 px-3 font-normal rounded-xl border-2 ${
-                        colorScheme === "dark"
-                          ? "border-slate-500 shadow-slate-950 bg-slate-800 text-white"
-                          : "border-slate-400 shadow-slate-400 bg-white text-black"
-                      }`,
-                      disabled: loading,
-                    }}
-                    dateFormat="DD/MM/YYYY"
-                    timeFormat="HH:mm"
-                    className="flex-1"
-                  />
-                </div>
+                    }
+                  }}
+                  disabled={loading}
+                />
               </div>
 
               <div className="space-y-2">
@@ -298,10 +245,23 @@ const EditAssignmentModal = ({
           </div>
 
           <div className="flex justify-end space-x-2">
-            <Button variant="outline" onClick={onClose} disabled={loading}>
+            <Button
+              className={`cursor-pointer border rounded-2xl text-[12px] sm:text-[14px] px-6 sm:px-8 py-4 ${
+                colorScheme === "dark"
+                  ? "bg-slate-900 border-slate-700 hover:bg-slate-800"
+                  : "bg-slate-200 border-slate-300 hover:bg-slate-300"
+              }`}
+              variant="outline"
+              onClick={onClose}
+              disabled={loading}
+            >
               Cancel
             </Button>
-            <Button onClick={handleSave} disabled={loading}>
+            <Button
+              className="gradient-button"
+              onClick={handleSave}
+              disabled={loading}
+            >
               <Save className="h-4 w-4 mr-2" />
               Save Changes
             </Button>

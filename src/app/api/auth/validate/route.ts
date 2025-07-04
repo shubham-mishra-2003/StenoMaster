@@ -10,7 +10,16 @@ interface ValidateRequestBody {
 export async function POST(request: NextRequest) {
   try {
     await connectToDatabase();
-    const body: ValidateRequestBody = await request.json();
+    let body: ValidateRequestBody;
+    try {
+      body = await request.json();
+    } catch (error) {
+      console.error("[validate] JSON parsing error:", error);
+      return NextResponse.json(
+        { status: "error", message: "Invalid or empty request body" },
+        { status: 400, headers: { "Content-Type": "application/json" } }
+      );
+    }
 
     if (
       !body.token ||
@@ -19,7 +28,7 @@ export async function POST(request: NextRequest) {
     ) {
       console.log("[validate] Missing or invalid token:", body.token);
       return NextResponse.json(
-        { status: "error", message: "Token is required" },
+        { status: "error", message: "Valid token is required" },
         { status: 400, headers: { "Content-Type": "application/json" } }
       );
     }

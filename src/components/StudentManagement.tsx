@@ -264,7 +264,7 @@ const StudentManagement = ({
                             }
                           >
                             <SelectTrigger
-                              className={`cursor-pointer border w-full sm:w-32 truncate rounded-xl ${
+                              className={`cursor-pointer h-9 border w-full sm:w-56 truncate rounded-xl ${
                                 colorScheme == "dark"
                                   ? "bg-slate-900/70 hover:bg-black/60 border-slate-700"
                                   : "bg-slate-200 hover:bg-slate-300 border-slate-300"
@@ -273,7 +273,7 @@ const StudentManagement = ({
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent
-                              className={`scroll-smooth border-0 p-2 max-h-60 rounded-xl shadow-2xl ${
+                              className={`scroll-smooth border-0 max-h-60 rounded-xl shadow-2xl ${
                                 colorScheme == "dark"
                                   ? "bg-slate-900/70 border-slate-700 shadow-slate-500"
                                   : "bg-slate-200/80 border-slate-300"

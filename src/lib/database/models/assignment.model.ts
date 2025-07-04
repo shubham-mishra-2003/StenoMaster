@@ -17,16 +17,11 @@ export interface IAssignment {
   isActive: boolean;
 }
 
-export async function createAssignmentDoc(
-  assignmentData: Omit<IAssignment, "createdAt">
-) {
+export async function createAssignmentDoc(assignmentData: IAssignment) {
   try {
     const db = await connectToFirebase();
     const assignmentRef = db.collection("assignments").doc(assignmentData.id);
-    await assignmentRef.set({
-      ...assignmentData,
-      createdAt: new Date().toISOString(),
-    });
+    await assignmentRef.set(assignmentData);
     const doc: DocumentSnapshot = await assignmentRef.get();
     if (!doc.exists) {
       throw new Error("Failed to create assignment");
