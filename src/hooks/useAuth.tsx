@@ -63,14 +63,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     loading: false,
   });
   const router = useRouter();
-  const pathname = usePathname(); // Get current pathname
+  const pathname = usePathname();
 
   const validate = useCallback(async () => {
     const token = localStorage.getItem("StenoMaster-token");
+    const protectedRoutes = ["/dashboard/student", "/dashboard/teacher"];
+    const isProtectedRoute = protectedRoutes.some((route) =>
+      pathname.startsWith(route)
+    );
 
-    // Skip validation for unauthenticated users on public pages
+    console.log("[useAuth] Validating for route:", pathname, "Token:", !!token);
+
     if (!token || typeof token !== "string" || token.trim() === "") {
-      console.log("[useAuth] No valid token found, skipping validation on public page");
+      console.log("[useAuth] No valid token found");
       setAuthState((prev) => ({
         ...prev,
         isAuthenticated: false,
@@ -78,8 +83,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         token: null,
         loading: false,
       }));
-      // Only redirect if not on the homepage
-      if (pathname !== "/") {
+      if (isProtectedRoute) {
+        console.log("[useAuth] Redirecting to /?showLogin=true from protected route");
         toast({
           title: "Session Error",
           description: "Invalid session. Please log in again.",
@@ -88,7 +93,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         localStorage.removeItem("StenoMaster-token");
         localStorage.removeItem("StenoMaster-user");
         router.push("/?showLogin=true");
-        router.refresh();
       }
       return;
     }
@@ -99,10 +103,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
     while (attempt <= maxRetries) {
       try {
-        console.log(
-          `[useAuth] Validation attempt ${attempt} with token:`,
-          token
-        );
+        console.log(`[useAuth] Validation attempt ${attempt} with token`);
         const response = await fetch("/api/auth/validate", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -135,11 +136,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
           return;
         } else {
           console.error("[useAuth] Validate error:", result.message);
-          toast({
-            title: "Session Error",
-            description: result.message || "Failed to validate session",
-            variant: "destructive",
-          });
           throw new Error(result.message || "Failed to validate session");
         }
       } catch (error: any) {
@@ -161,8 +157,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
           });
           localStorage.removeItem("StenoMaster-token");
           localStorage.removeItem("StenoMaster-user");
-          router.push("/?showLogin=true");
-          router.refresh();
+          if (isProtectedRoute) {
+            console.log("[useAuth] Validation failed, redirecting to /?showLogin=true");
+            router.push("/?showLogin=true");
+          }
           return;
         }
         attempt++;
@@ -172,8 +170,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   }, [router, pathname]);
 
   useEffect(() => {
+    console.log("[useAuth] useEffect triggered for pathname:", pathname);
     validate();
-  }, [validate]);
+  }, [validate, pathname]);
 
   const login = useCallback(
     async (credentials: {
