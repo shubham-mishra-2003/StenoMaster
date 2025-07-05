@@ -52,11 +52,6 @@ const AppSidebar = () => {
       url: "/dashboard/teacher/assignments",
       icon: FileText,
     },
-    {
-      title: "Student Scores",
-      url: "/dashboard/teacher/scores",
-      icon: BarChart3,
-    },
   ];
 
   const studentItems = [

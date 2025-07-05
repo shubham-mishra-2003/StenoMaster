@@ -207,7 +207,7 @@ function CalendarDayButton({
 }: React.ComponentProps<typeof DayButton>) {
   const defaultClassNames = getDefaultClassNames();
   const { colorScheme } = useTheme();
-  const today = moment().startOf("day").toDate(); // 01:06 AM IST, July 05, 2025
+  const today = moment().startOf("day").toDate();
 
   const isToday = day.date.toDateString() === today.toDateString();
   const isSelected =
@@ -253,13 +253,13 @@ export function Calendar24({
   const [open, setOpen] = React.useState(false);
   const [date, setDate] = React.useState<Date | undefined>(value);
   const [time, setTime] = React.useState<string>(
-    value ? moment(value).format("HH:mm:ss") : "10:30:00"
+    value ? moment(value).format("HH:mm") : "12:00"
   );
 
   React.useEffect(() => {
     setDate(value);
     if (value) {
-      setTime(moment(value).format("HH:mm:ss"));
+      setTime(moment(value).format("HH:mm"));
     }
   }, [value]);
 
@@ -310,7 +310,6 @@ export function Calendar24({
         <Input
           type="time"
           id="time-picker"
-          step="1"
           value={time}
           onChange={(e) => {
             const newTime = e.target.value;

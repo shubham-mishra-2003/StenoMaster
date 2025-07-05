@@ -7,7 +7,7 @@ import { Assignment, Student, Score, Class } from "@/types";
 import { BarChart3, Trophy, Clock, Target } from "lucide-react";
 import { useTheme } from "@/hooks/ThemeProvider";
 
-const ScoresPage = () => {
+const StudentsScores = () => {
   const [students] = useLocalStorage<Student[]>("stenolearn-students", []);
   const [assignments] = useLocalStorage<Assignment[]>(
     "stenolearn-assignments",
@@ -16,7 +16,7 @@ const ScoresPage = () => {
   const { colorScheme } = useTheme();
   const [classes] = useLocalStorage<Class[]>("stenolearn-classes", []);
   const [scores] = useLocalStorage<Score[]>("stenolearn-scores", []);
-  
+
   const getStudentScores = (studentId: string) => {
     return scores.filter((s) => s.studentId === studentId);
   };
@@ -234,4 +234,4 @@ const ScoresPage = () => {
   );
 };
 
-export default ScoresPage;
+export default StudentsScores;

@@ -89,7 +89,7 @@ const AssignmentPage = () => {
     try {
       await createAssignment({
         ...newAssignment,
-        deadline: moment(newAssignment.deadline).format("DD/MM/YYYY, HH:mm"),
+        deadline: moment(newAssignment.deadline).format("DD/MM/YYYY, hh:mm A"),
       });
       setNewAssignment({
         title: "",
@@ -109,7 +109,10 @@ const AssignmentPage = () => {
     try {
       await updateAssignment(updatedAssignment.id, {
         title: updatedAssignment.title,
-        deadline: updatedAssignment.deadline,
+        deadline: moment(
+          updatedAssignment.deadline,
+          "DD/MM/YYYY, hh:mm A"
+        ).format("DD/MM/YYYY, hh:mm A"),
         correctText: updatedAssignment.correctText,
         classId: updatedAssignment.classId,
         imageUrl: updatedAssignment.imageUrl,
@@ -167,11 +170,9 @@ const AssignmentPage = () => {
                     <Calendar24
                       onChange={(date: Date | undefined, time: string) => {
                         if (date) {
-                          const [hours, minutes, seconds] = time
-                            .split(":")
-                            .map(Number);
+                          const [hours, minutes] = time.split(":").map(Number);
                           const newDate = new Date(date);
-                          newDate.setHours(hours, minutes, seconds || 0);
+                          newDate.setHours(hours, minutes);
                           setNewAssignment((prev) => ({
                             ...prev,
                             deadline: newDate,
@@ -394,6 +395,13 @@ const AssignmentPage = () => {
                     <Image className="h-4 w-4 text-muted-foreground" />
                     <span className={`text-sm text-${colorScheme}-muted`}>
                       {assignment.correctText.length} characters
+                    </span>
+                  </div>
+
+                  <div className="flex items-center space-x-2">
+                    <Image className="h-4 w-4 text-muted-foreground" />
+                    <span className={`text-sm text-${colorScheme}-muted`}>
+                      Deadline: {assignment.deadline}
                     </span>
                   </div>
 

@@ -113,13 +113,10 @@ export const useAssignment = (): UseAssignmentReturn => {
         for (const assignment of formattedAssignments) {
           const endDate = moment(
             assignment.deadline,
-            "DD/MM/YYYY, HH:mm"
+            "DD/MM/YYYY, hh:mm A"
           ).toDate();
           if (assignment.isActive && endDate < now) {
             await toggleAssignmentStatus(assignment.id);
-          }
-          if (!assignment.isActive && endDate < now) {
-            await deleteAssignment(assignment.id);
           }
         }
 
