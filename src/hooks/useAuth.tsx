@@ -7,7 +7,7 @@ import React, {
   useEffect,
   useCallback,
 } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { toast } from "@/hooks/use-toast";
 
 interface User {
@@ -63,36 +63,42 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     loading: false,
   });
   const router = useRouter();
+  const pathname = usePathname(); // Get current pathname
 
   const validate = useCallback(async () => {
+    const token = localStorage.getItem("StenoMaster-token");
+
+    // Skip validation for unauthenticated users on public pages
+    if (!token || typeof token !== "string" || token.trim() === "") {
+      console.log("[useAuth] No valid token found, skipping validation on public page");
+      setAuthState((prev) => ({
+        ...prev,
+        isAuthenticated: false,
+        user: null,
+        token: null,
+        loading: false,
+      }));
+      // Only redirect if not on the homepage
+      if (pathname !== "/") {
+        toast({
+          title: "Session Error",
+          description: "Invalid session. Please log in again.",
+          variant: "destructive",
+        });
+        localStorage.removeItem("StenoMaster-token");
+        localStorage.removeItem("StenoMaster-user");
+        router.push("/?showLogin=true");
+        router.refresh();
+      }
+      return;
+    }
+
     setAuthState((prev) => ({ ...prev, loading: true }));
     const maxRetries = 3;
     let attempt = 1;
 
     while (attempt <= maxRetries) {
       try {
-        const token = localStorage.getItem("StenoMaster-token");
-        if (!token || typeof token !== "string" || token.trim() === "") {
-          console.error("[useAuth] Invalid token in localStorage");
-          toast({
-            title: "Session Error",
-            description: "Invalid session. Please log in again.",
-            variant: "destructive",
-          });
-          setAuthState((prev) => ({
-            ...prev,
-            isAuthenticated: false,
-            user: null,
-            token: null,
-            loading: false,
-          }));
-          localStorage.removeItem("StenoMaster-token");
-          localStorage.removeItem("StenoMaster-user");
-          router.push("/?showLogin=true");
-          router.refresh();
-          return;
-        }
-
         console.log(
           `[useAuth] Validation attempt ${attempt} with token:`,
           token
@@ -101,7 +107,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ token }),
-          signal: AbortSignal.timeout(10000), // Increased to 10 seconds
+          signal: AbortSignal.timeout(10000),
         });
 
         const text = await response.text();
@@ -160,11 +166,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
           return;
         }
         attempt++;
-        // Wait before retrying
         await new Promise((resolve) => setTimeout(resolve, 1000 * attempt));
       }
     }
-  }, [router]);
+  }, [router, pathname]);
 
   useEffect(() => {
     validate();
