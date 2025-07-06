@@ -1,28 +1,72 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Users, BookOpen } from "lucide-react";
 import { useTheme } from "@/hooks/ThemeProvider";
 import StudentsScores from "@/components/StudentsScores";
+import { useAuth } from "@/hooks/useAuth";
+import { Button } from "@/components/ui/button";
+import { useAssignment } from "@/hooks/useAssignments";
+import { useClass } from "@/hooks/useClasses";
 
 const TeacherDashboard = () => {
+  const { fetchStudent, students, isAuthenticated, user } = useAuth();
+  const [isLoading, setIsLoading] = useState(false);
+  const { assignments, fetchAssignments } = useAssignment();
+  const { classes, fetchClasses } = useClass();
+
+  useEffect(() => {
+    const fetchStudents = async () => {
+      if (!isAuthenticated || user?.userType !== "teacher") {
+        console.log(
+          "[TeacherDashboard] Skipping fetchStudent: User not authenticated or not a teacher"
+        );
+        return;
+      }
+      setIsLoading(true);
+      try {
+        const studentData = await fetchStudent();
+        if (!studentData) {
+          console.error("No student data found");
+          return;
+        }
+        console.log("Fetched students:", studentData.length);
+      } catch (error) {
+        console.error("Error fetching students:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchStudents();
+    fetchAssignments();
+    fetchClasses();
+  }, [isAuthenticated, user]);
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <p className="text-lg font-semibold">Loading...</p>
+      </div>
+    );
+  }
+
   const stats = [
     {
       title: "Total Classes",
-      value: "3",
+      value: classes.length,
       icon: Users,
       color: "from-blue-500 to-blue-600",
     },
     {
       title: "Active Assignments",
-      value: "8",
+      value: assignments.length,
       icon: BookOpen,
       color: "from-purple-500 to-purple-600",
     },
     {
       title: "Students",
-      value: "24",
+      value: students.length,
       icon: Users,
       color: "from-indigo-500 to-indigo-600",
     },
@@ -36,6 +80,18 @@ const TeacherDashboard = () => {
         <div>
           <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold gradient-text">
             Teacher Dashboard
+            <Button
+              onClick={async () => {
+                const student = await fetchStudent();
+                if (!student) {
+                  console.error("No student data found");
+                  return;
+                }
+                console.log(student.length);
+              }}
+            >
+              Click
+            </Button>
           </h1>
           <p
             className={`text-sm sm:text-base font-semibold mt-1 ${
