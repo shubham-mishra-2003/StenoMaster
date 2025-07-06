@@ -1,8 +1,8 @@
-import { NextRequest, NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/database/mongoose";
 import { handleError } from "@/lib/utils";
 import User from "@/lib/database/models/user.model";
 import jwt from "jsonwebtoken";
+import { NextRequest, NextResponse } from "next/server";
 
 interface LogoutRequestBody {
   userId: string;
@@ -12,17 +12,13 @@ interface LogoutRequestBody {
 export async function POST(request: NextRequest) {
   try {
     await connectToDatabase();
-
     const body: LogoutRequestBody = await request.json();
-
     if (!body.userId || !body.token) {
       return NextResponse.json(
         { status: "error", message: "userId and token are required" },
         { status: 400 }
       );
     }
-
-    // Verify token
     const decoded = jwt.verify(
       body.token,
       process.env.JWT_SECRET || "fallback-secret-key"
@@ -34,10 +30,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Invalidate session token
+    // Invalidate session by unsetting sessionToken
     await User.updateOne(
       { userId: body.userId, sessionToken: body.token },
-      { $set: { sessionToken: null } }
+      { $unset: { sessionToken: "" } }
     );
 
     return NextResponse.json(

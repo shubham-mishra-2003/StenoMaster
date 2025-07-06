@@ -28,6 +28,7 @@ export async function validateUserType(userType: string) {
   }
 }
 
+// user.actions.ts (partial, unchanged)
 export async function createUser(user: CreateUserParams) {
   try {
     await connectToDatabase();
@@ -38,7 +39,7 @@ export async function createUser(user: CreateUserParams) {
       photo: user.photo,
       password: hashedPassword,
       userType: user.userType,
-      teacherId: user.userType === "student" ? user.teacherId : undefined, // Set teacherId for students only
+      teacherId: user.userType === "student" ? user.teacherId : undefined,
     };
     console.log("User data to create:", userData);
     const newUser = await User.create(userData);
@@ -195,7 +196,10 @@ export async function updateUserPassword(userId: string, newPassword: string) {
     const hashedPassword = await bcrypt.hash(newPassword, 10);
     const updatedUser = await User.findOneAndUpdate(
       { userId },
-      { password: hashedPassword, sessionToken: null },
+      {
+        $set: { password: hashedPassword },
+        $unset: { sessionToken: "" },
+      },
       { new: true }
     ).lean<IUser>();
     if (!updatedUser) throw new Error("User password update failed");
