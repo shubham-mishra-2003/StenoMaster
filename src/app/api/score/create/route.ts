@@ -15,6 +15,7 @@ export async function POST(request: NextRequest) {
       wpm,
       timeElapsed,
       completedAt,
+      token,
     } = body;
 
     if (
@@ -33,16 +34,19 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const score = await createScore({
-      id,
-      studentId,
-      assignmentId,
-      typedText,
-      accuracy,
-      wpm,
-      timeElapsed,
-      completedAt: new Date(completedAt),
-    });
+    const score = await createScore(
+      {
+        id,
+        studentId,
+        assignmentId,
+        typedText,
+        accuracy,
+        wpm,
+        timeElapsed,
+        completedAt: new Date(completedAt),
+      },
+      token
+    );
     return NextResponse.json(
       {
         status: "success",

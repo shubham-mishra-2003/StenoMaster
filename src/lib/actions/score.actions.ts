@@ -10,10 +10,10 @@ import {
 } from "../database/models/score.model";
 import { Score } from "@/types";
 
-export async function createScore(scoreData: Score) {
+export async function createScore(scoreData: Score, token: string) {
   try {
     await connectToDatabase();
-    const user = await validateSessionToken(scoreData.studentId);
+    const user = await validateSessionToken(token);
     if (user.userType !== "student") {
       throw new Error("Only students can submit scores");
     }
