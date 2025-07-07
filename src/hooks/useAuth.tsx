@@ -25,7 +25,7 @@ interface AuthState {
   user: User | null;
   token: string | null;
   loading: boolean;
-  students: User[];
+  students?: User[];
 }
 
 interface AuthContextType extends AuthState {
@@ -63,7 +63,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     user: null,
     token: null,
     loading: false,
-    students: [],
   });
   const router = useRouter();
   const pathname = usePathname();
@@ -85,7 +84,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         user: null,
         token: null,
         loading: false,
-        students: [],
       }));
       if (isProtectedRoute) {
         console.log(
@@ -98,7 +96,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         });
         localStorage.removeItem("StenoMaster-token");
         localStorage.removeItem("StenoMaster-user");
-        router.push("/");
+        router.push("/?showLogin=true");
       }
       return;
     }
@@ -129,17 +127,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
             user: result.data.user,
             token,
             loading: false,
-            students: [],
           });
           localStorage.setItem(
             "StenoMaster-user",
             JSON.stringify(result.data.user)
           );
-          console.log("[useAuth] Session validated, user:", result.data.user);
-          toast({
-            title: "Success",
-            description: "Session validated successfully.",
-          });
           return;
         } else {
           console.error("[useAuth] Validate error:", result.message);
@@ -161,7 +153,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
             user: null,
             token: null,
             loading: false,
-            students: [],
           });
           localStorage.removeItem("StenoMaster-token");
           localStorage.removeItem("StenoMaster-user");
@@ -180,7 +171,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   }, [router, pathname]);
 
   useEffect(() => {
-    console.log("[useEffect] useEffect triggered for pathname:", pathname);
+    console.log("[useAuth] useEffect triggered for pathname:", pathname);
     validate();
   }, [validate, pathname]);
 
@@ -219,13 +210,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
         if (response.ok && result.status === "success") {
           const { user, token } = result.data;
-          setAuthState({
-            isAuthenticated: true,
-            user,
-            token,
-            loading: false,
-            students: [],
-          });
+          setAuthState({ isAuthenticated: true, user, token, loading: false });
           localStorage.setItem("StenoMaster-token", token);
           localStorage.setItem("StenoMaster-user", JSON.stringify(user));
           console.log("[useAuth] Login successful, user:", user);
@@ -308,13 +293,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
         if (response.ok && result.status === "success") {
           const { user, token } = result.data;
-          setAuthState({
-            isAuthenticated: true,
-            user,
-            token,
-            loading: false,
-            students: [],
-          });
+          setAuthState({ isAuthenticated: true, user, token, loading: false });
           localStorage.setItem("StenoMaster-token", token);
           localStorage.setItem("StenoMaster-user", JSON.stringify(user));
           console.log("[useAuth] Signup successful, user:", user);
@@ -420,15 +399,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
         if (response.ok && result.status === "success") {
           const { user } = result.data;
-          setAuthState((prev) => ({
-            ...prev,
-            loading: false,
-            students: [...prev.students, user],
-          }));
           toast({
             title: "Success",
             description: `Student ${fullName} created successfully!`,
           });
+          setAuthState((prev) => ({ ...prev, loading: false }));
           return user as User;
         } else {
           toast({
@@ -454,67 +429,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     [authState]
   );
 
-  const fetchStudent = useCallback(async () => {
-    setAuthState((prev) => ({ ...prev, loading: true }));
-    if (!authState.isAuthenticated || authState.user?.userType !== "teacher") {
-      toast({
-        title: "Error",
-        description: "Only teachers can fetch student accounts.",
-        variant: "destructive",
-      });
-      setAuthState((prev) => ({ ...prev, loading: false }));
-      throw new Error("Only teachers can fetch student accounts.");
-    }
-
-    try {
-      const response = await fetch("/api/auth/fetch-student", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ teacherId: authState.user?.userId }),
-        signal: AbortSignal.timeout(10000),
-      });
-
-      const text = await response.text();
-      console.log("[useAuth] Fetch student response body:", text);
-      const result = text
-        ? JSON.parse(text)
-        : { status: "error", message: "Empty response from server" };
-
-      if (response.ok && result.status === "success") {
-        const students = result.data.students as User[];
-        setAuthState((prev) => ({
-          ...prev,
-          loading: false,
-          students,
-        }));
-        toast({
-          title: "Success",
-          description: `Fetched ${students.length} student(s) successfully.`,
-        });
-        return students;
-      } else {
-        toast({
-          title: "Error",
-          description: result.message || "Failed to fetch students",
-          variant: "destructive",
-        });
-        setAuthState((prev) => ({ ...prev, loading: false }));
-        throw new Error(result.message || "Failed to fetch students");
-      }
-    } catch (error) {
-      console.error("[useAuth] Fetch student error:", error);
-      toast({
-        title: "Error",
-        description: "An unexpected error occurred while fetching students.",
-        variant: "destructive",
-      });
-      setAuthState((prev) => ({ ...prev, loading: false }));
-      throw error;
-    }
-  }, [authState]);
-
   const logout = useCallback(async () => {
     setAuthState((prev) => ({ ...prev, loading: true }));
     if (!authState.isAuthenticated || !authState.user || !authState.token) {
@@ -523,7 +437,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         user: null,
         token: null,
         loading: false,
-        students: [],
       });
       localStorage.removeItem("StenoMaster-token");
       localStorage.removeItem("StenoMaster-user");
@@ -555,16 +468,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
           user: null,
           token: null,
           loading: false,
-          students: [],
         });
         localStorage.removeItem("StenoMaster-token");
         localStorage.removeItem("StenoMaster-user");
         console.log("[useAuth] Logout successful");
+        router.push("/?showLogin=true");
         router.refresh();
 
         toast({
           title: "Logged Out",
-          description: "You %have been logged out successfully.",
+          description: "You have been logged out successfully.",
         });
       } else {
         toast({
@@ -636,27 +549,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
               user: null,
               token: null,
               loading: false,
-              students: [],
             });
             localStorage.removeItem("StenoMaster-token");
             localStorage.removeItem("StenoMaster-user");
+            router.push("/?showLogin=true");
             router.refresh();
             toast({
               title: "Account Deleted",
               description: "Your account has been deleted successfully.",
             });
           } else {
-            setAuthState((prev) => ({
-              ...prev,
-              loading: false,
-              students: prev.students.filter(
-                (student) => student.userId !== userId
-              ),
-            }));
             toast({
               title: "Success",
               description: "Student account deleted successfully.",
             });
+            setAuthState((prev) => ({ ...prev, loading: false }));
           }
         } else {
           toast({
@@ -679,6 +586,62 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     },
     [authState, router]
   );
+
+  const fetchStudent = useCallback(async () => {
+    setAuthState((prev) => ({ ...prev, loading: true }));
+    if (!authState.isAuthenticated || authState.user?.userType !== "teacher") {
+      toast({
+        title: "Error",
+        description: "Only teachers can fetch student accounts.",
+        variant: "destructive",
+      });
+      setAuthState((prev) => ({ ...prev, loading: false }));
+      throw new Error("Only teachers can fetch student accounts.");
+    }
+
+    try {
+      const response = await fetch("/api/auth/fetch-student", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ teacherId: authState.user?.userId }),
+        signal: AbortSignal.timeout(10000),
+      });
+
+      const text = await response.text();
+      const result = text
+        ? JSON.parse(text)
+        : { status: "error", message: "Empty response from server" };
+
+      if (response.ok && result.status === "success") {
+        const students = result.data.students as User[];
+        setAuthState((prev) => ({
+          ...prev,
+          loading: false,
+          students,
+        }));
+        return students;
+      } else {
+        toast({
+          title: "Error",
+          description: result.message || "Failed to fetch students",
+          variant: "destructive",
+        });
+        setAuthState((prev) => ({ ...prev, loading: false }));
+        throw new Error(result.message || "Failed to fetch students");
+      }
+    } catch (error) {
+      console.error("[useAuth] Fetch student error:", error);
+      toast({
+        title: "Error",
+        description: "An unexpected error occurred while fetching students.",
+        variant: "destructive",
+      });
+      setAuthState((prev) => ({ ...prev, loading: false }));
+      throw error;
+    }
+  }, [authState]);
 
   return (
     <AuthContext.Provider

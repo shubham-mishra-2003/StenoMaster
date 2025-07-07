@@ -43,7 +43,7 @@ const TeacherDashboard = () => {
     fetchClasses();
   }, [isAuthenticated, user]);
 
-  if (isLoading) {
+  if (isLoading || !students || !assignments || !classes) {
     return (
       <div className="flex items-center justify-center h-full">
         <p className="text-lg font-semibold">Loading...</p>
