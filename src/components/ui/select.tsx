@@ -145,7 +145,7 @@ const SelectItem = React.forwardRef<
       )}
       {...props}
     >
-      <Check className="h-4 w-4" />
+      {/* <Check className="h-4 w-4" /> */}
       <SelectPrimitive.ItemText>{children}</SelectPrimitive.ItemText>
     </SelectPrimitive.Item>
   );

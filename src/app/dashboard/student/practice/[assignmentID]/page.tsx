@@ -8,10 +8,14 @@ import { Progress } from "@/components/ui/progress";
 import { Clock, Target } from "lucide-react";
 import { Assignment, Score } from "@/types";
 import { useAuth } from "@/hooks/useAuth";
-import { useAssignments, AssignmentsProvider } from "@/hooks/use-StudentAssignments";
+import {
+  useAssignments,
+  AssignmentsProvider,
+} from "@/hooks/use-StudentAssignments";
 import { toast } from "@/hooks/use-toast";
 import Image from "next/image";
 import { useRouter, useParams } from "next/navigation";
+import { useTheme } from "@/hooks/ThemeProvider";
 
 const AssignmentPracticeContent = () => {
   const params = useParams();
@@ -26,6 +30,7 @@ const AssignmentPracticeContent = () => {
   const { user } = useAuth();
   const { getAssignments, createScore, error } = useAssignments();
   const router = useRouter();
+  const { colorScheme } = useTheme();
 
   useEffect(() => {
     const fetchAssignment = async () => {
@@ -101,7 +106,8 @@ const AssignmentPracticeContent = () => {
     if (!startTime || !user?.userId || !assignment || isCompleted) {
       toast({
         title: "Error",
-        description: "Cannot submit assignment. Ensure you are logged in and the assignment has started.",
+        description:
+          "Cannot submit assignment. Ensure you are logged in and the assignment has started.",
         variant: "destructive",
       });
       return;
@@ -137,7 +143,8 @@ const AssignmentPracticeContent = () => {
     } catch (error) {
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "Failed to save score",
+        description:
+          error instanceof Error ? error.message : "Failed to save score",
         variant: "destructive",
       });
     }
@@ -169,7 +176,10 @@ const AssignmentPracticeContent = () => {
           </CardHeader>
           <CardContent>
             <p>No assignment found with ID: {assignmentID || "undefined"}</p>
-            <Button onClick={() => router.push("/dashboard/student/practice")} className="mt-4 gradient-button">
+            <Button
+              onClick={() => router.push("/dashboard/student/practice")}
+              className="mt-4 gradient-button"
+            >
               Back to Practice
             </Button>
           </CardContent>
@@ -179,71 +189,89 @@ const AssignmentPracticeContent = () => {
   }
 
   return (
-    <div className="min-h-screen flex flex-col p-4 sm:p-6 lg:p-8 bg-gradient-to-br from-slate-50 via-blue-50 to-slate-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
-      <Card className="max-w-7xl mx-auto w-full">
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle className="flex items-center gap-2">
-              <Clock className="h-5 w-5" />
-              {assignment.title}
-            </CardTitle>
-            <Button variant="outline" onClick={() => router.push("/dashboard/student/practice")} className="gradient-button">
-              Back to Assignments
-            </Button>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            <div className="flex items-center gap-4 text-sm text-muted-foreground">
-              <div className="flex items-center gap-1">
-                <Clock className="h-4 w-4" />
-                Time: {Math.floor(timeElapsed / 60)}:{(timeElapsed % 60).toString().padStart(2, "0")}
-              </div>
-              <div className="flex items-center gap-1">
-                <Target className="h-4 w-4" />
-                Progress: {Math.round(progress)}%
-              </div>
+    <Card className="max-w-7xl mx-auto w-full">
+      <CardHeader>
+        <div className="flex items-center justify-between">
+          <CardTitle className="flex items-center gap-2">
+            <Clock className="h-5 w-5" />
+            {assignment.title}
+          </CardTitle>
+          <Button
+            variant="outline"
+            onClick={() => router.push("/dashboard/student/practice")}
+            className="gradient-button"
+          >
+            Back to Assignments
+          </Button>
+        </div>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-4">
+          <div className="flex items-center gap-4 text-sm text-muted-foreground">
+            <div className="flex items-center gap-1">
+              <Clock className="h-4 w-4" />
+              Time: {Math.floor(timeElapsed / 60)}:
+              {(timeElapsed % 60).toString().padStart(2, "0")}
             </div>
-            <Progress value={progress} className="w-full" />
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="flex items-center gap-1">
+              <Target className="h-4 w-4" />
+              Progress: {Math.round(progress)}%
+            </div>
+          </div>
+          <Progress value={progress} className="w-full" />
+          <div className="grid grid-cols-1 lg:grid-cols-1 gap-6">
+            <div>
+              {assignment.imageUrl && (
+                <>
+                  <h3 className="font-medium mb-2">Assignment Image</h3>
+                  <div className="border rounded-lg p-4 bg-muted">
+                    {assignment.imageUrl}
+                    <Image
+                      height={300}
+                      width={300}
+                      src={assignment.imageUrl}
+                      alt={assignment.title}
+                      className="w-full h-auto rounded"
+                    />
+                  </div>
+                </>
+              )}
+            </div>
+            <div className="space-y-4">
               <div>
-                <h3 className="font-medium mb-2">Assignment Image</h3>
-                <div className="border rounded-lg p-4 bg-muted">
-                  <Image height={300} width={300} src={assignment.imageUrl} alt={assignment.title} className="w-full h-auto rounded" />
-                </div>
+                <h3 className="font-medium mb-2">Type the text you see</h3>
+                <Textarea
+                  value={typedText}
+                  onChange={(e) => setTypedText(e.target.value)}
+                  placeholder="Start typing here..."
+                  className="min-h-[500px]"
+                  disabled={!isStarted || isCompleted}
+                />
               </div>
-              <div className="space-y-4">
-                <div>
-                  <h3 className="font-medium mb-2">Type the text you see</h3>
-                  <Textarea
-                    value={typedText}
-                    onChange={(e) => setTypedText(e.target.value)}
-                    placeholder="Start typing here..."
-                    className="min-h-[500px]"
-                    disabled={!isStarted || isCompleted}
-                  />
-                </div>
-                <div className="flex gap-2">
-                  {!isStarted ? (
-                    <Button onClick={handleStart} className="w-full gradient-button" disabled={!user?.userId}>
-                      Start Assignment
-                    </Button>
-                  ) : (
-                    <Button
-                      onClick={handleSubmit}
-                      className="w-full gradient-button"
-                      disabled={typedText.trim().length === 0 || isCompleted}
-                    >
-                      Submit Assignment
-                    </Button>
-                  )}
-                </div>
+              <div className="flex gap-2">
+                {!isStarted ? (
+                  <Button
+                    onClick={handleStart}
+                    className="w-full gradient-button"
+                    disabled={!user?.userId}
+                  >
+                    Start Assignment
+                  </Button>
+                ) : (
+                  <Button
+                    onClick={handleSubmit}
+                    className="w-full gradient-button"
+                    disabled={typedText.trim().length === 0 || isCompleted}
+                  >
+                    Submit Assignment
+                  </Button>
+                )}
               </div>
             </div>
           </div>
-        </CardContent>
-      </Card>
-    </div>
+        </div>
+      </CardContent>
+    </Card>
   );
 };
 

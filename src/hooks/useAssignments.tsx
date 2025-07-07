@@ -218,9 +218,7 @@ export const useAssignment = (): UseAssignmentReturn => {
         body: JSON.stringify({
           title: formData.title,
           deadline: formData.deadline,
-          imageUrl:
-            imageUrl ||
-            `https://res.cloudinary.com/${CLOUDINARY_CLOUD_NAME}/image/upload/v1/sample`,
+          imageUrl: imageUrl || "",
           correctText: formData.correctText,
           classId: formData.classId,
           token,
