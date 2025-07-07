@@ -1,3 +1,4 @@
+// dashboard/student/practice/[assignmentId]/page.tsx
 "use client";
 
 import React, { useState, useEffect } from "react";
@@ -8,18 +9,14 @@ import { Progress } from "@/components/ui/progress";
 import { Clock, Target } from "lucide-react";
 import { Assignment, Score } from "@/types";
 import { useAuth } from "@/hooks/useAuth";
-import {
-  useAssignments,
-  AssignmentsProvider,
-} from "@/hooks/use-StudentAssignments";
+import { useStudentAssignments } from "@/hooks/useStudentAssignments";
 import { toast } from "@/hooks/use-toast";
 import Image from "next/image";
 import { useRouter, useParams } from "next/navigation";
-import { useTheme } from "@/hooks/ThemeProvider";
 
 const AssignmentPracticeContent = () => {
   const params = useParams();
-  const assignmentID = params.assignmentID as string;
+  const assignmentId = params.assignmentId as string;
   const [assignment, setAssignment] = useState<Assignment | null>(null);
   const [typedText, setTypedText] = useState("");
   const [startTime, setStartTime] = useState<Date | null>(null);
@@ -28,16 +25,39 @@ const AssignmentPracticeContent = () => {
   const [timeElapsed, setTimeElapsed] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const { user } = useAuth();
-  const { getAssignments, createScore, error } = useAssignments();
+  const { fetchAssignments, submitScore, error } = useStudentAssignments();
   const router = useRouter();
-  const { colorScheme } = useTheme();
 
   useEffect(() => {
     const fetchAssignment = async () => {
       setIsLoading(true);
       try {
-        const data = await getAssignments(assignmentID);
-        setAssignment(data as Assignment);
+        const classId = "class1"; // Replace with actual classId from context or user data
+        await fetchAssignments(classId);
+        const response = await fetch("/api/assignment/fetch", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            token: localStorage.getItem("StenoMaster-token"),
+            classId,
+          }),
+        });
+        const result = await response.json();
+        if (result.status === "success") {
+          const assignment = result.data.find(
+            (a: Assignment) => a.id === assignmentId
+          );
+          if (assignment) {
+            setAssignment({
+              ...assignment,
+              createdAt: new Date(assignment.createdAt),
+            });
+          } else {
+            throw new Error("Assignment not found");
+          }
+        } else {
+          throw new Error(result.message || "Failed to load assignment");
+        }
       } catch (error) {
         toast({
           title: "Error",
@@ -49,7 +69,7 @@ const AssignmentPracticeContent = () => {
       }
     };
     fetchAssignment();
-  }, [assignmentID, getAssignments]);
+  }, [assignmentId, fetchAssignments]);
 
   useEffect(() => {
     if (error) {
@@ -124,12 +144,12 @@ const AssignmentPracticeContent = () => {
       typedText,
       accuracy,
       wpm,
-      completedAt: new Date(),
       timeElapsed,
+      completedAt: new Date(),
     };
 
     try {
-      await createScore(score);
+      await submitScore(score);
       toast({
         title: "Assignment Completed!",
         description: `Accuracy: ${accuracy}%, WPM: ${wpm}`,
@@ -175,7 +195,7 @@ const AssignmentPracticeContent = () => {
             <CardTitle>Assignment Not Found</CardTitle>
           </CardHeader>
           <CardContent>
-            <p>No assignment found with ID: {assignmentID || "undefined"}</p>
+            <p>No assignment found with ID: {assignmentId || "undefined"}</p>
             <Button
               onClick={() => router.push("/dashboard/student/practice")}
               className="mt-4 gradient-button"
@@ -225,7 +245,6 @@ const AssignmentPracticeContent = () => {
                 <>
                   <h3 className="font-medium mb-2">Assignment Image</h3>
                   <div className="border rounded-lg p-4 bg-muted">
-                    {assignment.imageUrl}
                     <Image
                       height={300}
                       width={300}
@@ -275,10 +294,4 @@ const AssignmentPracticeContent = () => {
   );
 };
 
-const AssignmentPractice = () => (
-  <AssignmentsProvider>
-    <AssignmentPracticeContent />
-  </AssignmentsProvider>
-);
-
-export default AssignmentPractice;
+export default AssignmentPracticeContent;

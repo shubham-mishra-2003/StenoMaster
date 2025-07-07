@@ -31,6 +31,7 @@ export interface Assignment {
   imageUrl: string;
   correctText: string;
   classId: string;
+  teacherId: string;
   createdAt: Date;
   isActive: boolean;
 }
@@ -42,17 +43,18 @@ export interface Score {
   typedText: string;
   accuracy: number;
   wpm: number;
-  completedAt: string | Date;
-  timeElapsed?: number;
+  timeElapsed: number;
+  completedAt: Date;
+  isTypingTest?: boolean;
 }
 
-export interface AuthState {
-  isAuthenticated: boolean;
-  user: User | null;
+export interface StudentAssignment {
+  id: string;
+  assignmentId: string;
+  studentId: string;
+  isCompleted: boolean;
+  completedAt?: Date;
 }
-
-export const STUDENT_ID_MAX_LENGTH = 20;
-export const STUDENT_ID_MIN_LENGTH = 3;
 
 export interface Class {
   id: string;
@@ -63,14 +65,6 @@ export interface Class {
   createdAt: string | Date;
 }
 
-export interface Student {
-  id: string;
-  name: string;
-  password: string;
-  classId: string;
-  scores: any[];
-}
-
 export interface User {
   _id: string;
   userId: string;
@@ -78,4 +72,12 @@ export interface User {
   fullName?: string;
   userType: "student" | "teacher";
   photo?: string;
+}
+
+export const STUDENT_ID_MAX_LENGTH = 20;
+export const STUDENT_ID_MIN_LENGTH = 3;
+
+export interface AuthState {
+  isAuthenticated: boolean;
+  user: User | null;
 }

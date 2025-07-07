@@ -9,15 +9,16 @@ import { useRouter } from "next/navigation";
 import AssignmentList from "@/components/AssignmentList";
 import { useTheme } from "@/hooks/ThemeProvider";
 import { useAuth } from "@/hooks/useAuth";
-import { useAssignments, AssignmentsProvider } from "@/hooks/use-StudentAssignments";
+
 import { toast } from "@/hooks/use-toast";
+import { useStudentAssignments } from "@/hooks/useStudentAssignments";
 
 const DashboardContent: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
   const { colorScheme } = useTheme();
   const { user } = useAuth();
-  const { assignments, scores, loading, error } = useAssignments();
+  const { assignments, scores, loading, error } = useStudentAssignments();
 
   useEffect(() => {
     if (!user?.userId) {
@@ -47,13 +48,19 @@ const DashboardContent: React.FC = () => {
 
   const calculateAverageAccuracy = (): string => {
     if (scores.length === 0) return "0";
-    const totalAccuracy = scores.reduce((sum, score) => sum + score.accuracy, 0);
+    const totalAccuracy = scores.reduce(
+      (sum, score) => sum + score.accuracy,
+      0
+    );
     return Math.round(totalAccuracy / scores.length).toString();
   };
 
   const calculateTotalTime = (): string => {
     if (scores.length === 0) return "0.0";
-    const totalSeconds = scores.reduce((sum, score) => sum + (score.timeElapsed || 0), 0);
+    const totalSeconds = scores.reduce(
+      (sum, score) => sum + (score.timeElapsed || 0),
+      0
+    );
     return (totalSeconds / 3600).toFixed(1);
   };
 
@@ -104,8 +111,14 @@ const DashboardContent: React.FC = () => {
     <div className="space-y-4 sm:space-y-6 lg:space-y-8">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold gradient-text">Student Dashboard</h1>
-          <p className={`text-sm sm:text-base mt-1 ${colorScheme === "dark" ? "text-dark" : "text-light"}`}>
+          <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold gradient-text">
+            Student Dashboard
+          </h1>
+          <p
+            className={`text-sm sm:text-base mt-1 ${
+              colorScheme === "dark" ? "text-dark" : "text-light"
+            }`}
+          >
             Track your progress and practice stenography
           </p>
         </div>
@@ -122,36 +135,49 @@ const DashboardContent: React.FC = () => {
                   : "from-white/80 via-white/60 to-white/40"
               }`}
             >
-              <div className={`absolute group-hover:opacity-10 inset-0 bg-gradient-to-br ${stat.color} opacity-5`}></div>
+              <div
+                className={`absolute group-hover:opacity-10 inset-0 bg-gradient-to-br ${stat.color} opacity-5`}
+              ></div>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative z-10">
                 <CardTitle
-                  className={`text-xs sm:text-sm font-medium ${colorScheme === "dark" ? "text-dark" : "text-light"}`}
+                  className={`text-xs sm:text-sm font-medium ${
+                    colorScheme === "dark" ? "text-dark" : "text-light"
+                  }`}
                 >
                   {stat.title}
                 </CardTitle>
-                <div className={`p-2 rounded-lg bg-gradient-to-br ${stat.color} shadow-lg`}>
+                <div
+                  className={`p-2 rounded-lg bg-gradient-to-br ${stat.color} shadow-lg`}
+                >
                   <Icon className="h-3 w-3 sm:h-4 sm:w-4 text-white" />
                 </div>
               </CardHeader>
               <CardContent className="relative z-10">
-                <div className={`text-lg sm:text-xl lg:text-2xl font-bold ${colorScheme === "dark" ? "text-dark" : "text-light"}`}>{stat.value}</div>
-                <p className={`text-xs mt-1 ${colorScheme === "dark" ? "text-dark" : "text-light"}`}>{stat.change}</p>
+                <div
+                  className={`text-lg sm:text-xl lg:text-2xl font-bold ${
+                    colorScheme === "dark" ? "text-dark" : "text-light"
+                  }`}
+                >
+                  {stat.value}
+                </div>
+                <p
+                  className={`text-xs mt-1 ${
+                    colorScheme === "dark" ? "text-dark" : "text-light"
+                  }`}
+                >
+                  {stat.change}
+                </p>
               </CardContent>
             </Card>
           );
         })}
       </div>
-      <AssignmentList assignments={assignments} onStartPractice={handleStartPractice} />
+      <AssignmentList
+        assignments={assignments}
+        onStartPractice={handleStartPractice}
+      />
     </div>
   );
 };
 
-const StudentDashboardPage = () => {
-  return (
-    <AssignmentsProvider>
-      <DashboardContent />
-    </AssignmentsProvider>
-  );
-};
-
-export default StudentDashboardPage;
+export default DashboardContent;

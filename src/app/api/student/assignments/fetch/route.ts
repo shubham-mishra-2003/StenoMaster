@@ -1,24 +1,26 @@
+// api/student/assignment/fetch/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { handleError } from "@/lib/utils";
-import { deleteAssignment } from "@/lib/actions/assignment.actions";
+import { getAvailableAssignments } from "@/lib/actions/studentAssignment.actions";
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { assignmentId, token } = body;
+    const { token, classId } = body;
 
-    if (!assignmentId || !token) {
+    if (!token || !classId) {
       return NextResponse.json(
-        { status: "error", message: "assignmentId and token are required" },
+        { status: "error", message: "Token and classId are required" },
         { status: 400 }
       );
     }
 
-    await deleteAssignment(assignmentId, token);
+    const assignments = await getAvailableAssignments(token, classId);
     return NextResponse.json(
       {
         status: "success",
-        message: "Assignment deleted successfully",
+        message: "Assignments retrieved successfully",
+        data: assignments,
       },
       { status: 200 }
     );

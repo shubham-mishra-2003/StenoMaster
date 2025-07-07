@@ -6,7 +6,6 @@ import { Users, BookOpen } from "lucide-react";
 import { useTheme } from "@/hooks/ThemeProvider";
 import StudentsScores from "@/components/StudentsScores";
 import { useAuth } from "@/hooks/useAuth";
-import { Button } from "@/components/ui/button";
 import { useAssignment } from "@/hooks/useAssignments";
 import { useClass } from "@/hooks/useClasses";
 
@@ -80,18 +79,6 @@ const TeacherDashboard = () => {
         <div>
           <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold gradient-text">
             Teacher Dashboard
-            <Button
-              onClick={async () => {
-                const student = await fetchStudent();
-                if (!student) {
-                  console.error("No student data found");
-                  return;
-                }
-                console.log(student.length);
-              }}
-            >
-              Click
-            </Button>
           </h1>
           <p
             className={`text-sm sm:text-base font-semibold mt-1 ${

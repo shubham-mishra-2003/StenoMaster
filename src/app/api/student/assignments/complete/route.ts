@@ -1,24 +1,32 @@
 import { NextRequest, NextResponse } from "next/server";
 import { handleError } from "@/lib/utils";
-import { deleteAssignment } from "@/lib/actions/assignment.actions";
+import { markAssignmentCompleted } from "@/lib/actions/studentAssignment.actions";
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { assignmentId, token } = body;
+    const { assignmentId, studentId, token } = body;
 
-    if (!assignmentId || !token) {
+    if (!assignmentId || !studentId || !token) {
       return NextResponse.json(
-        { status: "error", message: "assignmentId and token are required" },
+        {
+          status: "error",
+          message: "assignmentId, studentId, and token are required",
+        },
         { status: 400 }
       );
     }
 
-    await deleteAssignment(assignmentId, token);
+    const updatedStudentAssignment = await markAssignmentCompleted(
+      assignmentId,
+      studentId,
+      token
+    );
     return NextResponse.json(
       {
         status: "success",
-        message: "Assignment deleted successfully",
+        message: "Assignment marked as completed successfully",
+        data: updatedStudentAssignment,
       },
       { status: 200 }
     );
