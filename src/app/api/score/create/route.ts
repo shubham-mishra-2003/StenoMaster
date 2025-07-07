@@ -1,52 +1,52 @@
-// api/student/assignment/score/route.ts
+// api/score/create/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { handleError } from "@/lib/utils";
-import { submitAssignmentScore } from "@/lib/actions/studentAssignment.actions";
+import { createScore } from "@/lib/actions/score.actions";
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const {
+      id,
       studentId,
       assignmentId,
       typedText,
       accuracy,
       wpm,
       timeElapsed,
-      token,
-      isTypingTest,
+      completedAt,
     } = body;
 
     if (
+      !id ||
       !studentId ||
       !assignmentId ||
       !typedText ||
       !accuracy ||
       !wpm ||
       !timeElapsed ||
-      !token
+      !completedAt
     ) {
       return NextResponse.json(
-        { status: "error", message: "All fields and token are required" },
+        { status: "error", message: "All fields are required" },
         { status: 400 }
       );
     }
 
-    const score = await submitAssignmentScore({
+    const score = await createScore({
+      id,
       studentId,
       assignmentId,
       typedText,
       accuracy,
       wpm,
       timeElapsed,
-      token,
-      isTypingTest,
+      completedAt: new Date(completedAt),
     });
-
     return NextResponse.json(
       {
         status: "success",
-        message: "Score submitted successfully",
+        message: "Score saved successfully",
         data: score,
       },
       { status: 200 }

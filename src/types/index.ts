@@ -56,6 +56,12 @@ export interface StudentAssignment {
   completedAt?: Date;
 }
 
+export interface AuthState {
+  isAuthenticated: boolean;
+  user: User | null;
+}
+
+
 export interface Class {
   id: string;
   name: string;
@@ -63,6 +69,14 @@ export interface Class {
   students: string[];
   assignments: any[];
   createdAt: string | Date;
+}
+
+export interface Student {
+  id: string;
+  name: string;
+  password: string;
+  classId: string;
+  scores: any[];
 }
 
 export interface User {
@@ -76,8 +90,3 @@ export interface User {
 
 export const STUDENT_ID_MAX_LENGTH = 20;
 export const STUDENT_ID_MIN_LENGTH = 3;
-
-export interface AuthState {
-  isAuthenticated: boolean;
-  user: User | null;
-}

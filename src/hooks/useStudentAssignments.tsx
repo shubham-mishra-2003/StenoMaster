@@ -2,27 +2,24 @@
 "use client";
 
 import { useState, useCallback } from "react";
+import { Assignment, Score } from "@/types";
 import { toast } from "@/hooks/use-toast";
-import { Assignment, Score, StudentAssignment } from "@/types";
+import moment from "moment";
 
 interface UseStudentAssignmentsReturn {
   assignments: Assignment[];
   scores: Score[];
-  studentAssignments: StudentAssignment[];
   loading: boolean;
   error: string | null;
   fetchAssignments: (classId: string) => Promise<void>;
-  submitScore: (score: Score) => Promise<void>;
+  getAssignment: (assignmentId: string) => Promise<Assignment | null>;
+  createScore: (score: Score) => Promise<void>;
   fetchScores: (studentId: string) => Promise<void>;
-  fetchStudentAssignments: (studentId: string) => Promise<void>;
 }
 
 export const useStudentAssignments = (): UseStudentAssignmentsReturn => {
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [scores, setScores] = useState<Score[]>([]);
-  const [studentAssignments, setStudentAssignments] = useState<
-    StudentAssignment[]
-  >([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -35,7 +32,7 @@ export const useStudentAssignments = (): UseStudentAssignmentsReturn => {
         throw new Error("Invalid session. Please log in again.");
       }
 
-      const response = await fetch("/api/student/assignment/fetch", {
+      const response = await fetch("/api/assignment/fetch", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ token, classId }),
@@ -48,24 +45,32 @@ export const useStudentAssignments = (): UseStudentAssignmentsReturn => {
         : { status: "error", message: "Empty response from server" };
 
       if (response.ok && result.status === "success") {
-        setAssignments(
-          result.data.map((assignment: Assignment) => ({
+        const now = new Date();
+        const formattedAssignments = result.data.map(
+          (assignment: Assignment) => ({
             ...assignment,
             createdAt: new Date(assignment.createdAt),
-          }))
+            deadline: moment(
+              assignment.deadline,
+              "DD/MM/YYYY, hh:mm A"
+            ).toDate(),
+          })
+        );
+        setAssignments(
+          formattedAssignments.filter(
+            (a: Assignment) => a.isActive && a.deadline > now.toString()
+          )
         );
       } else {
         throw new Error(result.message || "Failed to fetch assignments");
       }
-    } catch (error: any) {
-      console.error("[useStudentAssignments] Fetch assignments error:", error);
-      setError(
-        error.message ||
-          "An unexpected error occurred while fetching assignments."
-      );
+    } catch (err) {
+      const errorMessage =
+        err instanceof Error ? err.message : "An unexpected error occurred";
+      setError(errorMessage);
       toast({
         title: "Error",
-        description: error.message || "Failed to fetch assignments",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
@@ -73,7 +78,7 @@ export const useStudentAssignments = (): UseStudentAssignmentsReturn => {
     }
   }, []);
 
-  const submitScore = useCallback(async (score: Score) => {
+  const getAssignment = useCallback(async (assignmentId: string) => {
     setLoading(true);
     setError(null);
     try {
@@ -82,7 +87,53 @@ export const useStudentAssignments = (): UseStudentAssignmentsReturn => {
         throw new Error("Invalid session. Please log in again.");
       }
 
-      const response = await fetch("/api/student/assignment/score", {
+      const response = await fetch("/api/assignment/fetch", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token, assignmentId }),
+        signal: AbortSignal.timeout(5000),
+      });
+
+      const text = await response.text();
+      const result = text
+        ? JSON.parse(text)
+        : { status: "error", message: "Empty response from server" };
+
+      if (response.ok && result.status === "success") {
+        const assignment = result.data[0];
+        return {
+          ...assignment,
+          createdAt: new Date(assignment.createdAt),
+          deadline: moment(assignment.deadline, "DD/MM/YYYY, hh:mm A").toDate(),
+        } as Assignment;
+      } else {
+        throw new Error(result.message || "Failed to fetch assignment");
+      }
+    } catch (err) {
+      const errorMessage =
+        err instanceof Error ? err.message : "An unexpected error occurred";
+      setError(errorMessage);
+      toast({
+        title: "Error",
+        description: errorMessage,
+        variant: "destructive",
+      });
+      return null;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const createScore = useCallback(async (score: Score) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const token = localStorage.getItem("StenoMaster-token");
+      if (!token || typeof token !== "string" || token.trim() === "") {
+        throw new Error("Invalid session. Please log in again.");
+      }
+
+      const response = await fetch("/api/score/create", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ...score, token }),
@@ -104,19 +155,18 @@ export const useStudentAssignments = (): UseStudentAssignmentsReturn => {
         ]);
         toast({
           title: "Success",
-          description: "Score submitted successfully.",
+          description: "Score saved successfully.",
         });
       } else {
-        throw new Error(result.message || "Failed to submit score");
+        throw new Error(result.message || "Failed to save score");
       }
-    } catch (error: any) {
-      console.error("[useStudentAssignments] Submit score error:", error);
-      setError(
-        error.message || "An unexpected error occurred while submitting score."
-      );
+    } catch (err) {
+      const errorMessage =
+        err instanceof Error ? err.message : "An unexpected error occurred";
+      setError(errorMessage);
       toast({
         title: "Error",
-        description: error.message || "Failed to submit score",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
@@ -133,10 +183,10 @@ export const useStudentAssignments = (): UseStudentAssignmentsReturn => {
         throw new Error("Invalid session. Please log in again.");
       }
 
-      const response = await fetch("/api/student/scores/fetch", {
+      const response = await fetch("/api/score/fetch", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ token, studentId }),
+        body: JSON.stringify({ studentId, token }),
         signal: AbortSignal.timeout(5000),
       });
 
@@ -155,68 +205,13 @@ export const useStudentAssignments = (): UseStudentAssignmentsReturn => {
       } else {
         throw new Error(result.message || "Failed to fetch scores");
       }
-    } catch (error: any) {
-      console.error("[useStudentAssignments] Fetch scores error:", error);
-      setError(
-        error.message || "An unexpected error occurred while fetching scores."
-      );
+    } catch (err) {
+      const errorMessage =
+        err instanceof Error ? err.message : "An unexpected error occurred";
+      setError(errorMessage);
       toast({
         title: "Error",
-        description: error.message || "Failed to fetch scores",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  const fetchStudentAssignments = useCallback(async (studentId: string) => {
-    setLoading(true);
-    setError(null);
-    try {
-      const token = localStorage.getItem("StenoMaster-token");
-      if (!token || typeof token !== "string" || token.trim() === "") {
-        throw new Error("Invalid session. Please log in again.");
-      }
-
-      const response = await fetch("/api/student/assignment/fetch", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ token, studentId }),
-        signal: AbortSignal.timeout(5000),
-      });
-
-      const text = await response.text();
-      const result = text
-        ? JSON.parse(text)
-        : { status: "error", message: "Empty response from server" };
-
-      if (response.ok && result.status === "success") {
-        setStudentAssignments(
-          result.data.map((studentAssignment: StudentAssignment) => ({
-            ...studentAssignment,
-            completedAt: studentAssignment.completedAt
-              ? new Date(studentAssignment.completedAt)
-              : undefined,
-          }))
-        );
-      } else {
-        throw new Error(
-          result.message || "Failed to fetch student assignments"
-        );
-      }
-    } catch (error: any) {
-      console.error(
-        "[useStudentAssignments] Fetch student assignments error:",
-        error
-      );
-      setError(
-        error.message ||
-          "An unexpected error occurred while fetching student assignments."
-      );
-      toast({
-        title: "Error",
-        description: error.message || "Failed to fetch student assignments",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
@@ -227,12 +222,11 @@ export const useStudentAssignments = (): UseStudentAssignmentsReturn => {
   return {
     assignments,
     scores,
-    studentAssignments,
     loading,
     error,
     fetchAssignments,
-    submitScore,
+    getAssignment,
+    createScore,
     fetchScores,
-    fetchStudentAssignments,
   };
 };

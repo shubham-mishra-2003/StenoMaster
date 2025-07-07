@@ -17,7 +17,7 @@ const DashboardContent: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
   const { colorScheme } = useTheme();
-  const { user } = useAuth();
+  const { user, isAuthenticated } = useAuth();
   const { assignments, scores, loading, error } = useStudentAssignments();
 
   useEffect(() => {
@@ -99,7 +99,7 @@ const DashboardContent: React.FC = () => {
     router.push("/dashboard/student/practice");
   };
 
-  if (isLoading) {
+  if (isLoading && !isAuthenticated && !user) {
     return (
       <div className="space-y-6">
         <p className="text-muted-foreground">Loading dashboard...</p>

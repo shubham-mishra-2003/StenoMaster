@@ -96,7 +96,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         });
         localStorage.removeItem("StenoMaster-token");
         localStorage.removeItem("StenoMaster-user");
-        router.push("/?showLogin=true");
+        router.push("/");
       }
       return;
     }
@@ -160,7 +160,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
             console.log(
               "[useAuth] Validation failed, redirecting to /?showLogin=true"
             );
-            router.push("/?showLogin=true");
+            router.push("/");
           }
           return;
         }
@@ -552,7 +552,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
             });
             localStorage.removeItem("StenoMaster-token");
             localStorage.removeItem("StenoMaster-user");
-            router.push("/?showLogin=true");
+            router.push("/");
             router.refresh();
             toast({
               title: "Account Deleted",

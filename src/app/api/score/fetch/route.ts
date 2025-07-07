@@ -1,21 +1,21 @@
-// api/student/scores/fetch/route.ts
+// api/score/fetch/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { handleError } from "@/lib/utils";
-import { getStudentScores } from "@/lib/actions/studentAssignment.actions";
+import { getStudentScores } from "@/lib/actions/score.actions";
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { token, studentId } = body;
+    const { studentId, token } = body;
 
-    if (!token || !studentId) {
+    if (!studentId || !token) {
       return NextResponse.json(
-        { status: "error", message: "Token and studentId are required" },
+        { status: "error", message: "studentId and token are required" },
         { status: 400 }
       );
     }
 
-    const scores = await getStudentScores(token, studentId);
+    const scores = await getStudentScores(studentId, token);
     return NextResponse.json(
       {
         status: "success",

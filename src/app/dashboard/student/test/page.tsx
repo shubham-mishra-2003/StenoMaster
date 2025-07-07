@@ -31,7 +31,7 @@ const TypingTestContent = () => {
   const inputRef = useRef<HTMLInputElement>(null);
   const { user } = useAuth();
   const { colorScheme } = useTheme();
-  const { scores, fetchScores, submitScore, error } = useStudentAssignments();
+  const { scores, fetchScores, createScore, error } = useStudentAssignments();
 
   useEffect(() => {
     const fetchTestResults = async () => {
@@ -132,7 +132,7 @@ const TypingTestContent = () => {
     };
 
     try {
-      await submitScore(result);
+      await createScore(result);
       toast({
         title: "Typing Test Completed!",
         description: `WPM: ${wpm}, Accuracy: ${accuracy}%`,

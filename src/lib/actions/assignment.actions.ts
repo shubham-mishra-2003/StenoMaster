@@ -16,6 +16,7 @@ import {
   getClassDocById,
   updateClassDoc,
 } from "../database/models/class.model";
+import { Assignment } from "@/types";
 
 export async function createAssignment(assignmentData: {
   title: string;
@@ -80,7 +81,11 @@ export async function getAssignments(token: string, classId?: string) {
       if (!classData || !classData.students.includes(user.userId)) {
         throw new Error("Student not enrolled in this class");
       }
-      return await getAssignmentsByClass(classId);
+      const assignments = await getAssignmentsByClass(classId);
+      // Filter only active assignments
+      return assignments.filter(
+        (assignment: Assignment) => assignment.isActive
+      );
     }
     throw new Error("Invalid user type");
   } catch (error) {
