@@ -1,4 +1,3 @@
-// dashboard/teacher/test/page.tsx
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
@@ -11,14 +10,7 @@ import { useStudentAssignments } from "@/hooks/useStudentAssignments";
 import { toast } from "@/hooks/use-toast";
 import { useTheme } from "@/hooks/ThemeProvider";
 import { Score } from "@/types";
-
-const sampleTexts = [
-  "The quick brown fox jumps over the lazy dog. This sentence contains every letter of the alphabet at least once.",
-  "In a hole in the ground there lived a hobbit. Not a nasty, dirty, wet hole filled with the ends of worms and an oozy smell.",
-  "It was the best of times, it was the worst of times, it was the age of wisdom, it was the age of foolishness.",
-  "To be or not to be, that is the question. Whether 'tis nobler in the mind to suffer the slings and arrows of outrageous fortune.",
-  "Call me Ishmael. Some years ago never mind how long precisely having little or no money in my purse.",
-];
+import { sampleTexts } from "./sample-texts";
 
 const TypingTestContent = () => {
   const [currentText, setCurrentText] = useState(sampleTexts[0]);

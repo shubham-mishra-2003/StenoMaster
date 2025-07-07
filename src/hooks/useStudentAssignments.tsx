@@ -1,10 +1,9 @@
-// src/hooks/useStudentAssignments.tsx
 "use client";
 
 import { useState, useCallback } from "react";
 import { Assignment, Score } from "@/types";
 import { toast } from "@/hooks/use-toast";
-import moment from "moment";
+import { parse, isValid } from "date-fns";
 
 interface UseStudentAssignmentsReturn {
   assignments: Assignment[];
@@ -20,7 +19,7 @@ interface UseStudentAssignmentsReturn {
 export const useStudentAssignments = (): UseStudentAssignmentsReturn => {
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [scores, setScores] = useState<Score[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
   const fetchAssignments = useCallback(async (classId: string) => {
@@ -36,37 +35,49 @@ export const useStudentAssignments = (): UseStudentAssignmentsReturn => {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ token, classId }),
-        signal: AbortSignal.timeout(5000),
+        signal: AbortSignal.timeout(10000), // Increased timeout
       });
 
-      const text = await response.text();
-      const result = text
-        ? JSON.parse(text)
-        : { status: "error", message: "Empty response from server" };
+      if (!response.ok) {
+        throw new Error(`Failed to fetch assignments: ${response.statusText}`);
+      }
 
-      if (response.ok && result.status === "success") {
-        const now = new Date();
-        const formattedAssignments = result.data.map(
-          (assignment: Assignment) => ({
-            ...assignment,
-            createdAt: new Date(assignment.createdAt),
-            deadline: moment(
-              assignment.deadline,
-              "DD/MM/YYYY, hh:mm A"
-            ).toDate(),
-          })
-        );
-        setAssignments(
-          formattedAssignments.filter(
-            (a: Assignment) => a.isActive && a.deadline > now.toString()
-          )
-        );
-      } else {
+      const result = await response.json();
+      console.log("API response:", result);
+      if (result.status !== "success") {
         throw new Error(result.message || "Failed to fetch assignments");
       }
+
+      const now = new Date();
+      const formattedAssignments: Assignment[] = result.data.map(
+        (assignment: Assignment) => {
+          const deadline = parse(
+            assignment.deadline,
+            "dd/MM/yyyy, hh:mm a",
+            new Date()
+          );
+          if (!isValid(deadline)) {
+            console.error(`Invalid deadline for assignment ${assignment.id}: ${assignment.deadline}`);
+            throw new Error(`Invalid deadline format for assignment ${assignment.id}`);
+          }
+          return {
+            ...assignment,
+            createdAt: new Date(assignment.createdAt),
+            deadline,
+          };
+        }
+      );
+
+      console.log("Formatted assignments:", formattedAssignments);
+      const activeAssignments = formattedAssignments.filter(
+        (a: Assignment) => a.isActive && a.deadline > now.toString()
+      );
+      console.log("Active assignments:", activeAssignments);
+      setAssignments(activeAssignments);
     } catch (err) {
       const errorMessage =
         err instanceof Error ? err.message : "An unexpected error occurred";
+      console.error(" error in fetchAssignments:", err);
       setError(errorMessage);
       toast({
         title: "Error",
@@ -78,6 +89,7 @@ export const useStudentAssignments = (): UseStudentAssignmentsReturn => {
     }
   }, []);
 
+  // Rest of the hook remains unchanged
   const getAssignment = useCallback(async (assignmentId: string) => {
     setLoading(true);
     setError(null);
@@ -91,24 +103,33 @@ export const useStudentAssignments = (): UseStudentAssignmentsReturn => {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ token, assignmentId }),
-        signal: AbortSignal.timeout(5000),
+        signal: AbortSignal.timeout(10000),
       });
 
-      const text = await response.text();
-      const result = text
-        ? JSON.parse(text)
-        : { status: "error", message: "Empty response from server" };
-
-      if (response.ok && result.status === "success") {
-        const assignment = result.data[0];
-        return {
-          ...assignment,
-          createdAt: new Date(assignment.createdAt),
-          deadline: moment(assignment.deadline, "DD/MM/YYYY, hh:mm A").toDate(),
-        } as Assignment;
-      } else {
-        throw new Error(result.message || "Failed to fetch assignment");
+      if (!response.ok) {
+        throw new Error(`Failed to fetch assignment: ${response.statusText}`);
       }
+
+      const result = await response.json();
+      if (result.status !== "success" || !result.data[0]) {
+        throw new Error(result.message || "Assignment not found");
+      }
+
+      const assignment = result.data[0];
+      const deadline = parse(
+        assignment.deadline,
+        "dd/MM/yyyy, hh:mm a",
+        new Date()
+      );
+      if (!isValid(deadline)) {
+        throw new Error(`Invalid deadline format for assignment ${assignment.id}`);
+      }
+
+      return {
+        ...assignment,
+        createdAt: new Date(assignment.createdAt),
+        deadline,
+      } as Assignment;
     } catch (err) {
       const errorMessage =
         err instanceof Error ? err.message : "An unexpected error occurred";
@@ -137,29 +158,29 @@ export const useStudentAssignments = (): UseStudentAssignmentsReturn => {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ...score, token }),
-        signal: AbortSignal.timeout(5000),
+        signal: AbortSignal.timeout(10000),
       });
 
-      const text = await response.text();
-      const result = text
-        ? JSON.parse(text)
-        : { status: "error", message: "Empty response from server" };
+      if (!response.ok) {
+        throw new Error(`Failed to save score: ${response.statusText}`);
+      }
 
-      if (response.ok && result.status === "success") {
-        setScores((prev) => [
-          ...prev,
-          {
-            ...result.data,
-            completedAt: new Date(result.data.completedAt),
-          },
-        ]);
-        toast({
-          title: "Success",
-          description: "Score saved successfully.",
-        });
-      } else {
+      const result = await response.json();
+      if (result.status !== "success") {
         throw new Error(result.message || "Failed to save score");
       }
+
+      setScores((prev) => [
+        ...prev,
+        {
+          ...result.data,
+          completedAt: new Date(result.data.completedAt),
+        },
+      ]);
+      toast({
+        title: "Success",
+        description: "Score saved successfully.",
+      });
     } catch (err) {
       const errorMessage =
         err instanceof Error ? err.message : "An unexpected error occurred";
@@ -187,24 +208,24 @@ export const useStudentAssignments = (): UseStudentAssignmentsReturn => {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ studentId, token }),
-        signal: AbortSignal.timeout(5000),
+        signal: AbortSignal.timeout(10000),
       });
 
-      const text = await response.text();
-      const result = text
-        ? JSON.parse(text)
-        : { status: "error", message: "Empty response from server" };
+      if (!response.ok) {
+        throw new Error(`Failed to fetch scores: ${response.statusText}`);
+      }
 
-      if (response.ok && result.status === "success") {
-        setScores(
-          result.data.map((score: Score) => ({
-            ...score,
-            completedAt: new Date(score.completedAt),
-          }))
-        );
-      } else {
+      const result = await response.json();
+      if (result.status !== "success") {
         throw new Error(result.message || "Failed to fetch scores");
       }
+
+      setScores(
+        result.data.map((score: Score) => ({
+          ...score,
+          completedAt: new Date(score.completedAt),
+        }))
+      );
     } catch (err) {
       const errorMessage =
         err instanceof Error ? err.message : "An unexpected error occurred";

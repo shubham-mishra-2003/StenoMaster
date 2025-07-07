@@ -18,6 +18,7 @@ interface User {
   userType: "student" | "teacher";
   photo?: string;
   teacherId?: string;
+  classId?: string;
 }
 
 interface AuthState {

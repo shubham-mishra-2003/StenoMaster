@@ -1,30 +1,76 @@
 "use client";
 
-import React, { useEffect } from "react";
+import React, { createContext, useContext, useEffect } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { TrendingUp, Target, Clock, Trophy } from "lucide-react";
 import { useTheme } from "@/hooks/ThemeProvider";
 import { useAuth } from "@/hooks/useAuth";
-import {
-  useAssignments,
-  AssignmentsProvider,
-} from "@/hooks/useStudentAssignments";
+import { useStudentAssignments } from "@/hooks/useStudentAssignments";
 import { toast } from "@/hooks/use-toast";
-import { Score } from "@/types";
+import { Assignment, Score } from "@/types";
 
-const StudentProgressContent: React.FC = () => {
+const AssignmentsContext = createContext<ReturnType<
+  typeof useStudentAssignments
+> | null>(null);
+
+const AssignmentsProvider: React.FC<{ children: React.ReactNode }> = ({
+  children,
+}) => {
+  const assignmentsHook = useStudentAssignments();
+  return (
+    <AssignmentsContext.Provider value={assignmentsHook}>
+      {children}
+    </AssignmentsContext.Provider>
+  );
+};
+
+const useAssignments = () => {
+  const context = useContext(AssignmentsContext);
+  if (!context) {
+    throw new Error(
+      "useAssignments must be used within an AssignmentsProvider"
+    );
+  }
+  return context;
+};
+
+const StudentProgressContent: React.FC<{ classId?: string }> = ({
+  classId,
+}) => {
   const { colorScheme } = useTheme();
-  const { user } = useAuth();
-  const { scores, assignments, loading, error } = useAssignments();
+  const { user, isAuthenticated } = useAuth();
+  const { scores, assignments, loading, error, fetchAssignments, fetchScores } =
+    useAssignments();
 
   useEffect(() => {
-    if (!user?.userId) {
-      toast({
-        title: "Authentication Required",
-        description: "Please log in to view progress.",
-        variant: "destructive",
-      });
+    if (!isAuthenticated || !user?.userId) {
+      const timer = setTimeout(() => {
+        toast({
+          title: "Authentication Required",
+          description: "Please log in to view progress.",
+          variant: "destructive",
+        });
+      }, 9000);
+      return () => clearTimeout(timer);
     }
+
+    fetchScores(user.userId);
+
+    if (classId) {
+      fetchAssignments(classId);
+    } else {
+      const timer = setTimeout(() => {
+        toast({
+          title: "Warning",
+          description: "No class ID provided. Unable to fetch assignments.",
+          variant: "destructive",
+        });
+      }, 900);
+      return () => clearTimeout(timer);
+    }
+  }, [user, isAuthenticated, classId, fetchAssignments, fetchScores]);
+
+  useEffect(() => {
     if (error) {
       toast({
         title: "Error",
@@ -32,7 +78,7 @@ const StudentProgressContent: React.FC = () => {
         variant: "destructive",
       });
     }
-  }, [user, error]);
+  }, [error]);
 
   const getAssignmentTitle = (assignmentId: string): string => {
     if (assignmentId === "typing-test") return "Typing Test";
@@ -195,7 +241,7 @@ const StudentProgressContent: React.FC = () => {
           <CardContent>
             <div
               className={`text-3xl font-bold ${
-                colorScheme === "dark" ? "text-dark" : "text-light"
+                colorScheme === "dark" ? "text-dark" : "get-light"
               }`}
             >
               {calculateTotalTime()}h
@@ -312,9 +358,9 @@ const StudentProgressContent: React.FC = () => {
   );
 };
 
-const StudentProgress: React.FC = () => (
+const StudentProgress: React.FC<{ classId?: string }> = ({ classId }) => (
   <AssignmentsProvider>
-    <StudentProgressContent />
+    <StudentProgressContent classId={classId} />
   </AssignmentsProvider>
 );
 

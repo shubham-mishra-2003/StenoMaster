@@ -1,5 +1,3 @@
-// src/app/dashboard/student/page.tsx
-
 "use client";
 
 import React, { useState, useEffect } from "react";
@@ -9,7 +7,6 @@ import { useRouter } from "next/navigation";
 import AssignmentList from "@/components/AssignmentList";
 import { useTheme } from "@/hooks/ThemeProvider";
 import { useAuth } from "@/hooks/useAuth";
-
 import { toast } from "@/hooks/use-toast";
 import { useStudentAssignments } from "@/hooks/useStudentAssignments";
 
@@ -18,27 +15,71 @@ const DashboardContent: React.FC = () => {
   const router = useRouter();
   const { colorScheme } = useTheme();
   const { user, isAuthenticated } = useAuth();
-  const { assignments, scores, loading, error } = useStudentAssignments();
+  const { assignments, scores, loading, error, fetchAssignments, fetchScores } =
+    useStudentAssignments();
 
   useEffect(() => {
-    if (!user?.userId) {
-      toast({
-        title: "Authentication Required",
-        description: "Please log in to view dashboard.",
-        variant: "destructive",
-      });
-      setIsLoading(false);
+    if (!isAuthenticated || !user?.userId) {
       return;
     }
-    setIsLoading(loading);
-    if (error) {
-      toast({
-        title: "Error",
-        description: error,
-        variant: "destructive",
-      });
+
+    const loadData = async () => {
+      setIsLoading(true);
+      try {
+        if (user.classId) {
+          await fetchAssignments(user.classId);
+        } else {
+          console.warn("Class ID not found in user object");
+        }
+        await fetchScores(user.userId);
+      } catch (err) {
+        console.error("Failed to load data:", err);
+      } finally {
+        setIsLoading(loading);
+      }
+    };
+
+    loadData();
+  }, [isAuthenticated, user, fetchAssignments, fetchScores]);
+
+  useEffect(() => {
+    if (!isAuthenticated || !user?.userId) {
+      if (!loading) {
+        const timer = setTimeout(() => {
+          toast({
+            title: "Authentication Required",
+            description: "Please log in to view dashboard.",
+            variant: "destructive",
+          });
+        }, 900);
+        return () => clearTimeout(timer);
+      }
+      return;
     }
-  }, [user, loading, error]);
+
+    if (error) {
+      const timer = setTimeout(() => {
+        toast({
+          title: "Error",
+          description: error,
+          variant: "destructive",
+        });
+      }, 900);
+      return () => clearTimeout(timer);
+    }
+
+    if (!loading && assignments.length === 0 && scores.length === 0) {
+      const timer = setTimeout(() => {
+        toast({
+          title: "No Data Available",
+          description:
+            "You have no assignments or scores to display at this time.",
+          variant: "default",
+        });
+      }, 900);
+      return () => clearTimeout(timer);
+    }
+  }, [isAuthenticated, user, loading, error, assignments, scores]);
 
   const calculateAverageWPM = (): string => {
     if (scores.length === 0) return "0";
@@ -69,28 +110,24 @@ const DashboardContent: React.FC = () => {
       title: "Assignments Done",
       value: scores.length.toString(),
       icon: BookOpen,
-      change: "+3 this week",
       color: "from-blue-500 to-blue-600",
     },
     {
       title: "Average Speed",
       value: `${calculateAverageWPM()} WPM`,
       icon: Zap,
-      change: "+5 WPM improved",
       color: "from-purple-500 to-purple-600",
     },
     {
       title: "Accuracy",
       value: `${calculateAverageAccuracy()}%`,
       icon: Target,
-      change: "+3% this month",
       color: "from-green-500 to-green-600",
     },
     {
       title: "Time Practiced",
       value: `${calculateTotalTime()}h`,
       icon: Clock,
-      change: "This week",
       color: "from-orange-500 to-orange-600",
     },
   ];
@@ -123,6 +160,7 @@ const DashboardContent: React.FC = () => {
           </p>
         </div>
       </div>
+
       <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 mb-6">
         {stats.map((stat, index) => {
           const Icon = stat.icon;
@@ -160,22 +198,26 @@ const DashboardContent: React.FC = () => {
                 >
                   {stat.value}
                 </div>
-                <p
-                  className={`text-xs mt-1 ${
-                    colorScheme === "dark" ? "text-dark" : "text-light"
-                  }`}
-                >
-                  {stat.change}
-                </p>
               </CardContent>
             </Card>
           );
         })}
       </div>
+
       <AssignmentList
         assignments={assignments}
         onStartPractice={handleStartPractice}
       />
+
+      {assignments.length === 0 && scores.length === 0 && !loading && (
+        <p
+          className={`text-sm sm:text-base mt-4 ${
+            colorScheme === "dark" ? "text-dark" : "text-light"
+          }`}
+        >
+          No assignments or scores available at this time.
+        </p>
+      )}
     </div>
   );
 };
