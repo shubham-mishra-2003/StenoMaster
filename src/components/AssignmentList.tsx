@@ -74,10 +74,6 @@ const AssignmentList = ({
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
-              <p className="text-sm text-muted-foreground">
-                {assignment.description}
-              </p>
-
               <div className="flex items-center space-x-2 text-sm text-muted-foreground">
                 <FileText className="h-4 w-4" />
                 <span>{assignment.correctText.length} characters to type</span>

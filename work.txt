@@ -1,11 +1,4 @@
-students can only see documents from its own class, assignments and if due date is over it should show assignments with timed out.
-
-
 To do :
-1. Actual Data as Teacher Dashboard
-2. Add AM/PM at assignment deadline time
-3. Assignments should be removed from student side list if submitted.
-4. After deadline time, assignment should be inactive, rather than deleting it.
-5. If assignment is set to inactive it should not be visible to students.
-6. To add filter for students (based on classes) on teacher scores page.
-7. Increase paragraph size at student's typing test.
+
+1. Check multiple fetch issues from useStudentAssignment hook.
+2. pass correct classId to getClassName function in StudentScores.tsx.

@@ -70,7 +70,7 @@ const Page = () => {
   const [isLoading, setIsLoading] = useState(true);
 
   const router = useRouter();
-  const { isAuthenticated, user } = useAuth();
+  const { isAuthenticated, user, loading } = useAuth();
 
   const features = [
     {
@@ -117,7 +117,7 @@ const Page = () => {
   ];
 
   useEffect(() => {
-    if (isAuthenticated) {
+    if (isAuthenticated || loading) {
       if (user) {
         router.push(`/dashboard/${user.userType}`);
       }

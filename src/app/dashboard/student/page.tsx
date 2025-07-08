@@ -1,5 +1,3 @@
-// src/app/dashboard/student/page.tsx
-
 "use client";
 
 import React, { useState, useEffect } from "react";
@@ -10,6 +8,7 @@ import AssignmentList from "@/components/AssignmentList";
 import { useTheme } from "@/hooks/ThemeProvider";
 import { useAuth } from "@/hooks/useAuth";
 import { useStudentAssignments } from "@/hooks/useStudentAssignments";
+import { useClass } from "@/hooks/useClasses";
 import { toast } from "@/hooks/use-toast";
 
 const DashboardContent: React.FC = () => {
@@ -17,19 +16,58 @@ const DashboardContent: React.FC = () => {
   const router = useRouter();
   const { colorScheme } = useTheme();
   const { user } = useAuth();
-  const { assignments, scores, loading, error } = useStudentAssignments();
+  const { assignments, scores, loading, error, fetchAssignments, fetchScores } =
+    useStudentAssignments();
+  const { classes, fetchClasses, fetchStudentsInClass } = useClass();
 
   useEffect(() => {
-    if (!user?.userId) {
-      toast({
-        title: "Authentication Required",
-        description: "Please log in to view dashboard.",
-        variant: "destructive",
-      });
-      setIsLoading(false);
-      return;
-    }
-    setIsLoading(loading);
+    const fetchData = async () => {
+      if (!user?.userId || user.userType !== "student") {
+        toast({
+          title: "Authentication Required",
+          description: "Please log in as a student to view dashboard.",
+          variant: "destructive",
+        });
+        setIsLoading(false);
+        return;
+      }
+
+      setIsLoading(true);
+      try {
+        // Fetch scores for the authenticated student
+        await fetchScores(user.userId);
+
+        // Fetch assignments for all classes the student is enrolled in
+        await fetchClasses();
+        for (const classItem of classes) {
+          const studentsInClass = await fetchStudentsInClass(classItem.id);
+          if (studentsInClass.some((s: any) => s.userId === user.userId)) {
+            await fetchAssignments(classItem.id);
+          }
+        }
+      } catch (err) {
+        console.error("[DashboardContent] Error fetching data:", err);
+        toast({
+          title: "Error",
+          description: "Failed to load dashboard data.",
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoading(loading);
+      }
+    };
+
+    fetchData();
+  }, [
+    user,
+    // fetchScores,
+    // fetchAssignments,
+    // fetchClasses,
+    // fetchStudentsInClass,
+    loading
+  ]);
+
+  useEffect(() => {
     if (error) {
       toast({
         title: "Error",
@@ -37,7 +75,7 @@ const DashboardContent: React.FC = () => {
         variant: "destructive",
       });
     }
-  }, [user, loading, error]);
+  }, [error]);
 
   const calculateAverageWPM = (): string => {
     if (scores.length === 0) return "0";

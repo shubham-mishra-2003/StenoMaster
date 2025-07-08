@@ -12,18 +12,94 @@ import { useClass } from "@/hooks/useClasses";
 import { useAssignment } from "@/hooks/useAssignments";
 
 const StudentsScores = () => {
-  const { scores, fetchScores, loading, error } = useStudentAssignments();
+  const [allScores, setAllScores] = useState<Score[]>([]);
+  const [hasFetched, setHasFetched] = useState(false);
+  const { fetchScores, loading, error, scores } = useStudentAssignments();
   const { user, fetchStudent, students } = useAuth();
   const { colorScheme } = useTheme();
-  const { classes, fetchClasses } = useClass();
+  const { classes, fetchClasses, fetchStudentsInClass } = useClass();
   const { fetchAssignments, assignments } = useAssignment();
 
+  // Fetch classes and students once
   useEffect(() => {
-    fetchStudent();
-  }, []);
+    if (!user?.userType || user.userType !== "teacher") {
+      console.log("[StudentsScores] User is not a teacher, skipping fetch");
+      return;
+    }
+
+    const fetchInitialData = async () => {
+      try {
+        await fetchClasses();
+        await fetchStudent();
+      } catch (err) {
+        console.error("[StudentsScores] Error fetching initial data:", err);
+        toast({
+          title: "Error",
+          description: "Failed to load classes or students.",
+          variant: "destructive",
+        });
+      }
+    };
+
+    fetchInitialData();
+  }, [user, fetchClasses, fetchStudent]);
+
+  // Fetch assignments and scores for all students in classes
+  useEffect(() => {
+    if (
+      !user?.userType ||
+      user.userType !== "teacher" ||
+      hasFetched ||
+      classes.length === 0
+    ) {
+      return;
+    }
+
+    const fetchAllData = async () => {
+      try {
+        const aggregatedScores: Score[] = [];
+        for (const classItem of classes) {
+          await fetchAssignments(classItem.id); // Fetch assignments for each class
+          const studentsInClass = await fetchStudentsInClass(classItem.id);
+          for (const student of studentsInClass) {
+            await fetchScores(student.userId);
+            aggregatedScores.push(...scores);
+          }
+        }
+        setAllScores(aggregatedScores);
+        setHasFetched(true);
+      } catch (err) {
+        console.error("[StudentsScores] Error fetching data:", err);
+        toast({
+          title: "Error",
+          description: "Failed to load student scores or assignments.",
+          variant: "destructive",
+        });
+      }
+    };
+
+    fetchAllData();
+  }, [
+    user,
+    classes,
+    fetchScores,
+    fetchStudentsInClass,
+    fetchAssignments,
+    hasFetched,
+  ]);
+
+  useEffect(() => {
+    if (error) {
+      toast({
+        title: "Error",
+        description: error,
+        variant: "destructive",
+      });
+    }
+  }, [error]);
 
   const getStudentScores = (studentId: string) => {
-    return scores.filter((s) => s.studentId === studentId);
+    return allScores.filter((s) => s.studentId === studentId);
   };
 
   const getAssignmentTitle = (assignmentId: string) => {
@@ -32,7 +108,8 @@ const StudentsScores = () => {
   };
 
   const getClassName = (classId: string) => {
-    return classId ? `Class ${classId}` : "Unknown Class"; // Replace with actual class name fetching if available
+    const classItem = classes.find((c) => c.id === classId);
+    return classItem?.name || `Class ${classId}` || "Unknown Class";
   };
 
   const calculateAverageAccuracy = (studentScores: Score[]) => {

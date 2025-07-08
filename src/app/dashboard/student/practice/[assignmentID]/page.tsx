@@ -22,34 +22,23 @@ const AssignmentPracticeContent = () => {
   const [isStarted, setIsStarted] = useState(false);
   const [isCompleted, setIsCompleted] = useState(false);
   const [timeElapsed, setTimeElapsed] = useState(0);
-  const [isLoading, setIsLoading] = useState(true);
   const { user } = useAuth();
-  const { getAssignment, createScore, error } = useStudentAssignments();
+  const { assignments, submitScore, loading, error } = useStudentAssignments();
   const router = useRouter();
-  const classId = "class-1751878661160"; // Replace with dynamic classId from context or user data
 
   useEffect(() => {
-    const fetchAssignment = async () => {
-      setIsLoading(true);
-      try {
-        const fetchedAssignment = await getAssignment(assignmentId, classId);
-        if (fetchedAssignment) {
-          setAssignment(fetchedAssignment);
-        } else {
-          throw new Error("Assignment not found");
-        }
-      } catch (error) {
-        toast({
-          title: "Error",
-          description: "Failed to load assignment",
-          variant: "destructive",
-        });
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    fetchAssignment();
-  }, [assignmentId, classId, getAssignment]);
+    const foundAssignment = assignments.find((a) => a.id === assignmentId);
+    if (foundAssignment) {
+      setAssignment(foundAssignment);
+    } else {
+      setAssignment(null);
+      toast({
+        title: "Error",
+        description: "Assignment not found.",
+        variant: "destructive",
+      });
+    }
+  }, [assignments, assignmentId]);
 
   useEffect(() => {
     if (error) {
@@ -129,7 +118,7 @@ const AssignmentPracticeContent = () => {
     };
 
     try {
-      await createScore(score);
+      await submitScore(score);
       toast({
         title: "Assignment Completed!",
         description: `Accuracy: ${accuracy}%, WPM: ${wpm}`,
@@ -155,7 +144,7 @@ const AssignmentPracticeContent = () => {
       ? Math.min((typedText.length / assignment.correctText.length) * 100, 100)
       : 0;
 
-  if (isLoading) {
+  if (loading) {
     return (
       <div className="min-h-screen flex flex-col p-4 sm:p-6 lg:p-8 bg-gradient-to-br from-slate-50 via-blue-50 to-slate-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
         <Card className="max-w-7xl mx-auto w-full">

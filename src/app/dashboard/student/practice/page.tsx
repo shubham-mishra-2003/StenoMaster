@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
@@ -14,30 +14,34 @@ import { FileTextIcon } from "lucide-react";
 import { useTheme } from "@/hooks/ThemeProvider";
 import { useRouter } from "next/navigation";
 import { useStudentAssignments } from "@/hooks/useStudentAssignments";
-import { toast } from "@/hooks/use-toast";
+import { useClass } from "@/hooks/useClasses";
+import { useAuth } from "@/hooks/useAuth";
 
 const PracticePageContent = () => {
   const [selectedAssignmentId, setSelectedAssignmentId] = useState<
     string | null
   >(null);
-  const { assignments, loading, error, fetchAssignments } =
-    useStudentAssignments();
+  const { assignments, loading, fetchAssignments } = useStudentAssignments();
   const { colorScheme } = useTheme();
+  const { classes, fetchClasses, fetchStudentsInClass } = useClass();
+  const { user } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
-    fetchAssignments("class-1751878661160");
-  }, [fetchAssignments]);
-
-  useEffect(() => {
-    if (error) {
-      toast({
-        title: "Error",
-        description: error,
-        variant: "destructive",
-      });
-    }
-  }, [error]);
+    const fetchStudentAssignments = async () => {
+      if (!user?.userId || user.userType !== "student") {
+        return;
+      }
+      await fetchClasses();
+      for (const classItem of classes) {
+        const studentsInClass = await fetchStudentsInClass(classItem.id);
+        if (studentsInClass.some((s: any) => s.userId === user.userId)) {
+          await fetchAssignments(classItem.id);
+        }
+      }
+    };
+    fetchStudentAssignments();
+  }, [user, classes]);
 
   const handleStartPractice = () => {
     if (selectedAssignmentId) {
