@@ -10,11 +10,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { FileText } from "lucide-react";
+import { FileTextIcon } from "lucide-react";
 import { useTheme } from "@/hooks/ThemeProvider";
 import { useRouter } from "next/navigation";
-import { toast } from "@/hooks/use-toast";
 import { useStudentAssignments } from "@/hooks/useStudentAssignments";
+import { toast } from "@/hooks/use-toast";
 
 const PracticePageContent = () => {
   const [selectedAssignmentId, setSelectedAssignmentId] = useState<
@@ -26,8 +26,18 @@ const PracticePageContent = () => {
   const router = useRouter();
 
   useEffect(() => {
-    fetchAssignments("class-1751790692219");
-  }, []);
+    fetchAssignments("class-1751878661160");
+  }, [fetchAssignments]);
+
+  useEffect(() => {
+    if (error) {
+      toast({
+        title: "Error",
+        description: error,
+        variant: "destructive",
+      });
+    }
+  }, [error]);
 
   const handleStartPractice = () => {
     if (selectedAssignmentId) {
@@ -62,14 +72,22 @@ const PracticePageContent = () => {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <FileText className="h-5 w-5" />
+            <FileTextIcon
+              className={`h-5 w-5 ${
+                colorScheme === "dark" ? "text-white" : "text-black"
+              }`}
+            />
             Select Assignment
           </CardTitle>
         </CardHeader>
         <CardContent>
           {assignments.length === 0 ? (
-            <p className="text-muted-foreground">
-              No assignments available. Please add assignments to continue.
+            <p
+              className={
+                colorScheme === "dark" ? "text-dark-muted" : "text-light-muted"
+              }
+            >
+              No assignments available.
             </p>
           ) : (
             <div className="space-y-4">

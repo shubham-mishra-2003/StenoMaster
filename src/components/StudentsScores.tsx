@@ -1,21 +1,26 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useLocalStorage } from "@/hooks/useLocalStorage";
-import { Assignment, Student, Score, Class } from "@/types";
 import { BarChart3, Trophy, Clock, Target } from "lucide-react";
 import { useTheme } from "@/hooks/ThemeProvider";
+import { useStudentAssignments } from "@/hooks/useStudentAssignments";
+import { useAuth } from "@/hooks/useAuth";
+import { Assignment, Score, User } from "@/types";
+import { toast } from "@/hooks/use-toast";
+import { useClass } from "@/hooks/useClasses";
+import { useAssignment } from "@/hooks/useAssignments";
 
 const StudentsScores = () => {
-  const [students] = useLocalStorage<Student[]>("stenolearn-students", []);
-  const [assignments] = useLocalStorage<Assignment[]>(
-    "stenolearn-assignments",
-    []
-  );
+  const { scores, fetchScores, loading, error } = useStudentAssignments();
+  const { user, fetchStudent, students } = useAuth();
   const { colorScheme } = useTheme();
-  const [classes] = useLocalStorage<Class[]>("stenolearn-classes", []);
-  const [scores] = useLocalStorage<Score[]>("stenolearn-scores", []);
+  const { classes, fetchClasses } = useClass();
+  const { fetchAssignments, assignments } = useAssignment();
+
+  useEffect(() => {
+    fetchStudent();
+  }, []);
 
   const getStudentScores = (studentId: string) => {
     return scores.filter((s) => s.studentId === studentId);
@@ -27,8 +32,7 @@ const StudentsScores = () => {
   };
 
   const getClassName = (classId: string) => {
-    const classItem = classes.find((c) => c.id === classId);
-    return classItem?.name || "Unknown Class";
+    return classId ? `Class ${classId}` : "Unknown Class"; // Replace with actual class name fetching if available
   };
 
   const calculateAverageAccuracy = (studentScores: Score[]) => {
@@ -43,13 +47,23 @@ const StudentsScores = () => {
     return Math.round(total / studentScores.length);
   };
 
+  if (loading || !students || !user) {
+    return (
+      <Card>
+        <CardContent className="flex flex-col items-center justify-center py-12">
+          <p className="text-muted-foreground">Loading scores...</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <div>
         <h2 className="gradient-text text-2xl font-bold">Student Scores</h2>
         <p
           className={
-            colorScheme == "dark" ? "text-dark-muted" : "text-light-muted"
+            colorScheme === "dark" ? "text-dark-muted" : "text-light-muted"
           }
         >
           Track student progress and performance
@@ -64,14 +78,14 @@ const StudentsScores = () => {
             </div>
             <h3
               className={`text-lg font-semibold mb-2 ${
-                colorScheme == "dark" ? "text-dark-muted" : "text-light-muted"
+                colorScheme === "dark" ? "text-dark-muted" : "text-light-muted"
               }`}
             >
               No students yet
             </h3>
             <p
               className={
-                colorScheme == "dark"
+                colorScheme === "dark"
                   ? "text-dark-muted text-center"
                   : "text-light-muted text-center"
               }
@@ -83,25 +97,27 @@ const StudentsScores = () => {
       ) : (
         <div className="grid gap-6">
           {students.map((student) => {
-            const studentScores = getStudentScores(student.id);
+            const studentScores = getStudentScores(student.userId);
             const avgAccuracy = calculateAverageAccuracy(studentScores);
             const avgWPM = calculateAverageWPM(studentScores);
 
             return (
-              <Card key={student.id}>
+              <Card key={student.userId}>
                 <CardHeader>
                   <div className="flex items-center justify-between">
                     <div>
-                      <CardTitle className="text-xl">{student.name}</CardTitle>
+                      <CardTitle className="text-xl">
+                        {student.fullName}
+                      </CardTitle>
                       <p
                         className={
-                          colorScheme == "dark"
+                          colorScheme === "dark"
                             ? "text-dark-muted"
                             : "text-light-muted"
                         }
                       >
-                        Class: {getClassName(student.classId)} | ID:{" "}
-                        {student.id}
+                        Class: {getClassName(student.classId || "")} | ID:{" "}
+                        {student.userId}
                       </p>
                     </div>
                     <div className="flex space-x-4 text-sm">
@@ -110,7 +126,9 @@ const StudentsScores = () => {
                           <Target className="h-4 w-4" />
                           <span
                             className={`text-xl font-semibold ${
-                              colorScheme == "dark" ? "text-dark" : "text-light"
+                              colorScheme === "dark"
+                                ? "text-dark"
+                                : "text-light"
                             }`}
                           >
                             {avgAccuracy}%
@@ -118,7 +136,7 @@ const StudentsScores = () => {
                         </div>
                         <p
                           className={
-                            colorScheme == "dark"
+                            colorScheme === "dark"
                               ? "text-dark-muted"
                               : "text-light-muted"
                           }
@@ -131,7 +149,9 @@ const StudentsScores = () => {
                           <Clock className="h-4 w-4" />
                           <span
                             className={`text-xl font-semibold ${
-                              colorScheme == "dark" ? "text-dark" : "text-light"
+                              colorScheme === "dark"
+                                ? "text-dark"
+                                : "text-light"
                             }`}
                           >
                             {avgWPM}
@@ -139,7 +159,7 @@ const StudentsScores = () => {
                         </div>
                         <p
                           className={
-                            colorScheme == "dark"
+                            colorScheme === "dark"
                               ? "text-dark-muted"
                               : "text-light-muted"
                           }
@@ -152,7 +172,9 @@ const StudentsScores = () => {
                           <Trophy className="h-4 w-4" />
                           <span
                             className={`text-xl font-semibold ${
-                              colorScheme == "dark" ? "text-dark" : "text-light"
+                              colorScheme === "dark"
+                                ? "text-dark"
+                                : "text-light"
                             }`}
                           >
                             {studentScores.length}
@@ -160,7 +182,7 @@ const StudentsScores = () => {
                         </div>
                         <p
                           className={
-                            colorScheme == "dark"
+                            colorScheme === "dark"
                               ? "text-dark-muted"
                               : "text-light-muted"
                           }
@@ -180,7 +202,7 @@ const StudentsScores = () => {
                     <div className="space-y-3">
                       <h4
                         className={`text-xl font-semibold ${
-                          colorScheme == "dark" ? "text-dark" : "text-light"
+                          colorScheme === "dark" ? "text-dark" : "text-light"
                         }`}
                       >
                         Recent Assignments

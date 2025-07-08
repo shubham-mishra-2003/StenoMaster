@@ -1,4 +1,3 @@
-// dashboard/student/practice/[assignmentId]/page.tsx
 "use client";
 
 import React, { useState, useEffect } from "react";
@@ -25,38 +24,19 @@ const AssignmentPracticeContent = () => {
   const [timeElapsed, setTimeElapsed] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const { user } = useAuth();
-  const { fetchAssignments, submitScore, error } = useStudentAssignments();
+  const { getAssignment, createScore, error } = useStudentAssignments();
   const router = useRouter();
+  const classId = "class-1751878661160"; // Replace with dynamic classId from context or user data
 
   useEffect(() => {
     const fetchAssignment = async () => {
       setIsLoading(true);
       try {
-        const classId = "class1"; // Replace with actual classId from context or user data
-        await fetchAssignments(classId);
-        const response = await fetch("/api/assignment/fetch", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            token: localStorage.getItem("StenoMaster-token"),
-            classId,
-          }),
-        });
-        const result = await response.json();
-        if (result.status === "success") {
-          const assignment = result.data.find(
-            (a: Assignment) => a.id === assignmentId
-          );
-          if (assignment) {
-            setAssignment({
-              ...assignment,
-              createdAt: new Date(assignment.createdAt),
-            });
-          } else {
-            throw new Error("Assignment not found");
-          }
+        const fetchedAssignment = await getAssignment(assignmentId, classId);
+        if (fetchedAssignment) {
+          setAssignment(fetchedAssignment);
         } else {
-          throw new Error(result.message || "Failed to load assignment");
+          throw new Error("Assignment not found");
         }
       } catch (error) {
         toast({
@@ -69,7 +49,7 @@ const AssignmentPracticeContent = () => {
       }
     };
     fetchAssignment();
-  }, [assignmentId, fetchAssignments]);
+  }, [assignmentId, classId, getAssignment]);
 
   useEffect(() => {
     if (error) {
@@ -149,7 +129,7 @@ const AssignmentPracticeContent = () => {
     };
 
     try {
-      await submitScore(score);
+      await createScore(score);
       toast({
         title: "Assignment Completed!",
         description: `Accuracy: ${accuracy}%, WPM: ${wpm}`,
