@@ -4,13 +4,22 @@ import React, { useState, useEffect, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { Clock, Target, RotateCcw } from "lucide-react";
+import {
+  Clock,
+  Target,
+  RotateCcw,
+  ArrowBigLeft,
+  Play,
+  ArrowRight,
+  RefreshCw,
+} from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useStudentAssignments } from "@/hooks/useStudentAssignments";
 import { toast } from "@/hooks/use-toast";
 import { useTheme } from "@/hooks/ThemeProvider";
 import { Score } from "@/types";
 import { sampleTexts } from "./sample-texts";
+import { useRouter } from "next/navigation";
 
 const TypingTestContent = () => {
   const [currentText, setCurrentText] = useState(sampleTexts[0]);
@@ -20,7 +29,7 @@ const TypingTestContent = () => {
   const [isCompleted, setIsCompleted] = useState(false);
   const [timeElapsed, setTimeElapsed] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
   const { user } = useAuth();
   const { colorScheme } = useTheme();
   const { scores, fetchScores, createScore, error } = useStudentAssignments();
@@ -165,7 +174,7 @@ const TypingTestContent = () => {
     setCurrentText(sampleTexts[Math.floor(Math.random() * sampleTexts.length)]);
   };
 
-  const handleTextChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     if (!isStarted || isCompleted) return;
     setTypedText(e.target.value);
   };
@@ -216,6 +225,8 @@ const TypingTestContent = () => {
     );
   }
 
+  const router = useRouter();
+
   return (
     <div className="space-y-6">
       <Card>
@@ -226,14 +237,53 @@ const TypingTestContent = () => {
               <Target className="h-5 w-5" />
               Typing Speed Test
             </CardTitle>
-            <Button
-              variant="outline"
-              onClick={handleReset}
-              className="gradient-button"
-            >
-              <RotateCcw className="h-4 w-4 mr-2" />
-              New Test
-            </Button>
+            <div className="flex justify-center items-center gap-2 w-fit">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  router.push("/dashboard/student/");
+                }}
+                className="gradient-button"
+              >
+                <ArrowBigLeft className="h-4 w-4 mr-2" />
+                Back to dashboard
+              </Button>
+              <Button
+                variant="outline"
+                onClick={handleReset}
+                className="gradient-button"
+              >
+                <RotateCcw className="h-4 w-4 mr-2" />
+                New Test
+              </Button>
+              {!isStarted ? (
+                <Button
+                  onClick={handleStart}
+                  className="gradient-button"
+                  disabled={!user?.userId}
+                >
+                  <Play />
+                  Start Test
+                </Button>
+              ) : isCompleted ? (
+                <Button
+                  onClick={handleReset}
+                  className="bg-gradient-to-r from-green-500 via-emerald-500 to-teal-500 hover:from-green-600 hover:via-emerald-600 hover:to-teal-600 text-white shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer rounded-2xl"
+                >
+                  <ArrowRight />
+                  Take Another Test
+                </Button>
+              ) : (
+                <Button
+                  variant="outline"
+                  onClick={handleReset}
+                  className="bg-gradient-to-r from-red-500/10 to-pink-500/10 hover:from-red-500/20 hover:to-pink-500/20 border-red-200 dark:border-red-800 cursor-pointer rounded-2xl"
+                >
+                  <RefreshCw />
+                  Reset Test
+                </Button>
+              )}
+            </div>
           </div>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -327,25 +377,22 @@ const TypingTestContent = () => {
             </div>
             <Progress value={progress} className="w-full" />
           </div>
-          <div
-            className={`p-6 border rounded-lg bg-gradient-to-r backdrop-blur-sm ${
-              colorScheme === "dark"
-                ? "from-gray-800/30 to-blue-950/30 border-gray-500"
-                : "border-blue-500/60 from-blue-500/10 to-blue-50/10"
-            }`}
-          >
-            <div className="font-mono leading-relaxed select-none">
+          <div className="flex gap-3 justify-between">
+            <div
+              className={`p-6 border rounded-lg bg-gradient-to-r backdrop-blur-sm flex-1/2 ${
+                colorScheme === "dark"
+                  ? "from-gray-800/30 to-blue-950/30 border-gray-500"
+                  : "border-blue-500/60 from-blue-500/10 to-blue-50/10"
+              }`}
+            >
               {renderText()}
             </div>
-          </div>
-          <div className="space-y-4">
-            <input
+            <textarea
               ref={inputRef}
-              type="text"
               value={typedText}
               onChange={handleTextChange}
               autoFocus={isStarted}
-              className={`w-full p-4 border rounded-lg bg-gradient-to-r backdrop-blur-sm font-mono text-lg ${
+              className={`w-full min-h-full p-4 border rounded-lg bg-gradient-to-r backdrop-blur-sm font-mono text-lg flex-1/2 ${
                 colorScheme === "dark"
                   ? "from-gray-800/30 to-blue-950/30 border-gray-500"
                   : "border-blue-500/60 from-blue-500/10 to-blue-50/10"
@@ -355,32 +402,6 @@ const TypingTestContent = () => {
               }
               disabled={!isStarted || isCompleted}
             />
-            <div className="flex gap-2">
-              {!isStarted ? (
-                <Button
-                  onClick={handleStart}
-                  className="w-full gradient-button rounded-2xl"
-                  disabled={!user?.userId}
-                >
-                  Start Test
-                </Button>
-              ) : isCompleted ? (
-                <Button
-                  onClick={handleReset}
-                  className="w-full bg-gradient-to-r from-green-500 via-emerald-500 to-teal-500 hover:from-green-600 hover:via-emerald-600 hover:to-teal-600 text-white shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer rounded-2xl"
-                >
-                  Take Another Test
-                </Button>
-              ) : (
-                <Button
-                  variant="outline"
-                  onClick={handleReset}
-                  className="w-full bg-gradient-to-r from-red-500/10 to-pink-500/10 hover:from-red-500/20 hover:to-pink-500/20 border-red-200 dark:border-red-800 cursor-pointer rounded-2xl"
-                >
-                  Reset Test
-                </Button>
-              )}
-            </div>
           </div>
         </CardContent>
       </Card>

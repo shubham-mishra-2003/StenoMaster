@@ -19,9 +19,10 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
   const router = useRouter();
 
   const isAssignmentPage =
-    pathname &&
-    pathname.startsWith("/dashboard/student/practice/") &&
-    pathname.split("/").length === 5;
+    (pathname &&
+      pathname.startsWith("/dashboard/student/practice/") &&
+      pathname.split("/").length === 5) ||
+    pathname.startsWith("/dashboard/student/test");
 
   useEffect(() => {
     if (!isAuthenticated || !user) {
