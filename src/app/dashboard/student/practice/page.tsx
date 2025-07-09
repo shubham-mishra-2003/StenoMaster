@@ -1,59 +1,82 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { FileTextIcon } from "lucide-react";
+import { BookOpen, Clock } from "lucide-react";
+import Link from "next/link";
 import { useTheme } from "@/hooks/ThemeProvider";
-import { useRouter } from "next/navigation";
+import { useAuth } from "@/hooks/useAuth";
 import { useStudentAssignments } from "@/hooks/useStudentAssignments";
 import { useClass } from "@/hooks/useClasses";
-import { useAuth } from "@/hooks/useAuth";
+import { toast } from "@/hooks/use-toast";
+import { Assignment } from "@/types";
 
-const PracticePageContent = () => {
-  const [selectedAssignmentId, setSelectedAssignmentId] = useState<
-    string | null
-  >(null);
-  const { assignments, loading, fetchAssignments } = useStudentAssignments();
-  const { colorScheme } = useTheme();
+const StudentPracticeDashboard = () => {
+  const { user, isAuthenticated } = useAuth();
   const { classes, fetchClasses, fetchStudentsInClass } = useClass();
-  const { user } = useAuth();
-  const router = useRouter();
+  const { assignments, fetchAssignments, loading, error } =
+    useStudentAssignments();
+  const { colorScheme } = useTheme();
+  const [hasFetched, setHasFetched] = useState(false);
 
   useEffect(() => {
-    const fetchStudentAssignments = async () => {
-      if (!user?.userId || user.userType !== "student") {
-        return;
-      }
-      await fetchClasses();
-      for (const classItem of classes) {
-        const studentsInClass = await fetchStudentsInClass(classItem.id);
-        if (studentsInClass.some((s: any) => s.userId === user.userId)) {
-          await fetchAssignments(classItem.id);
+    if (
+      !isAuthenticated ||
+      !user?.userId ||
+      user.userType !== "student" ||
+      hasFetched
+    ) {
+      return;
+    }
+
+    const fetchData = async () => {
+      try {
+        await fetchClasses();
+        for (const classItem of classes) {
+          const studentsInClass = await fetchStudentsInClass(classItem.id);
+          if (studentsInClass.some((s: any) => s.userId === user.userId)) {
+            await fetchAssignments(classItem.id);
+          }
         }
+        setHasFetched(true);
+      } catch (err) {
+        console.error("[StudentPracticeDashboard] Error fetching data:", err);
+        toast({
+          title: "Error",
+          description: "Failed to load classes or assignments.",
+          variant: "destructive",
+        });
       }
     };
-    fetchStudentAssignments();
-  }, [user, classes]);
 
-  const handleStartPractice = () => {
-    if (selectedAssignmentId) {
-      router.push(`/dashboard/student/practice/${selectedAssignmentId}`);
+    fetchData();
+  }, [
+    isAuthenticated,
+    user,
+    fetchClasses,
+    fetchAssignments,
+    fetchStudentsInClass,
+    classes,
+    hasFetched,
+  ]);
+
+  useEffect(() => {
+    if (error) {
+      toast({
+        title: "Error",
+        description: error,
+        variant: "destructive",
+      });
     }
-  };
+  }, [error]);
 
-  if (loading) {
+  if (loading || !user) {
     return (
       <Card>
         <CardContent className="flex flex-col items-center justify-center py-12">
-          <p className="text-muted-foreground">Loading assignments...</p>
+          <p className="text-muted-foreground">
+            Loading practice assignments...
+          </p>
         </CardContent>
       </Card>
     );
@@ -62,78 +85,76 @@ const PracticePageContent = () => {
   return (
     <div className="space-y-6">
       <div>
-        <h4 className="gradient-text font-bold text-2xl">
-          Assignments Assigned to You
-        </h4>
+        <h2 className="gradient-text text-2xl font-bold">
+          Practice Assignments
+        </h2>
         <p
           className={
             colorScheme === "dark" ? "text-dark-muted" : "text-light-muted"
           }
         >
-          Select and complete your assignments
+          Practice your assignments to improve your skills
         </p>
       </div>
+
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <FileTextIcon
-              className={`h-5 w-5 ${
-                colorScheme === "dark" ? "text-white" : "text-black"
-              }`}
-            />
-            Select Assignment
-          </CardTitle>
+          <CardTitle>Your Assignments</CardTitle>
         </CardHeader>
         <CardContent>
           {assignments.length === 0 ? (
-            <p
-              className={
-                colorScheme === "dark" ? "text-dark-muted" : "text-light-muted"
-              }
-            >
-              No assignments available.
-            </p>
-          ) : (
-            <div className="space-y-4">
-              <Select onValueChange={(value) => setSelectedAssignmentId(value)}>
-                <SelectTrigger
-                  className={`cursor-pointer border-2 h-12 rounded-xl ${
-                    colorScheme === "dark"
-                      ? "bg-slate-800 border-slate-700"
-                      : "bg-slate-200 border-slate-300"
-                  }`}
-                >
-                  <SelectValue placeholder="Choose an assignment to practice" />
-                </SelectTrigger>
-                <SelectContent
-                  className={`scroll-smooth max-h-[50vh] border-2 rounded-xl ${
-                    colorScheme === "dark"
-                      ? "bg-slate-800 border-slate-700"
-                      : "bg-slate-200 border-slate-300"
-                  }`}
-                >
-                  {assignments.map((assignment) => (
-                    <SelectItem
-                      key={assignment.id}
-                      value={assignment.id}
-                      className={`cursor-pointer mb-2 border-2 h-12 rounded-xl ${
-                        colorScheme === "dark"
-                          ? "bg-slate-700 border-slate-600"
-                          : "bg-slate-200 border-slate-300"
-                      }`}
-                    >
-                      {assignment.title}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Button
-                onClick={handleStartPractice}
-                className="w-full gradient-button"
-                disabled={!selectedAssignmentId}
+            <div className="flex flex-col items-center justify-center py-12">
+              <div className="w-16 h-16 bg-gradient-to-br from-blue-500 via-purple-500 to-indigo-500 rounded-full flex items-center justify-center mb-4 shadow-lg">
+                <BookOpen className="h-8 w-8 text-white" />
+              </div>
+              <h3
+                className={`text-lg font-semibold mb-2 ${
+                  colorScheme === "dark"
+                    ? "text-dark-muted"
+                    : "text-light-muted"
+                }`}
               >
-                Start Practice
-              </Button>
+                No assignments yet
+              </h3>
+              <p
+                className={
+                  colorScheme === "dark"
+                    ? "text-dark-muted text-center"
+                    : "text-light-muted text-center"
+                }
+              >
+                Check back later for new practice assignments
+              </p>
+            </div>
+          ) : (
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {assignments
+                .filter((assignment) => assignment.isActive)
+                .map((assignment) => (
+                  <Card key={assignment.id}>
+                    <CardHeader>
+                      <CardTitle>{assignment.title}</CardTitle>
+                      <p
+                        className={
+                          colorScheme === "dark"
+                            ? "text-dark-muted"
+                            : "text-light-muted"
+                        }
+                      >
+                        Deadline:{" "}
+                        {new Date(assignment.deadline).toLocaleDateString()}
+                      </p>
+                    </CardHeader>
+                    <CardContent>
+                      <Link
+                        href={`/dashboard/student/practice/${assignment.id}`}
+                        className="text-blue-500 hover:underline"
+                      >
+                        Start Practice
+                      </Link>
+                    </CardContent>
+                  </Card>
+                ))}
             </div>
           )}
         </CardContent>
@@ -142,4 +163,4 @@ const PracticePageContent = () => {
   );
 };
 
-export default PracticePageContent;
+export default StudentPracticeDashboard;

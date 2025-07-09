@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useClass } from "@/hooks/useClasses";
 import { Assignment, Score } from "@/types";
@@ -21,18 +21,25 @@ export const useStudentAssignments = (): UseStudentAssignmentsReturn => {
   const [scores, setScores] = useState<Score[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [hasFetched, setHasFetched] = useState<{
+    assignments: Set<string>;
+    scores: Set<string>;
+    studentsInClass: Set<string>;
+  }>({
+    assignments: new Set(),
+    scores: new Set(),
+    studentsInClass: new Set(),
+  });
   const { user, isAuthenticated } = useAuth();
   const { classes, fetchStudentsInClass } = useClass();
 
   const fetchAssignments = useCallback(
     async (classId: string) => {
-      if (!isAuthenticated || !user?.userId) {
-        toast({
-          title: "Error",
-          description: "You must be logged in to fetch assignments.",
-          variant: "destructive",
-        });
-        setError("You must be logged in to fetch assignments.");
+      if (
+        !isAuthenticated ||
+        !user?.userId ||
+        hasFetched.assignments.has(classId)
+      ) {
         return;
       }
 
@@ -48,23 +55,38 @@ export const useStudentAssignments = (): UseStudentAssignmentsReturn => {
         return;
       }
 
-      // Verify student is enrolled in the class
-      const studentsInClass = await fetchStudentsInClass(classId);
+      // Verify student is enrolled in the class (for students only)
       if (
         user.userType === "student" &&
-        !studentsInClass.some((s: any) => s.userId === user.userId)
+        !hasFetched.studentsInClass.has(classId)
       ) {
-        console.error(
-          "[useStudentAssignments] Student not enrolled in class:",
-          classId
-        );
-        toast({
-          title: "Error",
-          description: "You are not enrolled in this class.",
-          variant: "destructive",
-        });
-        setError("You are not enrolled in this class.");
-        return;
+        try {
+          const studentsInClass = await fetchStudentsInClass(classId);
+          setHasFetched((prev) => ({
+            ...prev,
+            studentsInClass: new Set(prev.studentsInClass).add(classId),
+          }));
+          if (!studentsInClass.some((s: any) => s.userId === user.userId)) {
+            console.error(
+              "[useStudentAssignments] Student not enrolled in class:",
+              classId
+            );
+            toast({
+              title: "Error",
+              description: "You are not enrolled in this class.",
+              variant: "destructive",
+            });
+            setError("You are not enrolled in this class.");
+            return;
+          }
+        } catch (err) {
+          console.error(
+            "[useStudentAssignments] Error fetching students in class:",
+            err
+          );
+          setError("Failed to verify class enrollment.");
+          return;
+        }
       }
 
       setLoading(true);
@@ -82,12 +104,18 @@ export const useStudentAssignments = (): UseStudentAssignmentsReturn => {
           : { status: "error", message: "Empty response from server" };
 
         if (response.ok && result.status === "success") {
-          setAssignments(
-            result.data.map((assignment: Assignment) => ({
+          setAssignments((prev) => [
+            ...prev.filter((a) => a.classId !== classId),
+            ...result.data.map((assignment: Assignment) => ({
               ...assignment,
+              classId,
               createdAt: new Date(assignment.createdAt),
-            }))
-          );
+            })),
+          ]);
+          setHasFetched((prev) => ({
+            ...prev,
+            assignments: new Set(prev.assignments).add(classId),
+          }));
           setError(null);
         } else {
           console.error(
@@ -117,18 +145,22 @@ export const useStudentAssignments = (): UseStudentAssignmentsReturn => {
         setLoading(false);
       }
     },
-    [isAuthenticated, user]
+    [
+      isAuthenticated,
+      user,
+      hasFetched.assignments,
+      hasFetched.studentsInClass,
+      fetchStudentsInClass,
+    ]
   );
 
   const fetchScores = useCallback(
     async (studentId: string) => {
-      if (!isAuthenticated || !user?.userId) {
-        toast({
-          title: "Error",
-          description: "You must be logged in to fetch scores.",
-          variant: "destructive",
-        });
-        setError("You must be logged in to fetch scores.");
+      if (
+        !isAuthenticated ||
+        !user?.userId ||
+        hasFetched.scores.has(studentId)
+      ) {
         return;
       }
 
@@ -140,42 +172,6 @@ export const useStudentAssignments = (): UseStudentAssignmentsReturn => {
           description: "Invalid session. Please log in again.",
           variant: "destructive",
         });
-        setError("Invalid session. Please log in again.");
-        return;
-      }
-
-      // For teachers, verify the student is associated with them
-      if (user.userType === "teacher") {
-        const allStudents: any[] = [];
-        for (const classItem of classes) {
-          const students = await fetchStudentsInClass(classItem.id);
-          allStudents.push(...students);
-        }
-        if (!allStudents.some((s: any) => s.userId === studentId)) {
-          console.error(
-            "[useStudentAssignments] Student not associated with teacher:",
-            studentId
-          );
-          toast({
-            title: "Error",
-            description:
-              "You are not authorized to view this student's scores.",
-            variant: "destructive",
-          });
-          setError("You are not authorized to view this student's scores.");
-          return;
-        }
-      } else if (user.userType === "student" && user.userId !== studentId) {
-        console.error(
-          "[useStudentAssignments] Unauthorized score access:",
-          studentId
-        );
-        toast({
-          title: "Error",
-          description: "You can only view your own scores.",
-          variant: "destructive",
-        });
-        setError("You can only view your own scores.");
         return;
       }
 
@@ -194,12 +190,18 @@ export const useStudentAssignments = (): UseStudentAssignmentsReturn => {
           : { status: "error", message: "Empty response from server" };
 
         if (response.ok && result.status === "success") {
-          setScores(
-            result.data.map((score: Score) => ({
+          setScores((prev) => [
+            ...prev.filter((s) => s.studentId !== studentId),
+            ...result.data.map((score: Score) => ({
               ...score,
+              studentId,
               completedAt: new Date(score.completedAt),
-            }))
-          );
+            })),
+          ]);
+          setHasFetched((prev) => ({
+            ...prev,
+            scores: new Set(prev.scores).add(studentId),
+          }));
           setError(null);
         } else {
           console.error(
@@ -225,23 +227,31 @@ export const useStudentAssignments = (): UseStudentAssignmentsReturn => {
         setLoading(false);
       }
     },
-    [isAuthenticated, user, classes, fetchStudentsInClass]
+    [isAuthenticated, user, hasFetched.scores]
   );
 
   const submitScore = useCallback(
     async (score: Score) => {
-      if (!isAuthenticated || !user?.userId || user.userType !== "student") {
+      if (
+        !isAuthenticated ||
+        !user?.userId ||
+        user.userType !== "student" ||
+        score.studentId !== user.userId
+      ) {
         toast({
           title: "Error",
-          description: "Only authenticated students can submit scores.",
+          description:
+            "Only authenticated students can submit scores for themselves.",
           variant: "destructive",
         });
-        setError("Only authenticated students can submit scores.");
+        setError(
+          "Only authenticated students can submit scores for themselves."
+        );
         return;
       }
 
-      const token = localStorage.getItem("StenoMaster-token");
-      if (!token || typeof token !== "string" || token.trim() === "") {
+      const token = localStorage.getItem("studentMaster-token");
+      if (!token || typeof token !== "string" || token.trim()) {
         console.error("[useStudentAssignments] Invalid token in localStorage");
         toast({
           title: "Error",
@@ -252,11 +262,9 @@ export const useStudentAssignments = (): UseStudentAssignmentsReturn => {
         return;
       }
 
-      // Verify the assignment exists and is accessible
-      const classId = assignments.find(
-        (a) => a.id === score.assignmentId
-      )?.classId;
-      if (!classId) {
+      // Verify the assignment exists
+      const assignment = assignments.find((a) => a.id === score.assignmentId);
+      if (!assignment) {
         console.error(
           "[useStudentAssignments] Assignment not found:",
           score.assignmentId
@@ -270,31 +278,53 @@ export const useStudentAssignments = (): UseStudentAssignmentsReturn => {
         return;
       }
 
-      const studentsInClass = await fetchStudentsInClass(classId);
-      if (!studentsInClass.some((s: any) => s.userId === user.userId)) {
-        console.error(
-          "[useStudentAssignments] Student not enrolled in class:",
-          classId
-        );
-        toast({
-          title: "Error",
-          description: "You are not enrolled in this class.",
-          variant: "destructive",
-        });
-        setError("You are not enrolled in this class.");
-        return;
+      // Verify student enrollment in the class
+      const classId = assignment!.classId;
+      if (!hasFetched.studentsInClass.has(classId)) {
+        try {
+          const studentsInClass = await fetchStudentsInClass(classId);
+          setHasFetched((prev) => ({
+            ...prev,
+            studentsInClass: new Set(prev.studentsInClass).add(classId),
+          }));
+          if (!studentsInClass.some((s: any) => s.userId === user.userId)) {
+            console.error(
+              "[useStudentAssignments] Student not enrolled in class:",
+              classId
+            );
+            toast({
+              title: "Error",
+              description: "You are not enrolled in this class.",
+              variant: "destructive",
+            });
+            setError("You are not enrolled in this class.");
+            return;
+          }
+        } catch (err) {
+          console.error(
+            "[useStudentAssignments] Error fetching students in class:",
+            err
+          );
+          setError("Failed to verify class enrollment.");
+          return;
+        }
       }
 
       setLoading(true);
       try {
-        const response = await fetch("/api/score/create", {
+        const response = await fetch("/api/score/submit", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            ...score,
+            id: score.id,
             studentId: user.userId,
-            token,
+            assignmentId: score.assignmentId,
+            typedText: score.typedText,
+            accuracy: score.accuracy,
+            wpm: score.wpm,
+            timeElapsed: score.timeElapsed,
             completedAt: score.completedAt.toISOString(),
+            token,
           }),
           signal: AbortSignal.timeout(5000),
         });
@@ -309,6 +339,7 @@ export const useStudentAssignments = (): UseStudentAssignmentsReturn => {
             ...prev,
             {
               ...result.data,
+              studentId: user.userId,
               completedAt: new Date(result.data.completedAt),
             },
           ]);
@@ -342,8 +373,23 @@ export const useStudentAssignments = (): UseStudentAssignmentsReturn => {
         setLoading(false);
       }
     },
-    [isAuthenticated, user, assignments, fetchStudentsInClass]
+    [
+      isAuthenticated,
+      user,
+      assignments,
+      fetchStudentsInClass,
+      hasFetched.studentsInClass,
+    ]
   );
+
+  // Reset hasFetched when user changes
+  useEffect(() => {
+    setHasFetched({
+      assignments: new Set(),
+      scores: new Set(),
+      studentsInClass: new Set(),
+    });
+  }, [user]);
 
   return {
     assignments,

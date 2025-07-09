@@ -8,41 +8,66 @@ import StudentsScores from "@/components/StudentsScores";
 import { useAuth } from "@/hooks/useAuth";
 import { useAssignment } from "@/hooks/useAssignments";
 import { useClass } from "@/hooks/useClasses";
+import { useStudentAssignments } from "@/hooks/useStudentAssignments";
+import { Score } from "@/types";
 
 const TeacherDashboard = () => {
-  const { fetchStudent, students, isAuthenticated, user } = useAuth();
-  const [isLoading, setIsLoading] = useState(false);
+  const { user, fetchStudent, students } = useAuth();
   const { assignments, fetchAssignments } = useAssignment();
-  const { classes, fetchClasses } = useClass();
+  const { classes, fetchClasses, fetchStudentsInClass } = useClass();
+  const { fetchScores, scores, loading, error } = useStudentAssignments();
+  const { colorScheme } = useTheme();
+  const [hasFetched, setHasFetched] = useState(false);
+  const [studentClasses, setStudentClasses] = useState<Record<string, string>>(
+    {}
+  );
+  const [allScores, setAllScores] = useState<Score[]>([]);
 
   useEffect(() => {
-    const fetchStudents = async () => {
-      if (!isAuthenticated || user?.userType !== "teacher") {
-        console.log(
-          "[TeacherDashboard] Skipping fetchStudent: User not authenticated or not a teacher"
-        );
-        return;
-      }
-      setIsLoading(true);
+    if (!user?.userType || user.userType !== "teacher" || hasFetched) {
+      return;
+    }
+
+    const fetchData = async () => {
       try {
-        const studentData = await fetchStudent();
-        if (!studentData) {
-          console.error("No student data found");
-          return;
+        await fetchClasses();
+        await fetchStudent();
+        await fetchAssignments();
+        const studentClassMap: Record<string, string> = {};
+        const aggregatedScores: Score[] = [];
+
+        for (const classItem of classes) {
+          const studentsInClass = await fetchStudentsInClass(classItem.id);
+          for (const student of studentsInClass) {
+            studentClassMap[student.userId] = classItem.id;
+            await fetchScores(student.userId);
+            aggregatedScores.push(
+              ...scores.filter((s) => s.studentId === student.userId)
+            );
+          }
         }
-        console.log("Fetched students:", studentData.length);
-      } catch (error) {
-        console.error("Error fetching students:", error);
-      } finally {
-        setIsLoading(false);
+
+        setStudentClasses(studentClassMap);
+        setAllScores(aggregatedScores);
+        setHasFetched(true);
+      } catch (err) {
+        console.error("[TeacherDashboard] Error fetching data:", err);
       }
     };
-    fetchStudents();
-    fetchAssignments();
-    fetchClasses();
-  }, [isAuthenticated, user]);
 
-  if (isLoading || !students || !assignments || !classes) {
+    fetchData();
+  }, [
+    user,
+    fetchClasses,
+    fetchStudent,
+    fetchStudentsInClass,
+    fetchScores,
+    classes,
+    scores,
+    hasFetched,
+  ]);
+
+  if (!students || !assignments || !classes) {
     return (
       <div className="flex items-center justify-center h-full">
         <p className="text-lg font-semibold">Loading...</p>
@@ -70,8 +95,6 @@ const TeacherDashboard = () => {
       color: "from-indigo-500 to-indigo-600",
     },
   ];
-
-  const { colorScheme } = useTheme();
 
   return (
     <div className="space-y-4 sm:space-y-6 lg:space-y-8">

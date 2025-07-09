@@ -29,25 +29,23 @@ const TypingTestContent = () => {
   const [isCompleted, setIsCompleted] = useState(false);
   const [timeElapsed, setTimeElapsed] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
+  const [hasFetched, setHasFetched] = useState(false);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const { user } = useAuth();
   const { colorScheme } = useTheme();
   const { scores, fetchScores, submitScore, error } = useStudentAssignments();
 
   useEffect(() => {
+    if (!user?.userId || hasFetched) {
+      setIsLoading(false);
+      return;
+    }
+
     const fetchTestResults = async () => {
-      if (!user?.userId) {
-        toast({
-          title: "Authentication Required",
-          description: "Please log in to view test results.",
-          variant: "destructive",
-        });
-        setIsLoading(false);
-        return;
-      }
       setIsLoading(true);
       try {
         await fetchScores(user.userId);
+        setHasFetched(true);
       } catch (error) {
         toast({
           title: "Error",
@@ -61,8 +59,9 @@ const TypingTestContent = () => {
         setIsLoading(false);
       }
     };
+
     fetchTestResults();
-  }, [user, fetchScores]);
+  }, [user, fetchScores, hasFetched]);
 
   useEffect(() => {
     if (error) {
