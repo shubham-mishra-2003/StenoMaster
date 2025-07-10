@@ -12,7 +12,6 @@ type StudentsScoresProps = {
   studentClasses: Record<string, string>;
   assignments: Assignment[];
   classes: Class[];
-  user: User | null;
   students: User[];
 };
 
@@ -21,7 +20,6 @@ const StudentsScores = ({
   studentClasses,
   assignments,
   classes,
-  user,
   students,
 }: StudentsScoresProps) => {
   const [isScoreOpen, setIsScoreOpen] = useState(false);
@@ -52,16 +50,6 @@ const StudentsScores = ({
     const total = studentScores.reduce((sum, score) => sum + score.wpm, 0);
     return Math.round(total / studentScores.length);
   };
-
-  if (!students || !user) {
-    return (
-      <Card>
-        <CardContent className="flex flex-col items-center justify-center py-12">
-          <p className="text-muted-foreground">Loading scores...</p>
-        </CardContent>
-      </Card>
-    );
-  }
 
   return (
     <div className="space-y-6">
@@ -101,7 +89,7 @@ const StudentsScores = ({
           </CardContent>
         </Card>
       ) : (
-        <div className="grid gap-6">
+        <div className="grid gap-3">
           {students.map((student) => {
             const studentScores = getStudentScores(student.userId);
             const avgAccuracy = calculateAverageAccuracy(studentScores);

@@ -15,66 +15,103 @@ const TeacherDashboard = () => {
   const { assignments, fetchAssignments } = useAssignment();
   const { classes, fetchClasses, fetchStudentsInClass } = useClass();
   const { colorScheme } = useTheme();
+
   const [hasFetched, setHasFetched] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [studentClasses, setStudentClasses] = useState<Record<string, string>>(
     {}
   );
   const [allScores, setAllScores] = useState<Score[]>([]);
-  
 
   useEffect(() => {
-    if (!user?.userType || user.userType !== "teacher" || hasFetched) {
-      return;
-    }
+    if (!user?.userType || user.userType !== "teacher" || hasFetched) return;
 
     const fetchData = async () => {
+      setLoading(true);
       try {
         await fetchClasses();
         await fetchStudent();
         await fetchAssignments();
-        const studentClassMap: Record<string, string> = {};
-        const aggregatedScores: Score[] = [];
-        const token = localStorage.getItem("StenoMaster-token");
 
-        for (const classItem of classes) {
-          const studentsInClass = await fetchStudentsInClass(classItem.id);
-          for (const student of studentsInClass) {
-            studentClassMap[student.userId] = classItem.id;
-            const response = await fetch("/api/score/fetch", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ studentId: student.userId, token }),
-              signal: AbortSignal.timeout(5000),
-            });
-
-            const text = await response.text();
-            const result = text
-              ? JSON.parse(text)
-              : { status: "error", message: "Empty response from server" };
-
-            if (result.status === "success" && Array.isArray(result.data)) {
-              aggregatedScores.push(...result.data);
-            } else {
-              console.warn(`No scores for student ${student.userId}`);
-            }
-          }
+        if (!classes || classes.length === 0) {
+          console.warn("[TeacherDashboard] No classes available.");
+          return;
         }
 
+        const token = localStorage.getItem("StenoMaster-token");
+        const studentClassMap: Record<string, string> = {};
+        const aggregatedScores: Score[] = [];
+
+        const fetchPromises = classes.map(async (classItem) => {
+          const studentsInClass = await fetchStudentsInClass(classItem.id);
+          const scorePromises = studentsInClass.map(async (student) => {
+            studentClassMap[student.userId] = classItem.id;
+
+            try {
+              const response = await fetch("/api/score/fetch", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ studentId: student.userId, token }),
+                signal: AbortSignal.timeout(5000),
+              });
+
+              const text = await response.text();
+              const result = text
+                ? JSON.parse(text)
+                : { status: "error", message: "Empty response from server" };
+
+              if (result.status === "success" && Array.isArray(result.data)) {
+                aggregatedScores.push(...result.data);
+              } else {
+                console.warn(`No scores for student ${student.userId}`);
+              }
+            } catch (err) {
+              console.error(
+                `[Score Fetch] Error for student ${student.userId}:`,
+                err
+              );
+            }
+          });
+
+          return Promise.all(scorePromises);
+        });
+
+        await Promise.all(fetchPromises);
         setStudentClasses(studentClassMap);
         setAllScores(aggregatedScores);
         setHasFetched(true);
       } catch (err) {
         console.error("[TeacherDashboard] Error fetching data:", err);
+      } finally {
+        setLoading(false);
       }
     };
 
     fetchData();
-  }, [user, classes, hasFetched]);
+  }, [user, hasFetched]);
 
-  if (!students || !assignments || !classes) {
+  if (loading || !students || !assignments || !classes) {
     return (
-      <div className="flex items-center justify-center h-full">
-        <p className="text-lg font-semibold">Loading...</p>
+      <div className="space-y-4 sm:space-y-6 lg:space-y-8">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <div className="h-8 w-64 bg-gray-200 dark:bg-gray-700 animate-pulse rounded" />
+            <div className="h-4 w-48 bg-gray-200 dark:bg-gray-700 animate-pulse mt-2 rounded" />
+          </div>
+        </div>
+        <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-3 lg:grid-cols-3">
+          {[...Array(3)].map((_, index) => (
+            <Card key={index} className="group">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative z-10">
+                <div className="h-4 w-24 bg-gray-200 dark:bg-gray-700 animate-pulse rounded" />
+                <div className="p-2 rounded-lg bg-gray-200 dark:bg-gray-700 animate-pulse h-8 w-8" />
+              </CardHeader>
+              <CardContent className="relative z-10">
+                <div className="h-6 w-12 bg-gray-200 dark:bg-gray-700 animate-pulse rounded" />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
       </div>
     );
   }
@@ -124,7 +161,7 @@ const TeacherDashboard = () => {
             <Card key={index} className="group">
               <div
                 className={`absolute group-hover:opacity-10 inset-0 bg-gradient-to-br ${stat.color} opacity-5`}
-              ></div>
+              />
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative z-10">
                 <CardTitle className="text-sm sm:text-[16px] font-medium">
                   {stat.title}
@@ -148,13 +185,13 @@ const TeacherDashboard = () => {
           );
         })}
       </div>
+
       <StudentsScores
         allScores={allScores}
         studentClasses={studentClasses}
         assignments={assignments}
         classes={classes}
         students={students}
-        user={user}
       />
     </div>
   );
