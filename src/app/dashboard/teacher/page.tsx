@@ -15,7 +15,6 @@ const TeacherDashboard = () => {
   const { assignments, fetchAssignments } = useAssignment();
   const { classes, fetchClasses, fetchStudentsInClass } = useClass();
   const { colorScheme } = useTheme();
-
   const [hasFetched, setHasFetched] = useState(false);
   const [loading, setLoading] = useState(true);
   const [studentClasses, setStudentClasses] = useState<Record<string, string>>(
@@ -24,59 +23,46 @@ const TeacherDashboard = () => {
   const [allScores, setAllScores] = useState<Score[]>([]);
 
   useEffect(() => {
-    if (!user?.userType || user.userType !== "teacher" || hasFetched) return;
+    if (!user?.userType || user.userType !== "teacher" || hasFetched) {
+      return;
+    }
 
     const fetchData = async () => {
       setLoading(true);
       try {
-        await fetchClasses();
-        await fetchStudent();
-        await fetchAssignments();
+        await Promise.all([fetchClasses(), fetchStudent(), fetchAssignments()]);
 
-        if (!classes || classes.length === 0) {
-          console.warn("[TeacherDashboard] No classes available.");
-          return;
-        }
-
-        const token = localStorage.getItem("StenoMaster-token");
         const studentClassMap: Record<string, string> = {};
         const aggregatedScores: Score[] = [];
+        const token = localStorage.getItem("StenoMaster-token");
 
         const fetchPromises = classes.map(async (classItem) => {
           const studentsInClass = await fetchStudentsInClass(classItem.id);
           const scorePromises = studentsInClass.map(async (student) => {
             studentClassMap[student.userId] = classItem.id;
+            const response = await fetch("/api/score/fetch", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ studentId: student.userId, token }),
+              signal: AbortSignal.timeout(5000),
+            });
 
-            try {
-              const response = await fetch("/api/score/fetch", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ studentId: student.userId, token }),
-                signal: AbortSignal.timeout(5000),
-              });
+            const text = await response.text();
+            const result = text
+              ? JSON.parse(text)
+              : { status: "error", message: "Empty response from server" };
 
-              const text = await response.text();
-              const result = text
-                ? JSON.parse(text)
-                : { status: "error", message: "Empty response from server" };
-
-              if (result.status === "success" && Array.isArray(result.data)) {
-                aggregatedScores.push(...result.data);
-              } else {
-                console.warn(`No scores for student ${student.userId}`);
-              }
-            } catch (err) {
-              console.error(
-                `[Score Fetch] Error for student ${student.userId}:`,
-                err
-              );
+            if (result.status === "success" && Array.isArray(result.data)) {
+              aggregatedScores.push(...result.data);
+            } else {
+              console.warn(`No scores for student ${student.userId}`);
             }
           });
-
           return Promise.all(scorePromises);
         });
 
         await Promise.all(fetchPromises);
+
         setStudentClasses(studentClassMap);
         setAllScores(aggregatedScores);
         setHasFetched(true);
@@ -88,7 +74,7 @@ const TeacherDashboard = () => {
     };
 
     fetchData();
-  }, [user, hasFetched]);
+  }, [user, classes, hasFetched]);
 
   if (loading || !students || !assignments || !classes) {
     return (
@@ -133,7 +119,7 @@ const TeacherDashboard = () => {
       title: "Students",
       value: students.length,
       icon: Users,
-      color: "from-indigo-500 to-indigo-600",
+      color: "from-indigo-500 Otis500 to-indigo-600",
     },
   ];
 
@@ -161,7 +147,7 @@ const TeacherDashboard = () => {
             <Card key={index} className="group">
               <div
                 className={`absolute group-hover:opacity-10 inset-0 bg-gradient-to-br ${stat.color} opacity-5`}
-              />
+              ></div>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative z-10">
                 <CardTitle className="text-sm sm:text-[16px] font-medium">
                   {stat.title}
@@ -185,7 +171,6 @@ const TeacherDashboard = () => {
           );
         })}
       </div>
-
       <StudentsScores
         allScores={allScores}
         studentClasses={studentClasses}
