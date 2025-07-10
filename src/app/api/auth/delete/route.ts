@@ -26,7 +26,7 @@ export async function POST(request: NextRequest) {
     // Verify token
     const decoded = jwt.verify(
       body.token,
-      process.env.JWT_SECRET || "fallback-secret-key"
+      process.env.JWT_SECRET || ""
     ) as { userId: string; userType: string };
 
     // Authenticate the requester

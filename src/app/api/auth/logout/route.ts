@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
     }
     const decoded = jwt.verify(
       body.token,
-      process.env.JWT_SECRET || "fallback-secret-key"
+      process.env.JWT_SECRET || ""
     ) as { userId: string; userType: string };
     if (decoded.userId !== body.userId) {
       return NextResponse.json(

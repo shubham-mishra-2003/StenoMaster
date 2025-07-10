@@ -1,135 +1,37 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { BarChart3, Trophy, Clock, Target } from "lucide-react";
 import { useTheme } from "@/hooks/ThemeProvider";
-import { useStudentAssignments } from "@/hooks/useStudentAssignments";
-import { useAuth } from "@/hooks/useAuth";
-import { useClass } from "@/hooks/useClasses";
-import { useAssignment } from "@/hooks/useAssignments";
-import { toast } from "@/hooks/use-toast";
-import { Score } from "@/types";
+import { Assignment, Class, Score, User } from "@/types";
 import StudentScoreDetails from "./StudentScoreDetails";
 
-const StudentsScores = () => {
-  const [allScores, setAllScores] = useState<Score[]>([]);
-  const [hasFetched, setHasFetched] = useState(false);
-  const [hasFetchedClasses, setHasFetchedClasses] = useState(false);
-  const [studentClasses, setStudentClasses] = useState<Record<string, string>>(
-    {}
-  );
-  const { user, fetchStudent, students } = useAuth();
-  const { colorScheme } = useTheme();
-  const { classes, fetchClasses, fetchStudentsInClass } = useClass();
-  const { fetchAssignments, assignments } = useAssignment();
+type StudentsScoresProps = {
+  allScores: Score[];
+  studentClasses: Record<string, string>;
+  assignments: Assignment[];
+  classes: Class[];
+  user: User | null;
+  students: User[];
+};
+
+const StudentsScores = ({
+  allScores,
+  studentClasses,
+  assignments,
+  classes,
+  user,
+  students,
+}: StudentsScoresProps) => {
   const [isScoreOpen, setIsScoreOpen] = useState(false);
-  const [apiScore, setAPIScore] = useState<Score[]>([]);
-
-  useEffect(() => {
-    if (!user?.userType || user.userType !== "teacher" || hasFetchedClasses) {
-      console.log(
-        "[StudentsScores] Skipping fetch: Not a teacher or already fetched"
-      );
-      return;
-    }
-
-    const fetchInitialData = async () => {
-      try {
-        await fetchClasses();
-        await fetchStudent();
-        setHasFetchedClasses(true);
-      } catch (err) {
-        console.error("[StudentsScores] Error fetching initial data:", err);
-        toast({
-          title: "Error",
-          description: "Failed to load classes or students.",
-          variant: "destructive",
-        });
-      }
-    };
-
-    fetchInitialData();
-  }, [user, fetchClasses, fetchStudent, hasFetchedClasses]);
-
-  useEffect(() => {
-    if (
-      !user?.userType ||
-      user.userType !== "teacher" ||
-      hasFetched ||
-      classes.length === 0 ||
-      !students
-    ) {
-      return;
-    }
-
-    const token = localStorage.getItem("StenoMaster-token");
-
-    const fetchAllData = async () => {
-      try {
-        const studentClassMap: Record<string, string> = {};
-        const aggregatedScores: Score[] = [];
-
-        for (const classItem of classes) {
-          await fetchAssignments(classItem.id);
-          const studentsInClass = await fetchStudentsInClass(classItem.id);
-          console.log("In class students - ", studentsInClass);
-
-          for (const student of studentsInClass) {
-            studentClassMap[student.userId] = classItem.id;
-            console.log(`Student - ${student.userId}`);
-
-            const response = await fetch("/api/score/fetch", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ studentId: student.userId, token }),
-              signal: AbortSignal.timeout(5000),
-            });
-
-            const text = await response.text();
-            const result = text
-              ? JSON.parse(text)
-              : { status: "error", message: "Empty response from server" };
-
-            if (result.status === "success" && Array.isArray(result.data)) {
-              aggregatedScores.push(...result.data);
-              console.log("response from fetch API - ", result.data);
-            } else {
-              console.warn(`No scores for student ${student.userId}`);
-            }
-          }
-        }
-
-        setStudentClasses(studentClassMap);
-        setAPIScore(aggregatedScores); // Set all scores at once
-        setHasFetched(true);
-      } catch (err) {
-        console.error("[StudentsScores] Error fetching data:", err);
-        toast({
-          title: "Error",
-          description: "Failed to load student scores or assignments.",
-          variant: "destructive",
-        });
-      }
-    };
-
-    fetchAllData();
-  }, [
-    user,
-    classes,
-    students,
-    hasFetched,
-    fetchAssignments,
-    fetchStudentsInClass,
-  ]);
+  const [selectedStudentId, setSelectedStudentId] = useState<string | null>(
+    null
+  );
+  const { colorScheme } = useTheme();
 
   const getStudentScores = (studentId: string) => {
-    return apiScore.filter((s) => s.studentId === studentId);
-  };
-
-  const getAssignmentTitle = (assignmentId: string) => {
-    const assignment = assignments.find((a) => a.id === assignmentId);
-    return assignment?.title || "Unknown Assignment";
+    return allScores.filter((s) => s.studentId === studentId);
   };
 
   const getClassName = (studentId: string) => {
@@ -201,14 +103,16 @@ const StudentsScores = () => {
       ) : (
         <div className="grid gap-6">
           {students.map((student) => {
-            const studentScores = apiScore;
+            const studentScores = getStudentScores(student.userId);
             const avgAccuracy = calculateAverageAccuracy(studentScores);
             const avgWPM = calculateAverageWPM(studentScores);
-
             return (
               <Card
                 key={student.userId}
-                onClick={() => setIsScoreOpen(true)}
+                onClick={() => {
+                  setSelectedStudentId(student.userId);
+                  setIsScoreOpen(true);
+                }}
                 className="cursor-pointer"
               >
                 <CardHeader>
@@ -302,10 +206,13 @@ const StudentsScores = () => {
                   </div>
                 </CardHeader>
                 <StudentScoreDetails
-                  studentScores={studentScores}
+                  studentScores={getStudentScores(student.userId)}
                   assignments={assignments}
-                  isOpen={isScoreOpen}
-                  onClose={() => setIsScoreOpen(false)}
+                  isOpen={isScoreOpen && selectedStudentId === student.userId}
+                  onClose={() => {
+                    setIsScoreOpen(false);
+                    setSelectedStudentId(null);
+                  }}
                 />
               </Card>
             );

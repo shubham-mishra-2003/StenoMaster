@@ -85,8 +85,7 @@ export async function POST(request: NextRequest) {
     // Generate JWT and store in database
     const token = jwt.sign(
       { userId: newUser.userId, userType: newUser.userType },
-      process.env.JWT_SECRET || "fallback-secret-key",
-      { expiresIn: "1h" }
+      process.env.JWT_SECRET || "",
     );
 
     await User.updateOne(

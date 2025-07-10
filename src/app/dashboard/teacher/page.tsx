@@ -8,20 +8,19 @@ import StudentsScores from "@/components/StudentsScores";
 import { useAuth } from "@/hooks/useAuth";
 import { useAssignment } from "@/hooks/useAssignments";
 import { useClass } from "@/hooks/useClasses";
-import { useStudentAssignments } from "@/hooks/useStudentAssignments";
 import { Score } from "@/types";
 
 const TeacherDashboard = () => {
   const { user, fetchStudent, students } = useAuth();
   const { assignments, fetchAssignments } = useAssignment();
   const { classes, fetchClasses, fetchStudentsInClass } = useClass();
-  const { fetchScores, scores, loading, error } = useStudentAssignments();
   const { colorScheme } = useTheme();
   const [hasFetched, setHasFetched] = useState(false);
   const [studentClasses, setStudentClasses] = useState<Record<string, string>>(
     {}
   );
   const [allScores, setAllScores] = useState<Score[]>([]);
+  
 
   useEffect(() => {
     if (!user?.userType || user.userType !== "teacher" || hasFetched) {
@@ -35,15 +34,29 @@ const TeacherDashboard = () => {
         await fetchAssignments();
         const studentClassMap: Record<string, string> = {};
         const aggregatedScores: Score[] = [];
+        const token = localStorage.getItem("StenoMaster-token");
 
         for (const classItem of classes) {
           const studentsInClass = await fetchStudentsInClass(classItem.id);
           for (const student of studentsInClass) {
             studentClassMap[student.userId] = classItem.id;
-            await fetchScores(student.userId);
-            aggregatedScores.push(
-              ...scores.filter((s) => s.studentId === student.userId)
-            );
+            const response = await fetch("/api/score/fetch", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ studentId: student.userId, token }),
+              signal: AbortSignal.timeout(5000),
+            });
+
+            const text = await response.text();
+            const result = text
+              ? JSON.parse(text)
+              : { status: "error", message: "Empty response from server" };
+
+            if (result.status === "success" && Array.isArray(result.data)) {
+              aggregatedScores.push(...result.data);
+            } else {
+              console.warn(`No scores for student ${student.userId}`);
+            }
           }
         }
 
@@ -56,16 +69,7 @@ const TeacherDashboard = () => {
     };
 
     fetchData();
-  }, [
-    user,
-    fetchClasses,
-    fetchStudent,
-    fetchStudentsInClass,
-    fetchScores,
-    classes,
-    scores,
-    hasFetched,
-  ]);
+  }, [user, classes, hasFetched]);
 
   if (!students || !assignments || !classes) {
     return (
@@ -83,7 +87,7 @@ const TeacherDashboard = () => {
       color: "from-blue-500 to-blue-600",
     },
     {
-      title: "Active Assignments",
+      title: "Total Assignments",
       value: assignments.length,
       icon: BookOpen,
       color: "from-purple-500 to-purple-600",
@@ -144,7 +148,14 @@ const TeacherDashboard = () => {
           );
         })}
       </div>
-      <StudentsScores />
+      <StudentsScores
+        allScores={allScores}
+        studentClasses={studentClasses}
+        assignments={assignments}
+        classes={classes}
+        students={students}
+        user={user}
+      />
     </div>
   );
 };

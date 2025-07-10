@@ -79,10 +79,10 @@ export async function getUserByEmail(email: string) {
 export async function validateSessionToken(token: string) {
   try {
     await connectToDatabase();
-    const decoded = jwt.verify(
-      token,
-      process.env.JWT_SECRET || "fallback-secret-key"
-    ) as { userId: string; userType: string };
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || "") as {
+      userId: string;
+      userType: string;
+    };
     const user = await User.findOne({
       userId: decoded.userId,
       sessionToken: token,
