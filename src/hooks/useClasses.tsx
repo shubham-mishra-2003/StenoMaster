@@ -13,6 +13,7 @@ interface ClassState {
 interface ClassContextType extends ClassState {
   createClass: (name: string) => Promise<void>;
   fetchClasses: () => Promise<void>;
+  fetchStudentClasses: () => Promise<void>;
   deleteClass: (classId: string) => Promise<void>;
   assignStudentToClass: (classId: string, studentId: string) => Promise<void>;
   removeStudentFromClass: (classId: string, studentId: string) => Promise<void>;
@@ -116,7 +117,12 @@ export const ClassProvider: React.FC<{ children: React.ReactNode }> = ({
         },
       });
 
-      const result = await response.json();
+      const text = await response.text();
+      const result = text
+        ? JSON.parse(text)
+        : { status: "error", message: "Empty response from server" };
+
+      console.log("Fetched classes - ", result);
       if (response.ok && result.status === "success") {
         setClassState((prev) => ({
           ...prev,
@@ -134,6 +140,57 @@ export const ClassProvider: React.FC<{ children: React.ReactNode }> = ({
       toast({
         title: "Error",
         description: "An unexpected error occurred while fetching classes.",
+        variant: "destructive",
+      });
+    } finally {
+      setClassState((prev) => ({ ...prev, isLoading: false }));
+    }
+  }, []);
+
+  const fetchStudentClasses = useCallback(async () => {
+    const token = getToken();
+    if (!token) {
+      toast({
+        title: "Error",
+        description: "You must be logged in to fetch classes.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setClassState((prev) => ({ ...prev, isLoading: true }));
+    try {
+      const response = await fetch("/api/classes", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ action: "getStudentClasses" }),
+      });
+
+      const text = await response.text();
+      const result = text
+        ? JSON.parse(text)
+        : { status: "error", message: "Empty response from server" };
+      if (response.ok && result.status === "success") {
+        setClassState((prev) => ({
+          ...prev,
+          classes: result.data,
+        }));
+      } else {
+        toast({
+          title: "Error",
+          description: result.message || "Failed to fetch student classes",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error("[useClass] Fetch student classes error:", error);
+      toast({
+        title: "Error",
+        description:
+          "An unexpected error occurred while fetching student classes.",
         variant: "destructive",
       });
     } finally {
@@ -174,7 +231,7 @@ export const ClassProvider: React.FC<{ children: React.ReactNode }> = ({
             title: "Success",
             description: "Class deleted successfully.",
           });
-          router.refresh;
+          router.refresh();
         } else {
           toast({
             title: "Error",
@@ -352,6 +409,7 @@ export const ClassProvider: React.FC<{ children: React.ReactNode }> = ({
         ...classState,
         createClass,
         fetchClasses,
+        fetchStudentClasses,
         deleteClass,
         assignStudentToClass,
         removeStudentFromClass,

@@ -7,75 +7,110 @@ import { useRouter } from "next/navigation";
 import AssignmentList from "@/components/AssignmentList";
 import { useTheme } from "@/hooks/ThemeProvider";
 import { useAuth } from "@/hooks/useAuth";
-import { useStudentAssignments } from "@/hooks/useStudentAssignments";
 import { useClass } from "@/hooks/useClasses";
+import { Assignment, Class } from "@/types";
+import { useAssignment } from "@/hooks/useAssignments";
 import { toast } from "@/hooks/use-toast";
 
 const DashboardContent: React.FC = () => {
-  const [isLoading, setIsLoading] = useState(true);
+  const token = localStorage.getItem("StenoMaster-token");
+  const [loading, setLoading] = useState(true);
   const router = useRouter();
   const { colorScheme } = useTheme();
   const { user } = useAuth();
-  const { assignments, scores, loading, error, fetchAssignments, fetchScores } =
-    useStudentAssignments();
-  const { classes, fetchClasses, fetchStudentsInClass } = useClass();
+  const [assignments, setAssignments] = useState<Assignment[]>([]);
+  const [studentClass, setStudentClass] = useState<Class>();
 
-  useEffect(() => {
-    const fetchData = async () => {
-      if (!user?.userId || user.userType !== "student") {
-        toast({
-          title: "Authentication Required",
-          description: "Please log in as a student to view dashboard.",
-          variant: "destructive",
-        });
-        setIsLoading(false);
-        return;
-      }
+  if (!user) {
+    return;
+  }
 
-      setIsLoading(true);
-      try {
-        // Fetch scores for the authenticated student
-        await fetchScores(user.userId);
+  const fetchClasses = async () => {
+    try {
+      const response = await fetch("/api/classes", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ action: "getStudentClasses" }),
+      });
 
-        // Fetch assignments for all classes the student is enrolled in
-        await fetchClasses();
-        for (const classItem of classes) {
-          const studentsInClass = await fetchStudentsInClass(classItem.id);
-          if (studentsInClass.some((s: any) => s.userId === user.userId)) {
-            await fetchAssignments(classItem.id);
-          }
-        }
-      } catch (err) {
-        console.error("[DashboardContent] Error fetching data:", err);
+      const text = await response.text();
+      const result = text
+        ? JSON.parse(text)
+        : { status: "error", message: "Empty response from server" };
+      if (response.ok && result.status === "success") {
+        setStudentClass(result.data);
+        console.log("class fetch - ", studentClass);
+      } else {
         toast({
           title: "Error",
-          description: "Failed to load dashboard data.",
+          description: result.message || "Failed to fetch student classes",
           variant: "destructive",
         });
-      } finally {
-        setIsLoading(loading);
       }
-    };
-
-    fetchData();
-  }, [
-    user,
-    // fetchScores,
-    // fetchAssignments,
-    // fetchClasses,
-    // fetchStudentsInClass,
-    loading
-  ]);
-
-  useEffect(() => {
-    if (error) {
+    } catch (error) {
       toast({
         title: "Error",
-        description: error,
+        description:
+          "An unexpected error occurred while fetching student classes.",
         variant: "destructive",
       });
     }
-  }, [error]);
+  };
+
+  const fetchAssignments = async (classId?: string) => {
+    try {
+      if (!studentClass?.id) {
+        return;
+      }
+      console.log("Class tested - ", studentClass.id);
+      const response = await fetch("/api/assignment/fetch", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token: token, classId: classId }),
+        signal: AbortSignal.timeout(5000),
+      });
+
+      const text = await response.text();
+      const result = text
+        ? JSON.parse(text)
+        : { status: "error", message: "Failed to fetch assignment" };
+      console.log("Ass fetch - ", result.data);
+      setAssignments(result.data);
+      console.log(result);
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: "Failed to fetch assignment",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const scores = [
+    {
+      id: "score-1625738400003",
+      studentId: "O5YDWjGHcCTSE3ZFd3F73",
+      typedText: "The quick brown fox jumps over the lazy dog.",
+      accuracy: 90,
+      wpm: 40,
+      timeElapsed: 10,
+      completedAt: "2025-07-08T22:00:00.000Z",
+      assignmentId: "assignment-1752089345210",
+    },
+    {
+      id: "score-1625738400008",
+      studentId: "O5YDWjGHcCTSE3ZFd3F72",
+      assignmentId: "assignment-1752000240970",
+      typedText: "The quick brown fox jumps over the lazy dog.",
+      accuracy: 20,
+      wpm: 60,
+      timeElapsed: 5,
+      completedAt: "2025-07-08T22:00:00.000Z",
+    },
+  ];
 
   const calculateAverageWPM = (): string => {
     if (scores.length === 0) return "0";
@@ -92,63 +127,44 @@ const DashboardContent: React.FC = () => {
     return Math.round(totalAccuracy / scores.length).toString();
   };
 
-  const calculateTotalTime = (): string => {
-    if (scores.length === 0) return "0.0";
-    const totalSeconds = scores.reduce(
-      (sum, score) => sum + (score.timeElapsed || 0),
-      0
-    );
-    return (totalSeconds / 3600).toFixed(1);
-  };
-
   const stats = [
     {
       title: "Assignments Done",
       value: scores.length.toString(),
       icon: BookOpen,
-      change: "+3 this week",
       color: "from-blue-500 to-blue-600",
     },
     {
       title: "Average Speed",
       value: `${calculateAverageWPM()} WPM`,
       icon: Zap,
-      change: "+5 WPM improved",
       color: "from-purple-500 to-purple-600",
     },
     {
       title: "Accuracy",
       value: `${calculateAverageAccuracy()}%`,
       icon: Target,
-      change: "+3% this month",
       color: "from-green-500 to-green-600",
-    },
-    {
-      title: "Time Practiced",
-      value: `${calculateTotalTime()}h`,
-      icon: Clock,
-      change: "This week",
-      color: "from-orange-500 to-orange-600",
     },
   ];
 
-  const handleStartPractice = () => {
-    router.push("/dashboard/student/practice");
-  };
-
-  if (isLoading) {
-    return (
-      <div className="space-y-6">
-        <p className="text-muted-foreground">Loading dashboard...</p>
-      </div>
-    );
+  function getAssignmentsForStudent() {
+    const studentAssignments = studentClass?.assignments || [];
+    setAssignments(studentAssignments);
   }
 
   return (
     <div className="space-y-4 sm:space-y-6 lg:space-y-8">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold gradient-text">
+          <h1
+            className="text-xl sm:text-2xl lg:text-3xl font-bold gradient-text"
+            onClick={async () => {
+              await fetchClasses().then(() => {
+                fetchAssignments(studentClass?.id);
+              });
+            }}
+          >
             Student Dashboard
           </h1>
           <p
@@ -160,7 +176,7 @@ const DashboardContent: React.FC = () => {
           </p>
         </div>
       </div>
-      <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 mb-6">
+      <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-3 lg:grid-cols-3 mb-6">
         {stats.map((stat, index) => {
           const Icon = stat.icon;
           return (
@@ -197,22 +213,12 @@ const DashboardContent: React.FC = () => {
                 >
                   {stat.value}
                 </div>
-                <p
-                  className={`text-xs mt-1 ${
-                    colorScheme === "dark" ? "text-dark" : "text-light"
-                  }`}
-                >
-                  {stat.change}
-                </p>
               </CardContent>
             </Card>
           );
         })}
       </div>
-      <AssignmentList
-        assignments={assignments}
-        onStartPractice={handleStartPractice}
-      />
+      {/* <AssignmentList  /> */}
     </div>
   );
 };

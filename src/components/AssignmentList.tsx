@@ -5,17 +5,19 @@ import { Badge } from "@/components/ui/badge";
 import { Assignment } from "@/types";
 import { BookOpen, Play, Clock, FileText } from "lucide-react";
 import { useTheme } from "@/hooks/ThemeProvider";
+import { useRouter } from "next/navigation";
 
 interface AssignmentListProps {
   assignments: Assignment[];
-  onStartPractice: () => void;
 }
 
-const AssignmentList = ({
-  assignments,
-  onStartPractice,
-}: AssignmentListProps) => {
+const AssignmentList = ({ assignments }: AssignmentListProps) => {
   const { colorScheme } = useTheme();
+  const router = useRouter();
+
+  const handleStartPractice = (assignmentId: string) => {
+    router.push(`/dashboard/student/practice/${assignmentId}`);
+  };
 
   if (assignments.length === 0) {
     return (
@@ -87,7 +89,7 @@ const AssignmentList = ({
               </div>
 
               <Button
-                onClick={onStartPractice}
+                onClick={() => handleStartPractice(assignment.id)}
                 className="w-full gradient-button"
               >
                 <Play className="h-4 w-4 mr-2" />

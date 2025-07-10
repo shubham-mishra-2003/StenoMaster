@@ -201,3 +201,37 @@ export async function updateClassDoc(
     throw error;
   }
 }
+
+export async function getClassesByStudent(
+  studentId: string
+): Promise<IClass[]> {
+  try {
+    const db = await connectToFirebase();
+    const classesCollection = db.collection("classes");
+    const querySnapshot: QuerySnapshot = await classesCollection
+      .where("students", "array-contains", studentId)
+      .get();
+    const classes: IClass[] = [];
+    querySnapshot.forEach((doc: QueryDocumentSnapshot) => {
+      const data = doc.data();
+      if (!data) {
+        throw new Error("Class data is undefined");
+      }
+      classes.push({
+        id: doc.id,
+        name: data.name,
+        teacherId: data.teacherId,
+        students: data.students || [],
+        assignments: data.assignments || [],
+        createdAt:
+          data.createdAt instanceof Date
+            ? data.createdAt
+            : new Date(data.createdAt),
+      });
+    });
+    return classes;
+  } catch (error) {
+    handleError(error);
+    throw error;
+  }
+}

@@ -8,6 +8,7 @@ import {
   createClassDoc,
   getClassDocById,
   getClassesByTeacher,
+  getClassesByStudent,
   deleteClassDoc,
   assignStudentToClassDoc,
   removeStudentFromClassDoc,
@@ -42,6 +43,21 @@ export async function getClasses(token: string) {
       throw new Error("Only teachers can view classes");
     }
     const classes = await getClassesByTeacher(user.userId);
+    return classes;
+  } catch (error) {
+    handleError(error);
+    throw error;
+  }
+}
+
+export async function getStudentClasses(token: string) {
+  try {
+    await connectToDatabase();
+    const user = await validateSessionToken(token);
+    if (user.userType !== "student") {
+      throw new Error("Only students can view their enrolled classes");
+    }
+    const classes = await getClassesByStudent(user.userId);
     return classes;
   } catch (error) {
     handleError(error);

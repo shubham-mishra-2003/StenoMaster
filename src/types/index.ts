@@ -32,7 +32,7 @@ export interface Assignment {
   correctText: string;
   classId: string;
   teacherId: string;
-  createdAt: Date;
+  createdAt: string;
   isActive: boolean;
 }
 

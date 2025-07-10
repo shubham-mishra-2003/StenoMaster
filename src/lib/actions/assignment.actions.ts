@@ -82,10 +82,7 @@ export async function getAssignments(token: string, classId?: string) {
         throw new Error("Student not enrolled in this class");
       }
       const assignments = await getAssignmentsByClass(classId);
-      // Filter only active assignments
-      return assignments.filter(
-        (assignment: Assignment) => assignment.isActive
-      );
+      return assignments
     }
     throw new Error("Invalid user type");
   } catch (error) {

@@ -117,7 +117,7 @@ const Page = () => {
   ];
 
   useEffect(() => {
-    if (isAuthenticated || loading) {
+    if (isAuthenticated) {
       if (user) {
         router.push(`/dashboard/${user.userType}`);
       }
