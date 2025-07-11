@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { BookOpen, Clock } from "lucide-react";
+import { BookOpen } from "lucide-react";
 import Link from "next/link";
 import { useTheme } from "@/hooks/ThemeProvider";
 import { useAuth } from "@/hooks/useAuth";
@@ -13,30 +13,28 @@ import { Assignment } from "@/types";
 
 const StudentPracticeDashboard = () => {
   const { user, isAuthenticated } = useAuth();
-  const { classes, fetchClasses, fetchStudentsInClass } = useClass();
-  const { assignments, fetchAssignments, loading, error } =
-    useStudentAssignments();
+  const { classes, fetchStudentClasses, isLoading: classLoading } = useClass();
+  const { assignments, fetchAssignments, loading: assignmentsLoading, error } = useStudentAssignments();
   const { colorScheme } = useTheme();
   const [hasFetched, setHasFetched] = useState(false);
 
   useEffect(() => {
-    if (
-      !isAuthenticated ||
-      !user?.userId ||
-      user.userType !== "student" ||
-      hasFetched
-    ) {
+    if (!isAuthenticated || !user?.userId || user.userType !== "student" || hasFetched) {
       return;
     }
 
     const fetchData = async () => {
       try {
-        await fetchClasses();
+        // Fetch the student's enrolled classes
+        await fetchStudentClasses();
+
+        // Fetch assignments for each enrolled class
+        const token = localStorage.getItem("StenoMaster-token");
+        if (!token) {
+          throw new Error("Invalid session. Please log in again.");
+        }
         for (const classItem of classes) {
-          const studentsInClass = await fetchStudentsInClass(classItem.id);
-          if (studentsInClass.some((s: any) => s.userId === user.userId)) {
-            await fetchAssignments(classItem.id);
-          }
+          await fetchAssignments(classItem.id);
         }
         setHasFetched(true);
       } catch (err) {
@@ -50,15 +48,7 @@ const StudentPracticeDashboard = () => {
     };
 
     fetchData();
-  }, [
-    isAuthenticated,
-    user,
-    fetchClasses,
-    fetchAssignments,
-    fetchStudentsInClass,
-    classes,
-    hasFetched,
-  ]);
+  }, [isAuthenticated, user, fetchStudentClasses, fetchAssignments, classes, hasFetched]);
 
   useEffect(() => {
     if (error) {
@@ -70,13 +60,11 @@ const StudentPracticeDashboard = () => {
     }
   }, [error]);
 
-  if (loading || !user) {
+  if (classLoading || assignmentsLoading || !user) {
     return (
       <Card>
         <CardContent className="flex flex-col items-center justify-center py-12">
-          <p className="text-muted-foreground">
-            Loading practice assignments...
-          </p>
+          <p className="text-muted-foreground">Loading practice assignments...</p>
         </CardContent>
       </Card>
     );
@@ -85,14 +73,8 @@ const StudentPracticeDashboard = () => {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="gradient-text text-2xl font-bold">
-          Practice Assignments
-        </h2>
-        <p
-          className={
-            colorScheme === "dark" ? "text-dark-muted" : "text-light-muted"
-          }
-        >
+        <h2 className="gradient-text text-2xl font-bold">Practice Assignments</h2>
+        <p className={colorScheme === "dark" ? "text-dark-muted" : "text-light-muted"}>
           Practice your assignments to improve your skills
         </p>
       </div>
@@ -107,22 +89,10 @@ const StudentPracticeDashboard = () => {
               <div className="w-16 h-16 bg-gradient-to-br from-blue-500 via-purple-500 to-indigo-500 rounded-full flex items-center justify-center mb-4 shadow-lg">
                 <BookOpen className="h-8 w-8 text-white" />
               </div>
-              <h3
-                className={`text-lg font-semibold mb-2 ${
-                  colorScheme === "dark"
-                    ? "text-dark-muted"
-                    : "text-light-muted"
-                }`}
-              >
+              <h3 className={`text-lg font-semibold mb-2 ${colorScheme === "dark" ? "text-dark-muted" : "text-light-muted"}`}>
                 No assignments yet
               </h3>
-              <p
-                className={
-                  colorScheme === "dark"
-                    ? "text-dark-muted text-center"
-                    : "text-light-muted text-center"
-                }
-              >
+              <p className={colorScheme === "dark" ? "text-dark-muted text-center" : "text-light-muted text-center"}>
                 Check back later for new practice assignments
               </p>
             </div>
@@ -134,15 +104,8 @@ const StudentPracticeDashboard = () => {
                   <Card key={assignment.id}>
                     <CardHeader>
                       <CardTitle>{assignment.title}</CardTitle>
-                      <p
-                        className={
-                          colorScheme === "dark"
-                            ? "text-dark-muted"
-                            : "text-light-muted"
-                        }
-                      >
-                        Deadline:{" "}
-                        {new Date(assignment.deadline).toLocaleDateString()}
+                      <p className={colorScheme === "dark" ? "text-dark-muted" : "text-light-muted"}>
+                        Deadline: {new Date(assignment.deadline).toLocaleDateString()}
                       </p>
                     </CardHeader>
                     <CardContent>

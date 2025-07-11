@@ -14,8 +14,7 @@ import { Assignment, Score } from "@/types";
 const PracticeAssignment = () => {
   const { assignmentId } = useParams();
   const { user, isAuthenticated } = useAuth();
-  const { assignments, fetchAssignments, submitScore, loading, error } =
-    useStudentAssignments();
+  const { getAssignment, createScore, loading, error } = useStudentAssignments();
   const { colorScheme } = useTheme();
   const router = useRouter();
   const [typedText, setTypedText] = useState("");
@@ -33,26 +32,34 @@ const PracticeAssignment = () => {
       return;
     }
 
+    if (!assignmentId || typeof assignmentId !== "string") {
+      toast({
+        title: "Error",
+        description: "Invalid assignment ID.",
+        variant: "destructive",
+      });
+      router.push("/dashboard/student/practice");
+      return;
+    }
+
     const fetchAssignment = async () => {
       try {
-        // Fetch assignments for all enrolled classes
         const token = localStorage.getItem("StenoMaster-token");
         if (!token) {
           throw new Error("Invalid session");
         }
-        await fetchAssignments(
-          assignments.find((a) => a.id === assignmentId)?.classId || ""
-        );
-        const foundAssignment = assignments.find((a) => a.id === assignmentId);
+        const foundAssignment = await getAssignment(assignmentId);
         if (!foundAssignment) {
           throw new Error("Assignment not found");
         }
         setAssignment(foundAssignment);
+        console.log("[PracticeAssignment] Assignment fetched:", foundAssignment);
       } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : "An unexpected error occurred";
         console.error("[PracticeAssignment] Error fetching assignment:", err);
         toast({
           title: "Error",
-          description: "Failed to load assignment.",
+          description: errorMessage,
           variant: "destructive",
         });
         router.push("/dashboard/student/practice");
@@ -60,14 +67,7 @@ const PracticeAssignment = () => {
     };
 
     fetchAssignment();
-  }, [
-    isAuthenticated,
-    user,
-    assignmentId,
-    fetchAssignments,
-    assignments,
-    router,
-  ]);
+  }, [isAuthenticated, user, assignmentId, getAssignment, router]);
 
   useEffect(() => {
     if (error) {
@@ -76,8 +76,9 @@ const PracticeAssignment = () => {
         description: error,
         variant: "destructive",
       });
+      router.push("/dashboard/student/practice");
     }
-  }, [error]);
+  }, [error, router]);
 
   const handleStart = () => {
     setStartTime(new Date());
@@ -87,8 +88,7 @@ const PracticeAssignment = () => {
     if (!startTime || !assignment || !user) {
       toast({
         title: "Error",
-        description:
-          "Please start the assignment and ensure all data is loaded.",
+        description: "Please start the assignment and ensure all data is loaded.",
         variant: "destructive",
       });
       return;
@@ -111,10 +111,19 @@ const PracticeAssignment = () => {
     };
 
     try {
-      await submitScore(score);
+      await createScore(score);
+      toast({
+        title: "Success",
+        description: "Assignment submitted successfully.",
+      });
       router.push("/dashboard/student/practice");
     } catch (err) {
       console.error("[PracticeAssignment] Error submitting score:", err);
+      toast({
+        title: "Error",
+        description: "Failed to submit score. Please try again.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -125,7 +134,7 @@ const PracticeAssignment = () => {
       (count, char, i) => (char === correctChars[i] ? count + 1 : count),
       0
     );
-    return Math.round((correctCount / correctChars.length) * 100);
+    return Math.round((correctCount / Math.max(correctChars.length, 1)) * 100);
   };
 
   if (loading || !assignment) {
@@ -142,11 +151,7 @@ const PracticeAssignment = () => {
     <div className="space-y-6">
       <div>
         <h2 className="gradient-text text-2xl font-bold">{assignment.title}</h2>
-        <p
-          className={
-            colorScheme === "dark" ? "text-dark-muted" : "text-light-muted"
-          }
-        >
+        <p className={colorScheme === "dark" ? "text-dark-muted" : "text-light-muted"}>
           Practice this assignment to improve your typing skills
         </p>
       </div>

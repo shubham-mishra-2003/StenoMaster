@@ -7,110 +7,79 @@ import { useRouter } from "next/navigation";
 import AssignmentList from "@/components/AssignmentList";
 import { useTheme } from "@/hooks/ThemeProvider";
 import { useAuth } from "@/hooks/useAuth";
-import { useClass } from "@/hooks/useClasses";
-import { Assignment, Class } from "@/types";
-import { useAssignment } from "@/hooks/useAssignments";
 import { toast } from "@/hooks/use-toast";
+import { useStudentAssignments } from "@/hooks/useStudentAssignments";
 
 const DashboardContent: React.FC = () => {
-  const token = localStorage.getItem("StenoMaster-token");
-  const [loading, setLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
   const { colorScheme } = useTheme();
-  const { user } = useAuth();
-  const [assignments, setAssignments] = useState<Assignment[]>([]);
-  const [studentClass, setStudentClass] = useState<Class>();
+  const { user, isAuthenticated } = useAuth();
+  const { assignments, scores, loading, error, fetchAssignments, fetchScores } =
+    useStudentAssignments();
 
-  if (!user) {
-    return;
-  }
+  useEffect(() => {
+    if (!isAuthenticated || !user?.userId) {
+      return;
+    }
 
-  const fetchClasses = async () => {
-    try {
-      const response = await fetch("/api/classes", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ action: "getStudentClasses" }),
-      });
+    const loadData = async () => {
+      setIsLoading(true);
+      try {
+        if (user.classId) {
+          await fetchAssignments(user.classId);
+        } else {
+          console.warn("Class ID not found in user object");
+        }
+        await fetchScores(user.userId);
+      } catch (err) {
+        console.error("Failed to load data:", err);
+      } finally {
+        setIsLoading(loading);
+      }
+    };
 
-      const text = await response.text();
-      const result = text
-        ? JSON.parse(text)
-        : { status: "error", message: "Empty response from server" };
-      if (response.ok && result.status === "success") {
-        setStudentClass(result.data);
-        console.log("class fetch - ", studentClass);
-      } else {
+    loadData();
+  }, [isAuthenticated, user, fetchAssignments, fetchScores]);
+
+  useEffect(() => {
+    if (!isAuthenticated || !user?.userId) {
+      if (!loading) {
+        const timer = setTimeout(() => {
+          toast({
+            title: "Authentication Required",
+            description: "Please log in to view dashboard.",
+            variant: "destructive",
+          });
+        }, 900);
+        return () => clearTimeout(timer);
+      }
+      return;
+    }
+
+    if (error) {
+      const timer = setTimeout(() => {
         toast({
           title: "Error",
-          description: result.message || "Failed to fetch student classes",
+          description: error,
           variant: "destructive",
         });
-      }
-    } catch (error) {
-      toast({
-        title: "Error",
-        description:
-          "An unexpected error occurred while fetching student classes.",
-        variant: "destructive",
-      });
+      }, 900);
+      return () => clearTimeout(timer);
     }
-  };
 
-  const fetchAssignments = async (classId?: string) => {
-    try {
-      if (!studentClass?.id) {
-        return;
-      }
-      console.log("Class tested - ", studentClass.id);
-      const response = await fetch("/api/assignment/fetch", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ token: token, classId: classId }),
-        signal: AbortSignal.timeout(5000),
-      });
-
-      const text = await response.text();
-      const result = text
-        ? JSON.parse(text)
-        : { status: "error", message: "Failed to fetch assignment" };
-      console.log("Ass fetch - ", result.data);
-      setAssignments(result.data);
-      console.log(result);
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: "Failed to fetch assignment",
-        variant: "destructive",
-      });
+    if (!loading && assignments.length === 0 && scores.length === 0) {
+      const timer = setTimeout(() => {
+        toast({
+          title: "No Data Available",
+          description:
+            "You have no assignments or scores to display at this time.",
+          variant: "default",
+        });
+      }, 900);
+      return () => clearTimeout(timer);
     }
-  };
-
-  const scores = [
-    {
-      id: "score-1625738400003",
-      studentId: "O5YDWjGHcCTSE3ZFd3F73",
-      typedText: "The quick brown fox jumps over the lazy dog.",
-      accuracy: 90,
-      wpm: 40,
-      timeElapsed: 10,
-      completedAt: "2025-07-08T22:00:00.000Z",
-      assignmentId: "assignment-1752089345210",
-    },
-    {
-      id: "score-1625738400008",
-      studentId: "O5YDWjGHcCTSE3ZFd3F72",
-      assignmentId: "assignment-1752000240970",
-      typedText: "The quick brown fox jumps over the lazy dog.",
-      accuracy: 20,
-      wpm: 60,
-      timeElapsed: 5,
-      completedAt: "2025-07-08T22:00:00.000Z",
-    },
-  ];
+  }, [isAuthenticated, user, loading, error, assignments, scores]);
 
   const calculateAverageWPM = (): string => {
     if (scores.length === 0) return "0";
@@ -125,6 +94,15 @@ const DashboardContent: React.FC = () => {
       0
     );
     return Math.round(totalAccuracy / scores.length).toString();
+  };
+
+  const calculateTotalTime = (): string => {
+    if (scores.length === 0) return "0.0";
+    const totalSeconds = scores.reduce(
+      (sum, score) => sum + (score.timeElapsed || 0),
+      0
+    );
+    return (totalSeconds / 3600).toFixed(1);
   };
 
   const stats = [
@@ -146,25 +124,31 @@ const DashboardContent: React.FC = () => {
       icon: Target,
       color: "from-green-500 to-green-600",
     },
+    {
+      title: "Time Practiced",
+      value: `${calculateTotalTime()}h`,
+      icon: Clock,
+      color: "from-orange-500 to-orange-600",
+    },
   ];
 
-  function getAssignmentsForStudent() {
-    const studentAssignments = studentClass?.assignments || [];
-    setAssignments(studentAssignments);
+  const handleStartPractice = () => {
+    router.push("/dashboard/student/practice");
+  };
+
+  if (isLoading && !isAuthenticated && !user) {
+    return (
+      <div className="space-y-6">
+        <p className="text-muted-foreground">Loading dashboard...</p>
+      </div>
+    );
   }
 
   return (
     <div className="space-y-4 sm:space-y-6 lg:space-y-8">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1
-            className="text-xl sm:text-2xl lg:text-3xl font-bold gradient-text"
-            onClick={async () => {
-              await fetchClasses().then(() => {
-                fetchAssignments(studentClass?.id);
-              });
-            }}
-          >
+          <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold gradient-text">
             Student Dashboard
           </h1>
           <p
@@ -176,7 +160,8 @@ const DashboardContent: React.FC = () => {
           </p>
         </div>
       </div>
-      <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-3 lg:grid-cols-3 mb-6">
+
+      <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 mb-6">
         {stats.map((stat, index) => {
           const Icon = stat.icon;
           return (
@@ -218,7 +203,21 @@ const DashboardContent: React.FC = () => {
           );
         })}
       </div>
-      {/* <AssignmentList  /> */}
+
+      <AssignmentList
+        assignments={assignments}
+        onStartPractice={handleStartPractice}
+      />
+
+      {assignments.length === 0 && scores.length === 0 && !loading && (
+        <p
+          className={`text-sm sm:text-base mt-4 ${
+            colorScheme === "dark" ? "text-dark" : "text-light"
+          }`}
+        >
+          No assignments or scores available at this time.
+        </p>
+      )}
     </div>
   );
 };

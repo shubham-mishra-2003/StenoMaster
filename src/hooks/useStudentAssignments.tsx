@@ -1,10 +1,9 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
-import { useAuth } from "@/hooks/useAuth";
-import { useClass } from "@/hooks/useClasses";
-import { Assignment, Score } from "@/types";
+import { useState, useCallback } from "react";
 import { toast } from "@/hooks/use-toast";
+import { parse, isValid } from "date-fns";
+import { Assignment, Score } from "@/types";
 
 interface UseStudentAssignmentsReturn {
   assignments: Assignment[];
@@ -12,384 +11,395 @@ interface UseStudentAssignmentsReturn {
   loading: boolean;
   error: string | null;
   fetchAssignments: (classId: string) => Promise<void>;
+  getAssignment: (assignmentId: string) => Promise<Assignment | null>;
+  createScore: (score: Score) => Promise<void>;
   fetchScores: (studentId: string) => Promise<void>;
-  submitScore: (score: Score) => Promise<void>;
 }
 
 export const useStudentAssignments = (): UseStudentAssignmentsReturn => {
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [scores, setScores] = useState<Score[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
-  const [hasFetched, setHasFetched] = useState<{
-    assignments: Set<string>;
-    scores: Set<string>;
-    studentsInClass: Set<string>;
-  }>({
-    assignments: new Set(),
-    scores: new Set(),
-    studentsInClass: new Set(),
-  });
-  const { user, isAuthenticated } = useAuth();
-  const { classes, fetchStudentsInClass } = useClass();
 
-  const fetchAssignments = useCallback(
-    async (classId: string) => {
-      if (
-        !isAuthenticated ||
-        !user?.userId ||
-        hasFetched.assignments.has(classId)
-      ) {
-        return;
-      }
+  const fetchAssignments = useCallback(async (classId: string) => {
+    if (!classId || typeof classId !== "string" || classId.trim() === "") {
+      setError("Invalid class ID");
+      toast({
+        title: "Error",
+        description: "Invalid class ID",
+        variant: "destructive",
+      });
+      return;
+    }
 
+    setLoading(true);
+    setError(null);
+    try {
       const token = localStorage.getItem("StenoMaster-token");
       if (!token || typeof token !== "string" || token.trim() === "") {
-        console.error("[useStudentAssignments] Invalid token in localStorage");
-        toast({
-          title: "Error",
-          description: "Invalid session. Please log in again.",
-          variant: "destructive",
-        });
-        setError("Invalid session. Please log in again.");
-        return;
+        throw new Error("Invalid session. Please log in again.");
       }
 
-      // Verify student is enrolled in the class (for students only)
-      if (
-        user.userType === "student" &&
-        !hasFetched.studentsInClass.has(classId)
-      ) {
-        try {
-          const studentsInClass = await fetchStudentsInClass(classId);
-          setHasFetched((prev) => ({
-            ...prev,
-            studentsInClass: new Set(prev.studentsInClass).add(classId),
-          }));
-          if (!studentsInClass.some((s: any) => s.userId === user.userId)) {
-            console.error(
-              "[useStudentAssignments] Student not enrolled in class:",
-              classId
-            );
-            toast({
-              title: "Error",
-              description: "You are not enrolled in this class.",
-              variant: "destructive",
-            });
-            setError("You are not enrolled in this class.");
-            return;
-          }
-        } catch (err) {
-          console.error(
-            "[useStudentAssignments] Error fetching students in class:",
-            err
-          );
-          setError("Failed to verify class enrollment.");
-          return;
-        }
+      console.log(
+        `[useStudentAssignments] Fetching assignments for classId: ${classId}`
+      );
+      const response = await fetch("/api/assignment/fetch", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token, classId }),
+        signal: AbortSignal.timeout(10000),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch assignments: ${response.statusText}`);
       }
 
-      setLoading(true);
-      try {
-        const response = await fetch("/api/assignment/fetch", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ token, classId }),
-          signal: AbortSignal.timeout(5000),
-        });
+      const result = await response.json();
+      console.log(
+        `[useStudentAssignments] API response for classId ${classId}:`,
+        result
+      );
 
-        const text = await response.text();
-        const result = text
-          ? JSON.parse(text)
-          : { status: "error", message: "Empty response from server" };
+      if (result.status !== "success") {
+        throw new Error(result.message || "Failed to fetch assignments");
+      }
 
-        if (response.ok && result.status === "success") {
-          setAssignments((prev) => [
-            ...prev.filter((a) => a.classId !== classId),
-            ...result.data.map((assignment: Assignment) => ({
-              ...assignment,
-              classId,
-              createdAt: new Date(assignment.createdAt),
-            })),
-          ]);
-          setHasFetched((prev) => ({
-            ...prev,
-            assignments: new Set(prev.assignments).add(classId),
-          }));
-          setError(null);
-        } else {
-          console.error(
-            "[useStudentAssignments] Fetch assignments error:",
-            result.message
-          );
-          toast({
-            title: "Error",
-            description: result.message || "Failed to fetch assignments",
-            variant: "destructive",
-          });
-          setError(result.message || "Failed to fetch assignments");
-        }
-      } catch (error: any) {
-        console.error(
-          "[useStudentAssignments] Fetch assignments error:",
-          error
+      if (!Array.isArray(result.data)) {
+        console.warn(
+          `[useStudentAssignments] No assignments found for classId ${classId}`
         );
-        toast({
-          title: "Error",
-          description:
-            "An unexpected error occurred while fetching assignments.",
-          variant: "destructive",
-        });
-        setError("An unexpected error occurred while fetching assignments.");
-      } finally {
-        setLoading(false);
-      }
-    },
-    [
-      isAuthenticated,
-      user,
-      hasFetched.assignments,
-      hasFetched.studentsInClass,
-      fetchStudentsInClass,
-    ]
-  );
-
-  const fetchScores = useCallback(
-    async (studentId: string) => {
-      if (
-        !isAuthenticated ||
-        !user?.userId ||
-        hasFetched.scores.has(studentId)
-      ) {
+        setAssignments([]);
         return;
       }
 
+      const now = new Date();
+      console.log(
+        `[useStudentAssignments] Current time for comparison: ${now.toISOString()}`
+      );
+
+      const formattedAssignments: Assignment[] = result.data.map(
+        (assignment: Assignment) => {
+          const deadline = parse(
+            assignment.deadline,
+            "dd/MM/yyyy, hh:mm a",
+            new Date()
+          );
+          if (!isValid(deadline)) {
+            console.error(
+              `[useStudentAssignments] Invalid deadline for assignment ${assignment.id}: ${assignment.deadline}`
+            );
+            throw new Error(
+              `Invalid deadline format for assignment ${assignment.id}`
+            );
+          }
+          console.log(
+            `[useStudentAssignments] Parsed deadline for assignment ${
+              assignment.id
+            }: ${deadline.toISOString()}`
+          );
+          return {
+            ...assignment,
+            createdAt: new Date(assignment.createdAt),
+            deadline,
+          };
+        }
+      );
+
+      console.log(
+        `[useStudentAssignments] Formatted assignments for classId ${classId}:`,
+        formattedAssignments
+      );
+
+      const activeAssignments = formattedAssignments.filter((a: Assignment) => {
+        const deadlineDate = new Date(a.deadline);
+        const isActive = a.isActive && deadlineDate > now;
+        console.log(
+          `[useStudentAssignments] Assignment ${a.id} - isActive: ${
+            a.isActive
+          }, deadline: ${deadlineDate.toISOString()}, isFuture: ${
+            deadlineDate > now
+          }, included: ${isActive}`
+        );
+        return isActive;
+      });
+
+      console.log(
+        `[useStudentAssignments] Active assignments for classId ${classId}:`,
+        activeAssignments
+      );
+
+      setAssignments((prev) => {
+        const existingIds = new Set(prev.map((a) => a.id));
+        const newAssignments = activeAssignments.filter(
+          (a) => !existingIds.has(a.id)
+        );
+        const updatedAssignments = [...prev, ...newAssignments];
+        console.log(
+          `[useStudentAssignments] Updated assignments state:`,
+          updatedAssignments
+        );
+        return updatedAssignments;
+      });
+    } catch (err) {
+      const errorMessage =
+        err instanceof Error ? err.message : "An unexpected error occurred";
+      console.error(
+        `[useStudentAssignments] Error in fetchAssignments for classId ${classId}:`,
+        err
+      );
+      setError(errorMessage);
+      toast({
+        title: "Error",
+        description: errorMessage,
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const getAssignment = useCallback(async (assignmentId: string) => {
+    if (!assignmentId || typeof assignmentId !== "string" || assignmentId.trim() === "") {
+      console.error("[useStudentAssignments] Invalid assignmentId:", assignmentId);
+      setError("Invalid assignment ID");
+      toast({
+        title: "Error",
+        description: "Invalid assignment ID",
+        variant: "destructive",
+      });
+      return null;
+    }
+
+    setLoading(true);
+    setError(null);
+    try {
       const token = localStorage.getItem("StenoMaster-token");
       if (!token || typeof token !== "string" || token.trim() === "") {
-        console.error("[useStudentAssignments] Invalid token in localStorage");
-        toast({
-          title: "Error",
-          description: "Invalid session. Please log in again.",
-          variant: "destructive",
-        });
-        return;
+        throw new Error("Invalid session. Please log in again.");
       }
 
-      setLoading(true);
-      try {
-        const response = await fetch("/api/score/fetch", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ studentId, token }),
-          signal: AbortSignal.timeout(5000),
-        });
+      console.log(
+        `[useStudentAssignments] Fetching assignment with id: ${assignmentId}`
+      );
+      // Try fetching with the existing endpoint
+      const response = await fetch("/api/assignment/fetch", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ id: assignmentId }), // Use 'id' instead of 'assignmentId'
+        signal: AbortSignal.timeout(10000),
+      });
 
-        const text = await response.text();
-        const result = text
-          ? JSON.parse(text)
-          : { status: "error", message: "Empty response from server" };
-
-        if (response.ok && result.status === "success") {
-          setScores((prev) => [
-            ...prev.filter((s) => s.studentId !== studentId),
-            ...result.data.map((score: Score) => ({
-              ...score,
-              studentId,
-              completedAt: new Date(score.completedAt),
-            })),
-          ]);
-          setHasFetched((prev) => ({
-            ...prev,
-            scores: new Set(prev.scores).add(studentId),
-          }));
-          setError(null);
-        } else {
-          console.error(
-            "[useStudentAssignments] Fetch scores error:",
-            result.message
-          );
-          toast({
-            title: "Error",
-            description: result.message || "Failed to fetch scores",
-            variant: "destructive",
-          });
-          setError(result.message || "Failed to fetch scores");
-        }
-      } catch (error: any) {
-        console.error("[useStudentAssignments] Fetch scores error:", error);
-        toast({
-          title: "Error",
-          description: "An unexpected error occurred while fetching scores.",
-          variant: "destructive",
-        });
-        setError("An unexpected error occurred while fetching scores.");
-      } finally {
-        setLoading(false);
-      }
-    },
-    [isAuthenticated, user, hasFetched.scores]
-  );
-
-  const submitScore = useCallback(
-    async (score: Score) => {
-      if (
-        !isAuthenticated ||
-        !user?.userId ||
-        user.userType !== "student" ||
-        score.studentId !== user.userId
-      ) {
-        toast({
-          title: "Error",
-          description:
-            "Only authenticated students can submit scores for themselves.",
-          variant: "destructive",
-        });
-        setError(
-          "Only authenticated students can submit scores for themselves."
+      if (!response.ok) {
+        // Fallback to a GET request if POST fails
+        console.warn(
+          `[useStudentAssignments] POST request failed, trying GET for assignmentId: ${assignmentId}`
         );
-        return;
-      }
-
-      const token = localStorage.getItem("studentMaster-token");
-      if (!token || typeof token !== "string" || token.trim()) {
-        console.error("[useStudentAssignments] Invalid token in localStorage");
-        toast({
-          title: "Error",
-          description: "Invalid session. Please log in again.",
-          variant: "destructive",
+        const fallbackResponse = await fetch(`/api/assignment/${assignmentId}`, {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          signal: AbortSignal.timeout(10000),
         });
-        setError("Invalid session. Please log in again.");
-        return;
-      }
 
-      // Verify the assignment exists
-      const assignment = assignments.find((a) => a.id === score.assignmentId);
-      if (!assignment) {
-        console.error(
-          "[useStudentAssignments] Assignment not found:",
-          score.assignmentId
+        if (!fallbackResponse.ok) {
+          throw new Error(`Failed to fetch assignment: ${fallbackResponse.statusText}`);
+        }
+
+        const fallbackResult = await fallbackResponse.json();
+        console.log(
+          `[useStudentAssignments] Fallback GET response for assignmentId ${assignmentId}:`,
+          fallbackResult
         );
-        toast({
-          title: "Error",
-          description: "Assignment not found.",
-          variant: "destructive",
-        });
-        setError("Assignment not found.");
-        return;
-      }
 
-      // Verify student enrollment in the class
-      const classId = assignment!.classId;
-      if (!hasFetched.studentsInClass.has(classId)) {
-        try {
-          const studentsInClass = await fetchStudentsInClass(classId);
-          setHasFetched((prev) => ({
-            ...prev,
-            studentsInClass: new Set(prev.studentsInClass).add(classId),
-          }));
-          if (!studentsInClass.some((s: any) => s.userId === user.userId)) {
-            console.error(
-              "[useStudentAssignments] Student not enrolled in class:",
-              classId
-            );
-            toast({
-              title: "Error",
-              description: "You are not enrolled in this class.",
-              variant: "destructive",
-            });
-            setError("You are not enrolled in this class.");
-            return;
-          }
-        } catch (err) {
-          console.error(
-            "[useStudentAssignments] Error fetching students in class:",
-            err
-          );
-          setError("Failed to verify class enrollment.");
-          return;
+        if (fallbackResult.status !== "success" || !fallbackResult.data) {
+          throw new Error(fallbackResult.message || "Assignment not found");
         }
-      }
 
-      setLoading(true);
-      try {
-        const response = await fetch("/api/score/submit", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            id: score.id,
-            studentId: user.userId,
-            assignmentId: score.assignmentId,
-            typedText: score.typedText,
-            accuracy: score.accuracy,
-            wpm: score.wpm,
-            timeElapsed: score.timeElapsed,
-            completedAt: score.completedAt.toISOString(),
-            token,
-          }),
-          signal: AbortSignal.timeout(5000),
-        });
-
-        const text = await response.text();
-        const result = text
-          ? JSON.parse(text)
-          : { status: "error", message: "Empty response from server" };
-
-        if (response.ok && result.status === "success") {
-          setScores((prev) => [
-            ...prev,
-            {
-              ...result.data,
-              studentId: user.userId,
-              completedAt: new Date(result.data.completedAt),
-            },
-          ]);
-          toast({
-            title: "Success",
-            description: "Score submitted successfully.",
-          });
-          setError(null);
-        } else {
-          console.error(
-            "[useStudentAssignments] Submit score error:",
-            result.message
+        const assignment = fallbackResult.data; // Assume single object for GET
+        const deadline = parse(
+          assignment.deadline,
+          "dd/MM/yyyy, hh:mm a",
+          new Date()
+        );
+        if (!isValid(deadline)) {
+          throw new Error(
+            `Invalid deadline format for assignment ${assignment.id}`
           );
-          toast({
-            title: "Error",
-            description: result.message || "Failed to submit score",
-            variant: "destructive",
-          });
-          setError(result.message || "Failed to submit score");
         }
-      } catch (error: any) {
-        console.error("[useStudentAssignments] Submit score error:", error);
-        toast({
-          title: "Error",
-          description:
-            "An unexpected error occurred while submitting the score.",
-          variant: "destructive",
-        });
-        setError("An unexpected error occurred while submitting the score.");
-      } finally {
-        setLoading(false);
-      }
-    },
-    [
-      isAuthenticated,
-      user,
-      assignments,
-      fetchStudentsInClass,
-      hasFetched.studentsInClass,
-    ]
-  );
 
-  // Reset hasFetched when user changes
-  useEffect(() => {
-    setHasFetched({
-      assignments: new Set(),
-      scores: new Set(),
-      studentsInClass: new Set(),
-    });
-  }, [user]);
+        const formattedAssignment = {
+          ...assignment,
+          createdAt: new Date(assignment.createdAt),
+          deadline,
+        } as Assignment;
+        console.log(
+          `[useStudentAssignments] Formatted assignment:`,
+          formattedAssignment
+        );
+        return formattedAssignment;
+      }
+
+      const result = await response.json();
+      console.log(
+        `[useStudentAssignments] API response for assignmentId ${assignmentId}:`,
+        result
+      );
+
+      if (result.status !== "success" || !result.data || !Array.isArray(result.data) || result.data.length === 0) {
+        throw new Error(result.message || "Assignment not found");
+      }
+
+      const assignment = result.data[0];
+      const deadline = parse(
+        assignment.deadline,
+        "dd/MM/yyyy, hh:mm a",
+        new Date()
+      );
+      if (!isValid(deadline)) {
+        throw new Error(
+          `Invalid deadline format for assignment ${assignment.id}`
+        );
+      }
+
+      const formattedAssignment = {
+        ...assignment,
+        createdAt: new Date(assignment.createdAt),
+        deadline,
+      } as Assignment;
+      console.log(
+        `[useStudentAssignments] Formatted assignment:`,
+        formattedAssignment
+      );
+      return formattedAssignment;
+    } catch (err) {
+      const errorMessage =
+        err instanceof Error ? err.message : "An unexpected error occurred";
+      console.error(
+        `[useStudentAssignments] Error fetching assignment ${assignmentId}:`,
+        err
+      );
+      setError(errorMessage);
+      toast({
+        title: "Error",
+        description: errorMessage,
+        variant: "destructive",
+      });
+      return null;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const createScore = useCallback(async (score: Score) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const token = localStorage.getItem("StenoMaster-token");
+      if (!token || typeof token !== "string" || token.trim() === "") {
+        throw new Error("Invalid session. Please log in again.");
+      }
+
+      console.log("[useStudentAssignments] Creating score:", score);
+      const response = await fetch("/api/score/create", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...score, token }),
+        signal: AbortSignal.timeout(10000),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to save score: ${response.statusText}`);
+      }
+
+      const result = await response.json();
+      console.log("[useStudentAssignments] Score creation response:", result);
+
+      if (result.status !== "success") {
+        throw new Error(result.message || "Failed to save score");
+      }
+
+      setScores((prev) => [
+        ...prev,
+        {
+          ...result.data,
+          completedAt: new Date(result.data.completedAt),
+        },
+      ]);
+      toast({
+        title: "Success",
+        description: "Score saved successfully.",
+      });
+    } catch (err) {
+      const errorMessage =
+        err instanceof Error ? err.message : "An unexpected error occurred";
+      console.error("[useStudentAssignments] Error creating score:", err);
+      setError(errorMessage);
+      toast({
+        title: "Error",
+        description: errorMessage,
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const fetchScores = useCallback(async (studentId: string) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const token = localStorage.getItem("StenoMaster-token");
+      if (!token || typeof token !== "string" || token.trim() === "") {
+        throw new Error("Invalid session. Please log in again.");
+      }
+
+      console.log(
+        `[useStudentAssignments] Fetching scores for studentId: ${studentId}`
+      );
+      const response = await fetch("/api/score/fetch", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ studentId, token }),
+        signal: AbortSignal.timeout(10000),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch scores: ${response.statusText}`);
+      }
+
+      const result = await response.json();
+      console.log("[useStudentAssignments] Scores fetch response:", result);
+
+      if (result.status !== "success") {
+        throw new Error(result.message || "Failed to fetch scores");
+      }
+
+      setScores(
+        result.data.map((score: Score) => ({
+          ...score,
+          completedAt: new Date(score.completedAt),
+        }))
+      );
+    } catch (err) {
+      const errorMessage =
+        err instanceof Error ? err.message : "An unexpected error occurred";
+      console.error("[useStudentAssignments] Error fetching scores:", err);
+      setError(errorMessage);
+      toast({
+        title: "Error",
+        description: errorMessage,
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   return {
     assignments,
@@ -397,7 +407,8 @@ export const useStudentAssignments = (): UseStudentAssignmentsReturn => {
     loading,
     error,
     fetchAssignments,
+    getAssignment,
+    createScore,
     fetchScores,
-    submitScore,
   };
 };
