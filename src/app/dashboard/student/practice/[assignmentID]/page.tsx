@@ -23,7 +23,7 @@ const AssignmentPracticeContent = () => {
   const [isStarted, setIsStarted] = useState(false);
   const [isCompleted, setIsCompleted] = useState(false);
   const [timeElapsed, setTimeElapsed] = useState(0);
-  const { user } = useAuth();
+  const { user, isAuthenticated } = useAuth();
   const token = localStorage.getItem("StenoMaster-token");
   const { assignmentID } = useParams();
   const router = useRouter();
@@ -35,20 +35,45 @@ const AssignmentPracticeContent = () => {
     fetchClasses,
     fetchAssignments,
     setAssignments,
-    scores,
     studentClass,
     submitScore,
   } = useStudentSide();
 
   useEffect(() => {
-    if (user) {
-      fetchClasses();
+    if (!isAuthenticated || !user?.userId) {
+      setLoading(false);
+      return;
     }
-  }, [user]);
+
+    const loadData = async () => {
+      setLoading(true);
+      try {
+        if (user) {
+          await fetchClasses();
+        }
+      } catch (err) {
+        console.error("Failed to load data:", err);
+        toast({
+          title: "Error",
+          description: "Failed to load dashboard data.",
+          variant: "destructive",
+        });
+      } finally {
+        setLoading(loading);
+      }
+    };
+
+    loadData();
+  }, [isAuthenticated, user]);
 
   useEffect(() => {
     if (studentClass.length > 0) {
       fetchAssignments(studentClass[0].id);
+      const foundAssignment = assignments.find((a) => a.id == assignmentID);
+      if (!foundAssignment) {
+        return;
+      }
+      setAssignment(foundAssignment);
     } else if (!loading && studentClass.length === 0) {
       setAssignments([]);
       if (!studentClass) {
@@ -59,22 +84,37 @@ const AssignmentPracticeContent = () => {
         });
       }
     }
+  }, [studentClass, loading, user]);
 
-    if (assignments.length > 0 && assignmentID) {
-      const foundAssignment = assignments.find((a) => a.id === assignmentID);
-      if (!foundAssignment) {
-        return;
-      }
-      setAssignment(foundAssignment);
-      if (!foundAssignment) {
-        toast({
-          title: "Error",
-          description: "Assignment not found.",
-          variant: "destructive",
-        });
-      }
-    }
-  }, [studentClass, loading, user, assignments, assignmentID]);
+  // useEffect(() => {
+  //   if (studentClass.length > 0) {
+  //     fetchAssignments(studentClass[0].id);
+  //   } else if (!loading && studentClass.length === 0) {
+  //     setAssignments([]);
+  //     if (!studentClass) {
+  //       toast({
+  //         title: "No Classes",
+  //         description: "No classes found for this student.",
+  //         variant: "destructive",
+  //       });
+  //     }
+  //   }
+
+  //   if (assignments.length > 0 && assignmentID) {
+  //     const foundAssignment = assignments.find((a) => a.id === assignmentID);
+  //     if (!foundAssignment) {
+  //       return;
+  //     }
+  //     setAssignment(foundAssignment);
+  //     if (!foundAssignment) {
+  //       toast({
+  //         title: "Error",
+  //         description: "Assignment not found.",
+  //         variant: "destructive",
+  //       });
+  //     }
+  //   }
+  // }, [studentClass, loading, user, assignments, assignmentID]);
 
   const handleStart = () => {
     setIsStarted(true);
