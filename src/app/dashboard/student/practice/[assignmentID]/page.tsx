@@ -9,111 +9,29 @@ import { useTheme } from "@/hooks/ThemeProvider";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "@/hooks/use-toast";
 import { Assignment, Class, Score } from "@/types";
+import { Clock, Target } from "lucide-react";
+import Image from "next/image";
+import { Progress } from "@/components/ui/progress";
+import { Textarea } from "@/components/ui/textarea";
 
-const PracticeAssignment = () => {
+const AssignmentPracticeContent = () => {
+  const params = useParams();
+  const assignmentId = params.assignmentId as string;
+  const [typedText, setTypedText] = useState("");
+  const [startTime, setStartTime] = useState<Date | null>(null);
+  const [isStarted, setIsStarted] = useState(false);
+  const [isCompleted, setIsCompleted] = useState(false);
+  const [timeElapsed, setTimeElapsed] = useState(0);
+  const { user } = useAuth();
   const token = localStorage.getItem("StenoMaster-token");
   const { assignmentID } = useParams();
   const router = useRouter();
-  const [typedText, setTypedText] = useState("");
-  const [startTime, setStartTime] = useState<Date | null>(null);
   const [loading, setLoading] = useState(false);
-  const { colorScheme } = useTheme();
-  const { user } = useAuth();
   const [assignments, setAssignments] = useState<Assignment[]>([]);
-  const [assignment, setAssignment] = useState<Assignment>();
+  const [assignment, setAssignment] = useState<Assignment | null>(null);
   const [studentClass, setStudentClass] = useState<Class[]>([]);
   const [scores, setScores] = useState<Score[]>([]);
 
-  const fetchClasses = async () => {
-    if (loading || !token) return;
-    setLoading(true);
-    try {
-      const response = await fetch("/api/classes", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ action: "getStudentClasses" }),
-      });
-
-      const text = await response.text();
-      const result = text
-        ? JSON.parse(text)
-        : { status: "error", message: "Empty response from server" };
-
-      if (
-        response.ok &&
-        result.status === "success" &&
-        Array.isArray(result.data)
-      ) {
-        setStudentClass(result.data);
-      } else {
-        toast({
-          title: "Error",
-          description: result.message || "Failed to fetch student classes",
-          variant: "destructive",
-        });
-        setStudentClass([]);
-      }
-    } catch (error) {
-      toast({
-        title: "Error",
-        description:
-          "An unexpected error occurred while fetching student classes.",
-        variant: "destructive",
-      });
-      setStudentClass([]);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const fetchAssignments = async (classId: string) => {
-    try {
-      const response = await fetch("/api/assignment/fetch", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ token, classId }),
-        signal: AbortSignal.timeout(5000),
-      });
-      const text = await response.text();
-      const result = text
-        ? JSON.parse(text)
-        : { status: "error", message: "Failed to fetch assignment" };
-
-      if (response.ok && result.status === "success") {
-        setAssignments(result.data);
-      } else {
-        toast({
-          title: "Error",
-          description: result.message || "Failed to fetch assignments",
-          variant: "destructive",
-        });
-        setAssignments([]);
-      }
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to fetch assignments",
-        variant: "destructive",
-      });
-      setAssignments([]);
-    }
-  };
-
-  const submitScore = (score: Score) => {
-    try {
-      
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to fetch assignments",
-        variant: "destructive",
-      });
-      setScores([]);
-    }
-  };
 
   useEffect(() => {
     if (user) {
@@ -126,7 +44,7 @@ const PracticeAssignment = () => {
       fetchAssignments(studentClass[0].id);
     } else if (!loading && studentClass.length === 0) {
       setAssignments([]);
-      if (user) {
+      if (!studentClass) {
         toast({
           title: "No Classes",
           description: "No classes found for this student.",
@@ -134,11 +52,25 @@ const PracticeAssignment = () => {
         });
       }
     }
-    const foundAssignment = assignments.find((a) => a.id === assignmentID);
-    setAssignment(foundAssignment);
-  }, [studentClass, loading, user]);
+
+    if (assignments.length > 0 && assignmentID) {
+      const foundAssignment = assignments.find((a) => a.id === assignmentID);
+      if (!foundAssignment) {
+        return;
+      }
+      setAssignment(foundAssignment);
+      if (!foundAssignment) {
+        toast({
+          title: "Error",
+          description: "Assignment not found.",
+          variant: "destructive",
+        });
+      }
+    }
+  }, [studentClass, loading, user, assignments, assignmentID]);
 
   const handleStart = () => {
+    setIsStarted(true);
     setStartTime(new Date());
   };
 
@@ -153,7 +85,10 @@ const PracticeAssignment = () => {
       return;
     }
 
+    setIsStarted(false);
+    setIsCompleted(true);
     const timeElapsed = (new Date().getTime() - startTime.getTime()) / 1000;
+    setTimeElapsed(timeElapsed);
     const words = typedText.trim().split(/\s+/).length;
     const wpm = Math.round((words / timeElapsed) * 60);
     const accuracy = calculateAccuracy(typedText, assignment.correctText);
@@ -169,21 +104,21 @@ const PracticeAssignment = () => {
       completedAt: new Date(),
     };
 
-    // try {
-    //   await submitScore(score);
-    //   toast({
-    //     title: "Success",
-    //     description: "Assignment submitted successfully.",
-    //   });
-    //   router.push("/dashboard/student/practice");
-    // } catch (err) {
-    //   console.error("[PracticeAssignment] Error submitting score:", err);
-    //   toast({
-    //     title: "Error",
-    //     description: "Failed to submit score. Please try again.",
-    //     variant: "destructive",
-    //   });
-    // }
+    try {
+      await submitScore(score);
+      toast({
+        title: "Assignment submitted successfully.",
+        description: `WPM: ${score.wpm}, Accuracy: ${score.accuracy}`,
+      });
+      router.push("/dashboard/student/practice");
+    } catch (err) {
+      console.error("[PracticeAssignment] Error submitting score:", err);
+      toast({
+        title: "Error",
+        description: "Failed to submit score. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   const calculateAccuracy = (typed: string, correct: string) => {
@@ -196,53 +131,126 @@ const PracticeAssignment = () => {
     return Math.round((correctCount / Math.max(correctChars.length, 1)) * 100);
   };
 
-  if (loading || !assignment) {
+  const progress =
+    assignment && assignment.correctText.length > 0
+      ? Math.min((typedText.length / assignment.correctText.length) * 100, 100)
+      : 0;
+
+  if (loading) {
     return (
-      <Card>
-        <CardContent className="flex flex-col items-center justify-center py-12">
-          <p className="text-muted-foreground">Loading assignment...</p>
+      <div className="min-h-screen flex flex-col p-4 sm:p-6 lg:p-8 bg-gradient-to-br from-slate-50 via-blue-50 to-slate-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
+        <Card className="max-w-7xl mx-auto w-full">
+          <CardContent className="flex flex-col items-center justify-center py-12">
+            <p className="text-muted-foreground">Loading assignment...</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (!assignment) {
+    return (
+      <Card className="max-w-7xl mx-auto w-full">
+        <CardHeader>
+          <CardTitle>Assignment Not Found</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p>No assignment found with this ID : {assignmentId}</p>
+          <Button
+            onClick={() => router.push("/dashboard/student/practice")}
+            className="mt-4 gradient-button"
+          >
+            Back to Practice
+          </Button>
         </CardContent>
       </Card>
     );
   }
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h2 className="gradient-text text-2xl font-bold">{assignment.title}</h2>
-        <p
-          className={
-            colorScheme === "dark" ? "text-dark-muted" : "text-light-muted"
-          }
-        >
-          Practice this assignment to improve your typing skills
-        </p>
-      </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Assignment Details</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="mb-4">{assignment.correctText}</p>
-          <Input
-            value={typedText}
-            onChange={(e) => setTypedText(e.target.value)}
-            placeholder="Type the text above..."
-            className="mb-4"
-          />
-          <div className="flex space-x-4">
-            <Button onClick={handleStart} disabled={startTime !== null}>
-              Start
-            </Button>
-            <Button onClick={handleSubmit} disabled={!startTime}>
-              Submit
-            </Button>
+    <Card className="max-w-7xl mx-auto w-full">
+      <CardHeader>
+        <div className="flex items-center justify-between">
+          <CardTitle className="flex items-center gap-2">
+            <Clock className="h-5 w-5" />
+            {assignment.title}
+          </CardTitle>
+          <Button
+            variant="outline"
+            onClick={() => router.push("/dashboard/student/practice")}
+            className="gradient-button"
+          >
+            Back to Assignments
+          </Button>
+        </div>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-4">
+          <div className="flex items-center gap-4 text-sm text-muted-foreground">
+            <div className="flex items-center gap-1">
+              <Clock className="h-4 w-4" />
+              Time: {Math.floor(timeElapsed / 60)}:
+              {(timeElapsed % 60).toString().padStart(2, "0")}
+            </div>
+            <div className="flex items-center gap-1">
+              <Target className="h-4 w-4" />
+              Progress: {Math.round(progress)}%
+            </div>
           </div>
-        </CardContent>
-      </Card>
-    </div>
+          <Progress value={progress} className="w-full" />
+          <div className="grid grid-cols-1 lg:grid-cols-1 gap-6">
+            <div>
+              {assignment.imageUrl && (
+                <>
+                  <h3 className="font-medium mb-2">Assignment Image</h3>
+                  <div className="border rounded-lg p-4 bg-muted">
+                    <Image
+                      height={300}
+                      width={300}
+                      src={assignment.imageUrl}
+                      alt={assignment.title}
+                      className="w-full h-auto rounded"
+                    />
+                  </div>
+                </>
+              )}
+            </div>
+            <div className="space-y-4">
+              <div>
+                <h3 className="font-medium mb-2">Type the text you see</h3>
+                <Textarea
+                  value={typedText}
+                  onChange={(e) => setTypedText(e.target.value)}
+                  placeholder="Start typing here..."
+                  className="min-h-[500px]"
+                  disabled={!isStarted || isCompleted}
+                />
+              </div>
+              <div className="flex gap-2">
+                {!isStarted ? (
+                  <Button
+                    onClick={handleStart}
+                    className="w-full gradient-button"
+                    disabled={!user?.userId}
+                  >
+                    Start Assignment
+                  </Button>
+                ) : (
+                  <Button
+                    onClick={handleSubmit}
+                    className="w-full gradient-button"
+                    disabled={typedText.trim().length === 0 || isCompleted}
+                  >
+                    Submit Assignment
+                  </Button>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
   );
 };
 
-export default PracticeAssignment;
+export default AssignmentPracticeContent;

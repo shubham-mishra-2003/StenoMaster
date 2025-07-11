@@ -38,7 +38,9 @@ const useAssignments = () => {
 };
 
 // Main component for rendering student progress
-const StudentProgressContent: React.FC<{ classId?: string }> = ({ classId }) => {
+const StudentProgressContent: React.FC<{ classId?: string }> = ({
+  classId,
+}) => {
   const { colorScheme } = useTheme();
   const { user, isAuthenticated } = useAuth();
   const { scores, assignments, loading, error, fetchAssignments, fetchScores } =
@@ -72,17 +74,6 @@ const StudentProgressContent: React.FC<{ classId?: string }> = ({ classId }) => 
       return () => clearTimeout(timer);
     }
   }, [user, isAuthenticated, classId, fetchAssignments, fetchScores]);
-
-  // Handle error notifications
-  useEffect(() => {
-    if (error) {
-      toast({
-        title: "Error",
-        description: error,
-        variant: "destructive",
-      });
-    }
-  }, [error]);
 
   // Get assignment title by ID
   const getAssignmentTitle = (assignmentId: string): string => {

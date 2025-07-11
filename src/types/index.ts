@@ -45,7 +45,6 @@ export interface Score {
   wpm: number;
   timeElapsed: number;
   completedAt: Date;
-  isTypingTest?: boolean;
 }
 
 export interface StudentAssignment {

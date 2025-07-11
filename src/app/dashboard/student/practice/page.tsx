@@ -6,75 +6,91 @@ import { BookOpen } from "lucide-react";
 import Link from "next/link";
 import { useTheme } from "@/hooks/ThemeProvider";
 import { useAuth } from "@/hooks/useAuth";
-import { useStudentAssignments } from "@/hooks/useStudentAssignments";
-import { useClass } from "@/hooks/useClasses";
+
 import { toast } from "@/hooks/use-toast";
-import { Assignment } from "@/types";
+import { Assignment, Class } from "@/types";
+import { useStudentSide } from "@/hooks/useScore";
 
 const StudentPracticeDashboard = () => {
   const { user, isAuthenticated } = useAuth();
-  const { classes, fetchStudentClasses, isLoading: classLoading } = useClass();
-  const { assignments, fetchAssignments, loading: assignmentsLoading, error } = useStudentAssignments();
   const { colorScheme } = useTheme();
-  const [hasFetched, setHasFetched] = useState(false);
+
+  const token = localStorage.getItem("StenoMaster-token");
+  const [isLoading, setIsLoading] = useState(true);
+
+  const {
+    assignments,
+    fetchAssignments,
+    fetchClasses,
+    scores,
+    studentClass,
+    submitScore,
+  } = useStudentSide();
 
   useEffect(() => {
-    if (!isAuthenticated || !user?.userId || user.userType !== "student" || hasFetched) {
+    if (!isAuthenticated || !user?.userId) {
+      setIsLoading(false);
       return;
     }
 
-    const fetchData = async () => {
+    const loadData = async () => {
+      setIsLoading(true);
       try {
-        // Fetch the student's enrolled classes
-        await fetchStudentClasses();
-
-        // Fetch assignments for each enrolled class
-        const token = localStorage.getItem("StenoMaster-token");
-        if (!token) {
-          throw new Error("Invalid session. Please log in again.");
+        if (user) {
+          await fetchClasses();
         }
-        for (const classItem of classes) {
-          await fetchAssignments(classItem.id);
-        }
-        setHasFetched(true);
       } catch (err) {
-        console.error("[StudentPracticeDashboard] Error fetching data:", err);
+        console.error("Failed to load data:", err);
         toast({
           title: "Error",
-          description: "Failed to load classes or assignments.",
+          description: "Failed to load dashboard data.",
           variant: "destructive",
         });
+      } finally {
+        setIsLoading(isLoading);
       }
     };
 
-    fetchData();
-  }, [isAuthenticated, user, fetchStudentClasses, fetchAssignments, classes, hasFetched]);
+    loadData();
+  }, [isAuthenticated, user]);
 
   useEffect(() => {
-    if (error) {
-      toast({
-        title: "Error",
-        description: error,
-        variant: "destructive",
-      });
+    if (studentClass.length > 0) {
+      fetchAssignments(studentClass[0].id);
+    } else if (!isLoading && studentClass.length === 0) {
+      if (!studentClass) {
+        toast({
+          title: "No Classes",
+          description: "No classes found for this student.",
+          variant: "destructive",
+        });
+      }
     }
-  }, [error]);
+  }, [studentClass, isLoading, user]);
 
-  if (classLoading || assignmentsLoading || !user) {
-    return (
-      <Card>
-        <CardContent className="flex flex-col items-center justify-center py-12">
-          <p className="text-muted-foreground">Loading practice assignments...</p>
-        </CardContent>
-      </Card>
-    );
-  }
+  // if (isLoading || !user) {
+  //   return (
+  //     <Card>
+  //       <CardContent className="flex flex-col items-center justify-center py-12">
+  //         <p className="text-muted-foreground">
+  //           Loading practice assignments...
+  //         </p>
+  //       </CardContent>
+  //     </Card>
+  //   );
+  // }
 
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="gradient-text text-2xl font-bold">Practice Assignments</h2>
-        <p className={colorScheme === "dark" ? "text-dark-muted" : "text-light-muted"}>
+        <h2 className="gradient-text text-2xl font-bold">
+          Practice Assignments
+        </h2>
+        <p
+          className={
+            colorScheme === "dark" ? "text-dark-muted" : "text-light-muted"
+          }
+        >
           Practice your assignments to improve your skills
         </p>
       </div>
@@ -89,10 +105,22 @@ const StudentPracticeDashboard = () => {
               <div className="w-16 h-16 bg-gradient-to-br from-blue-500 via-purple-500 to-indigo-500 rounded-full flex items-center justify-center mb-4 shadow-lg">
                 <BookOpen className="h-8 w-8 text-white" />
               </div>
-              <h3 className={`text-lg font-semibold mb-2 ${colorScheme === "dark" ? "text-dark-muted" : "text-light-muted"}`}>
+              <h3
+                className={`text-lg font-semibold mb-2 ${
+                  colorScheme === "dark"
+                    ? "text-dark-muted"
+                    : "text-light-muted"
+                }`}
+              >
                 No assignments yet
               </h3>
-              <p className={colorScheme === "dark" ? "text-dark-muted text-center" : "text-light-muted text-center"}>
+              <p
+                className={
+                  colorScheme === "dark"
+                    ? "text-dark-muted text-center"
+                    : "text-light-muted text-center"
+                }
+              >
                 Check back later for new practice assignments
               </p>
             </div>
@@ -104,8 +132,15 @@ const StudentPracticeDashboard = () => {
                   <Card key={assignment.id}>
                     <CardHeader>
                       <CardTitle>{assignment.title}</CardTitle>
-                      <p className={colorScheme === "dark" ? "text-dark-muted" : "text-light-muted"}>
-                        Deadline: {new Date(assignment.deadline).toLocaleDateString()}
+                      <p
+                        className={
+                          colorScheme === "dark"
+                            ? "text-dark-muted"
+                            : "text-light-muted"
+                        }
+                      >
+                        Deadline:{" "}
+                        {new Date(assignment.deadline).toLocaleDateString()}
                       </p>
                     </CardHeader>
                     <CardContent>
