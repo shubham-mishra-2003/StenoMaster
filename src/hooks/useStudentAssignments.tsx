@@ -182,80 +182,78 @@ export const useStudentAssignments = (): UseStudentAssignmentsReturn => {
       console.log(
         `[useStudentAssignments] Fetching assignment with id: ${assignmentId}`
       );
-      // Try fetching with the existing endpoint
-      const response = await fetch("/api/assignment/fetch", {
+
+      // Try POST to /api/assignment/fetch with id
+      let response = await fetch("/api/assignment/fetch", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ id: assignmentId }), // Use 'id' instead of 'assignmentId'
+        body: JSON.stringify({ id: assignmentId }),
         signal: AbortSignal.timeout(10000),
       });
 
+      let result = await response.json();
+      console.log(
+        `[useStudentAssignments] POST /api/assignment/fetch response for id ${assignmentId}:`,
+        result
+      );
+
       if (!response.ok) {
-        // Fallback to a GET request if POST fails
         console.warn(
-          `[useStudentAssignments] POST request failed, trying GET for assignmentId: ${assignmentId}`
+          `[useStudentAssignments] POST /api/assignment/fetch failed: ${response.statusText}`
         );
-        const fallbackResponse = await fetch(`/api/assignment/${assignmentId}`, {
-          method: "GET",
+        // Try alternative POST with assignmentId
+        response = await fetch("/api/assignment/fetch", {
+          method: "POST",
           headers: {
             "Content-Type": "application/json",
             Authorization: `Bearer ${token}`,
           },
+          body: JSON.stringify({ assignmentId }),
           signal: AbortSignal.timeout(10000),
         });
 
-        if (!fallbackResponse.ok) {
-          throw new Error(`Failed to fetch assignment: ${fallbackResponse.statusText}`);
-        }
-
-        const fallbackResult = await fallbackResponse.json();
+        result = await response.json();
         console.log(
-          `[useStudentAssignments] Fallback GET response for assignmentId ${assignmentId}:`,
-          fallbackResult
+          `[useStudentAssignments] POST /api/assignment/fetch with assignmentId response:`,
+          result
         );
 
-        if (fallbackResult.status !== "success" || !fallbackResult.data) {
-          throw new Error(fallbackResult.message || "Assignment not found");
-        }
+        if (!response.ok) {
+          // Try GET request as a fallback
+          response = await fetch(`/api/assignment/${assignmentId}`, {
+            method: "GET",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+            signal: AbortSignal.timeout(10000),
+          });
 
-        const assignment = fallbackResult.data; // Assume single object for GET
-        const deadline = parse(
-          assignment.deadline,
-          "dd/MM/yyyy, hh:mm a",
-          new Date()
-        );
-        if (!isValid(deadline)) {
-          throw new Error(
-            `Invalid deadline format for assignment ${assignment.id}`
+          result = await response.json();
+          console.log(
+            `[useStudentAssignments] GET /api/assignment/${assignmentId} response:`,
+            result
           );
-        }
 
-        const formattedAssignment = {
-          ...assignment,
-          createdAt: new Date(assignment.createdAt),
-          deadline,
-        } as Assignment;
-        console.log(
-          `[useStudentAssignments] Formatted assignment:`,
-          formattedAssignment
-        );
-        return formattedAssignment;
+          if (!response.ok) {
+            throw new Error(`Failed to fetch assignment: ${response.statusText}`);
+          }
+        }
       }
 
-      const result = await response.json();
-      console.log(
-        `[useStudentAssignments] API response for assignmentId ${assignmentId}:`,
-        result
-      );
-
-      if (result.status !== "success" || !result.data || !Array.isArray(result.data) || result.data.length === 0) {
+      if (result.status !== "success") {
         throw new Error(result.message || "Assignment not found");
       }
 
-      const assignment = result.data[0];
+      // Handle both single object and array responses
+      const assignment = Array.isArray(result.data) ? result.data[0] : result.data;
+      if (!assignment) {
+        throw new Error("Assignment not found in response data");
+      }
+
       const deadline = parse(
         assignment.deadline,
         "dd/MM/yyyy, hh:mm a",

@@ -12,9 +12,9 @@ import { toast } from "@/hooks/use-toast";
 import { Assignment, Score } from "@/types";
 
 const PracticeAssignment = () => {
-  const { assignmentId } = useParams();
+  const { assignmentID } = useParams();
   const { user, isAuthenticated } = useAuth();
-  const { getAssignment, createScore, loading, error } = useStudentAssignments();
+  const { assignments, createScore, loading, error } = useStudentAssignments();
   const { colorScheme } = useTheme();
   const router = useRouter();
   const [typedText, setTypedText] = useState("");
@@ -23,6 +23,11 @@ const PracticeAssignment = () => {
 
   useEffect(() => {
     if (!isAuthenticated || !user?.userId || user.userType !== "student") {
+      console.error("[PracticeAssignment] Authentication check failed:", {
+        isAuthenticated,
+        userId: user?.userId,
+        userType: user?.userType,
+      });
       toast({
         title: "Error",
         description: "Please log in as a student to access this assignment.",
@@ -32,7 +37,8 @@ const PracticeAssignment = () => {
       return;
     }
 
-    if (!assignmentId || typeof assignmentId !== "string") {
+    if (!assignmentID || typeof assignmentID !== "string" || assignmentID.trim() === "") {
+      console.error("[PracticeAssignment] Invalid assignmentID:", assignmentID);
       toast({
         title: "Error",
         description: "Invalid assignment ID.",
@@ -42,35 +48,27 @@ const PracticeAssignment = () => {
       return;
     }
 
-    const fetchAssignment = async () => {
-      try {
-        const token = localStorage.getItem("StenoMaster-token");
-        if (!token) {
-          throw new Error("Invalid session");
-        }
-        const foundAssignment = await getAssignment(assignmentId);
-        if (!foundAssignment) {
-          throw new Error("Assignment not found");
-        }
-        setAssignment(foundAssignment);
-        console.log("[PracticeAssignment] Assignment fetched:", foundAssignment);
-      } catch (err) {
-        const errorMessage = err instanceof Error ? err.message : "An unexpected error occurred";
-        console.error("[PracticeAssignment] Error fetching assignment:", err);
-        toast({
-          title: "Error",
-          description: errorMessage,
-          variant: "destructive",
-        });
-        router.push("/dashboard/student/practice");
-      }
-    };
+    console.log("[PracticeAssignment] Starting fetch for assignmentID:", assignmentID);
 
-    fetchAssignment();
-  }, [isAuthenticated, user, assignmentId, getAssignment, router]);
+    // Try to find the assignment in the already fetched assignments
+    const foundAssignment = assignments.find((a) => a.id === assignmentID);
+    if (foundAssignment) {
+      console.log("[PracticeAssignment] Assignment found in state:", foundAssignment);
+      setAssignment(foundAssignment);
+    } else {
+      console.error("[PracticeAssignment] Assignment not found in state for ID:", assignmentID);
+      toast({
+        title: "Error",
+        description: "Assignment not found.",
+        variant: "destructive",
+      });
+      router.push("/dashboard/student/practice");
+    }
+  }, [isAuthenticated, user, assignmentID, assignments, router]);
 
   useEffect(() => {
     if (error) {
+      console.error("[PracticeAssignment] Hook error:", error);
       toast({
         title: "Error",
         description: error,
