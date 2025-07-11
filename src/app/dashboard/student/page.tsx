@@ -2,84 +2,143 @@
 
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { BookOpen, Target, Zap, Clock } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { BookOpen, Target, Zap } from "lucide-react";
 import AssignmentList from "@/components/AssignmentList";
 import { useTheme } from "@/hooks/ThemeProvider";
 import { useAuth } from "@/hooks/useAuth";
+import { Assignment, Class, Score } from "@/types";
 import { toast } from "@/hooks/use-toast";
-import { useStudentAssignments } from "@/hooks/useStudentAssignments";
 
 const DashboardContent: React.FC = () => {
-  const [isLoading, setIsLoading] = useState(true);
-  const router = useRouter();
+  const token = localStorage.getItem("StenoMaster-token");
+  const [loading, setLoading] = useState(false);
   const { colorScheme } = useTheme();
-  const { user, isAuthenticated } = useAuth();
-  const { assignments, scores, loading, error, fetchAssignments, fetchScores } =
-    useStudentAssignments();
+  const { user } = useAuth();
+  const [assignments, setAssignments] = useState<Assignment[]>([]);
+  const [studentClass, setStudentClass] = useState<Class[]>([]);
+  const [scores, setScores] = useState<Score[]>([]);
 
-  useEffect(() => {
-    if (!isAuthenticated || !user?.userId) {
-      return;
-    }
+  const fetchClasses = async () => {
+    if (loading || !token) return;
+    setLoading(true);
+    try {
+      const response = await fetch("/api/classes", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ action: "getStudentClasses" }),
+      });
 
-    const loadData = async () => {
-      setIsLoading(true);
-      try {
-        if (user.classId) {
-          await fetchAssignments(user.classId);
-        } else {
-          console.warn("Class ID not found in user object");
-        }
-        await fetchScores(user.userId);
-      } catch (err) {
-        console.error("Failed to load data:", err);
-      } finally {
-        setIsLoading(loading);
-      }
-    };
+      const text = await response.text();
+      const result = text
+        ? JSON.parse(text)
+        : { status: "error", message: "Empty response from server" };
 
-    loadData();
-  }, [isAuthenticated, user, fetchAssignments, fetchScores]);
-
-  useEffect(() => {
-    if (!isAuthenticated || !user?.userId) {
-      if (!loading) {
-        const timer = setTimeout(() => {
-          toast({
-            title: "Authentication Required",
-            description: "Please log in to view dashboard.",
-            variant: "destructive",
-          });
-        }, 900);
-        return () => clearTimeout(timer);
-      }
-      return;
-    }
-
-    if (error) {
-      const timer = setTimeout(() => {
+      if (
+        response.ok &&
+        result.status === "success" &&
+        Array.isArray(result.data)
+      ) {
+        setStudentClass(result.data);
+      } else {
         toast({
           title: "Error",
-          description: error,
+          description: result.message || "Failed to fetch student classes",
           variant: "destructive",
         });
-      }, 900);
-      return () => clearTimeout(timer);
+        setStudentClass([]);
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description:
+          "An unexpected error occurred while fetching student classes.",
+        variant: "destructive",
+      });
+      setStudentClass([]);
+    } finally {
+      setLoading(false);
     }
+  };
 
-    if (!loading && assignments.length === 0 && scores.length === 0) {
-      const timer = setTimeout(() => {
+  const fetchAssignments = async (classId: string) => {
+    try {
+      const response = await fetch("/api/assignment/fetch", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token, classId }),
+        signal: AbortSignal.timeout(5000),
+      });
+      const text = await response.text();
+      const result = text
+        ? JSON.parse(text)
+        : { status: "error", message: "Failed to fetch assignment" };
+
+      if (response.ok && result.status === "success") {
+        setAssignments(result.data);
+      } else {
         toast({
-          title: "No Data Available",
-          description:
-            "You have no assignments or scores to display at this time.",
-          variant: "default",
+          title: "Error",
+          description: result.message || "Failed to fetch assignments",
+          variant: "destructive",
         });
-      }, 900);
-      return () => clearTimeout(timer);
+        setAssignments([]);
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to fetch assignments",
+        variant: "destructive",
+      });
+      setAssignments([]);
     }
-  }, [isAuthenticated, user, loading, error, assignments, scores]);
+  };
+
+  useEffect(() => {
+    if (user) {
+      fetchClasses();
+    }
+  }, [user]);
+
+  useEffect(() => {
+    if (studentClass.length > 0) {
+      fetchAssignments(studentClass[0].id);
+    } else if (!loading && studentClass.length === 0) {
+      setAssignments([]);
+      if (user) {
+        toast({
+          title: "No Classes",
+          description: "No classes found for this student.",
+          variant: "destructive",
+        });
+      }
+    }
+  }, [studentClass, loading, user]);
+
+  // const scores = [
+  //   {
+  //     id: "score-1625738400003",
+  //     studentId: "O5YDWjGHcCTSE3ZFd3F73",
+  //     typedText: "The quick brown fox jumps over the lazy dog.",
+  //     accuracy: 90,
+  //     wpm: 40,
+  //     timeElapsed: 10,
+  //     completedAt: "2025-07-08T22:00:00.000Z",
+  //     assignmentId: "assignment-1752089345210",
+  //   },
+  //   {
+  //     id: "score-1625738400008",
+  //     studentId: "O5YDWjGHcCTSE3ZFd3F72",
+  //     typedText: "The quick brown fox jumps over the lazy dog.",
+  //     accuracy: 20,
+  //     wpm: 60,
+  //     timeElapsed: 5,
+  //     completedAt: "2025-07-08T22:00:00.000Z",
+  //     assignmentId: "assignment-1752000240970",
+  //   },
+  // ];
 
   const calculateAverageWPM = (): string => {
     if (scores.length === 0) return "0";
@@ -94,15 +153,6 @@ const DashboardContent: React.FC = () => {
       0
     );
     return Math.round(totalAccuracy / scores.length).toString();
-  };
-
-  const calculateTotalTime = (): string => {
-    if (scores.length === 0) return "0.0";
-    const totalSeconds = scores.reduce(
-      (sum, score) => sum + (score.timeElapsed || 0),
-      0
-    );
-    return (totalSeconds / 3600).toFixed(1);
   };
 
   const stats = [
@@ -124,22 +174,12 @@ const DashboardContent: React.FC = () => {
       icon: Target,
       color: "from-green-500 to-green-600",
     },
-    {
-      title: "Time Practiced",
-      value: `${calculateTotalTime()}h`,
-      icon: Clock,
-      color: "from-orange-500 to-orange-600",
-    },
   ];
 
-  const handleStartPractice = () => {
-    router.push("/dashboard/student/practice");
-  };
-
-  if (isLoading && !isAuthenticated && !user) {
+  if (!user) {
     return (
-      <div className="space-y-6">
-        <p className="text-muted-foreground">Loading dashboard...</p>
+      <div className="text-center">
+        <p>Please log in to view your dashboard.</p>
       </div>
     );
   }
@@ -160,8 +200,7 @@ const DashboardContent: React.FC = () => {
           </p>
         </div>
       </div>
-
-      <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 mb-6">
+      <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-3 lg:grid-cols-3 mb-6">
         {stats.map((stat, index) => {
           const Icon = stat.icon;
           return (
@@ -169,7 +208,7 @@ const DashboardContent: React.FC = () => {
               key={index}
               className={`relative group overflow-hidden bg-gradient-to-br backdrop-blur-xl border-0 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1 ${
                 colorScheme === "dark"
-                  ? "from-gray-900/80 via-gray-800/60 to-gray-700/40"
+                  ? "from-gray-900/80 via-gray-80/60 to-gray-700/40"
                   : "from-white/80 via-white/60 to-white/40"
               }`}
             >
@@ -203,21 +242,7 @@ const DashboardContent: React.FC = () => {
           );
         })}
       </div>
-
-      <AssignmentList
-        assignments={assignments}
-        onStartPractice={handleStartPractice}
-      />
-
-      {assignments.length === 0 && scores.length === 0 && !loading && (
-        <p
-          className={`text-sm sm:text-base mt-4 ${
-            colorScheme === "dark" ? "text-dark" : "text-light"
-          }`}
-        >
-          No assignments or scores available at this time.
-        </p>
-      )}
+      <AssignmentList assignments={assignments} />
     </div>
   );
 };

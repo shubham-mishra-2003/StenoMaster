@@ -9,7 +9,6 @@ import { useRouter } from "next/navigation";
 
 interface AssignmentListProps {
   assignments: Assignment[];
-  onStartPractice: (assignmentId: string) => void;
 }
 
 const AssignmentList = ({ assignments }: AssignmentListProps) => {
