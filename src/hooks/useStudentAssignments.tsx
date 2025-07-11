@@ -12,7 +12,7 @@ interface UseStudentAssignmentsReturn {
   error: string | null;
   fetchAssignments: (classId: string) => Promise<void>;
   getAssignment: (assignmentId: string) => Promise<Assignment | null>;
-  createScore: (score: Score) => Promise<void>;
+  submitScore: (score: Score) => Promise<void>; // Changed from createScore
   fetchScores: (studentId: string) => Promise<void>;
 }
 
@@ -294,7 +294,7 @@ export const useStudentAssignments = (): UseStudentAssignmentsReturn => {
     }
   }, []);
 
-  const createScore = useCallback(async (score: Score) => {
+  const submitScore = useCallback(async (score: Score) => {
     setLoading(true);
     setError(null);
     try {
@@ -303,7 +303,7 @@ export const useStudentAssignments = (): UseStudentAssignmentsReturn => {
         throw new Error("Invalid session. Please log in again.");
       }
 
-      console.log("[useStudentAssignments] Creating score:", score);
+      console.log("[useStudentAssignments] Submitting score:", score);
       const response = await fetch("/api/score/create", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -316,7 +316,7 @@ export const useStudentAssignments = (): UseStudentAssignmentsReturn => {
       }
 
       const result = await response.json();
-      console.log("[useStudentAssignments] Score creation response:", result);
+      console.log("[useStudentAssignments] Score submission response:", result);
 
       if (result.status !== "success") {
         throw new Error(result.message || "Failed to save score");
@@ -336,7 +336,7 @@ export const useStudentAssignments = (): UseStudentAssignmentsReturn => {
     } catch (err) {
       const errorMessage =
         err instanceof Error ? err.message : "An unexpected error occurred";
-      console.error("[useStudentAssignments] Error creating score:", err);
+      console.error("[useStudentAssignments] Error submitting score:", err);
       setError(errorMessage);
       toast({
         title: "Error",
@@ -406,7 +406,7 @@ export const useStudentAssignments = (): UseStudentAssignmentsReturn => {
     error,
     fetchAssignments,
     getAssignment,
-    createScore,
+    submitScore, // Changed from createScore
     fetchScores,
   };
 };

@@ -14,7 +14,7 @@ import { Assignment, Score } from "@/types";
 const PracticeAssignment = () => {
   const { assignmentID } = useParams();
   const { user, isAuthenticated } = useAuth();
-  const { assignments, createScore, loading, error } = useStudentAssignments();
+  const { assignments, submitScore, loading, error } = useStudentAssignments();
   const { colorScheme } = useTheme();
   const router = useRouter();
   const [typedText, setTypedText] = useState("");
@@ -109,7 +109,7 @@ const PracticeAssignment = () => {
     };
 
     try {
-      await createScore(score);
+      await submitScore(score);
       toast({
         title: "Success",
         description: "Assignment submitted successfully.",
