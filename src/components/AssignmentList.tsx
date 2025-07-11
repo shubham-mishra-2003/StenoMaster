@@ -15,8 +15,9 @@ const AssignmentList = ({ assignments }: AssignmentListProps) => {
   const { colorScheme } = useTheme();
   const router = useRouter();
 
-  const handleStartPractice = (assignmentId: string) => {
-    router.push(`/dashboard/student/practice/${assignmentId}`);
+  const handleStartPractice = (assignmentID: string) => {
+    router.push(`/dashboard/student/practice/${assignmentID}`);
+    console.log("Assignment id - ", assignmentID);
   };
 
   if (assignments.length === 0) {

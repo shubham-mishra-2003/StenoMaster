@@ -226,10 +226,6 @@ const DashboardContent: React.FC = () => {
     },
   ];
 
-  const handleStartPractice = () => {
-    router.push("/dashboard/student/practice");
-  };
-
   if (isLoading && !isAuthenticated && !user) {
     return (
       <div className="space-y-6">
