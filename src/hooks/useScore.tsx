@@ -6,7 +6,7 @@ interface studentSideProps {
   fetchClasses: () => Promise<void>;
   fetchAssignments: (classId: string) => Promise<void>;
   submitScore: (score: Score) => Promise<void>;
-  setAssignments: (assignment: Assignment) => void;
+  setAssignments: (assignment: Assignment[]) => void;
   assignments: Assignment[];
   studentClass: Class[];
   scores: Score[];

@@ -13,6 +13,7 @@ import { Clock, Target } from "lucide-react";
 import Image from "next/image";
 import { Progress } from "@/components/ui/progress";
 import { Textarea } from "@/components/ui/textarea";
+import { useStudentSide } from "@/hooks/useScore";
 
 const AssignmentPracticeContent = () => {
   const params = useParams();
@@ -27,11 +28,17 @@ const AssignmentPracticeContent = () => {
   const { assignmentID } = useParams();
   const router = useRouter();
   const [loading, setLoading] = useState(false);
-  const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [assignment, setAssignment] = useState<Assignment | null>(null);
-  const [studentClass, setStudentClass] = useState<Class[]>([]);
-  const [scores, setScores] = useState<Score[]>([]);
 
+  const {
+    assignments,
+    fetchClasses,
+    fetchAssignments,
+    setAssignments,
+    scores,
+    studentClass,
+    submitScore,
+  } = useStudentSide();
 
   useEffect(() => {
     if (user) {
