@@ -2,21 +2,25 @@
 
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { BookOpen, Target, Zap } from "lucide-react";
+import { BookOpen, Target, Zap, Clock } from "lucide-react";
+import { useRouter } from "next/navigation";
 import AssignmentList from "@/components/AssignmentList";
 import { useTheme } from "@/hooks/ThemeProvider";
 import { useAuth } from "@/hooks/useAuth";
 import { Assignment, Class, Score } from "@/types";
 import { toast } from "@/hooks/use-toast";
+import { useStudentAssignments } from "@/hooks/useStudentAssignments";
 
 const DashboardContent: React.FC = () => {
   const token = localStorage.getItem("StenoMaster-token");
   const [loading, setLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const { colorScheme } = useTheme();
-  const { user } = useAuth();
+  const { user, isAuthenticated } = useAuth();
+  const { scores, loading: scoresLoading, error, fetchScores } = useStudentAssignments();
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [studentClass, setStudentClass] = useState<Class[]>([]);
-  const [scores, setScores] = useState<Score[]>([]);
+  const router = useRouter();
 
   const fetchClasses = async () => {
     if (loading || !token) return;
@@ -97,10 +101,32 @@ const DashboardContent: React.FC = () => {
   };
 
   useEffect(() => {
-    if (user) {
-      fetchClasses();
+    if (!isAuthenticated || !user?.userId) {
+      setIsLoading(false);
+      return;
     }
-  }, [user]);
+
+    const loadData = async () => {
+      setIsLoading(true);
+      try {
+        if (user) {
+          await fetchClasses();
+          await fetchScores(user.userId);
+        }
+      } catch (err) {
+        console.error("Failed to load data:", err);
+        toast({
+          title: "Error",
+          description: "Failed to load dashboard data.",
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoading(scoresLoading || loading);
+      }
+    };
+
+    loadData();
+  }, [isAuthenticated, user, fetchScores]);
 
   useEffect(() => {
     if (studentClass.length > 0) {
@@ -117,28 +143,43 @@ const DashboardContent: React.FC = () => {
     }
   }, [studentClass, loading, user]);
 
-  // const scores = [
-  //   {
-  //     id: "score-1625738400003",
-  //     studentId: "O5YDWjGHcCTSE3ZFd3F73",
-  //     typedText: "The quick brown fox jumps over the lazy dog.",
-  //     accuracy: 90,
-  //     wpm: 40,
-  //     timeElapsed: 10,
-  //     completedAt: "2025-07-08T22:00:00.000Z",
-  //     assignmentId: "assignment-1752089345210",
-  //   },
-  //   {
-  //     id: "score-1625738400008",
-  //     studentId: "O5YDWjGHcCTSE3ZFd3F72",
-  //     typedText: "The quick brown fox jumps over the lazy dog.",
-  //     accuracy: 20,
-  //     wpm: 60,
-  //     timeElapsed: 5,
-  //     completedAt: "2025-07-08T22:00:00.000Z",
-  //     assignmentId: "assignment-1752000240970",
-  //   },
-  // ];
+  useEffect(() => {
+    if (!isAuthenticated || !user?.userId) {
+      if (!scoresLoading && !loading) {
+        const timer = setTimeout(() => {
+          toast({
+            title: "Authentication Required",
+            description: "Please log in to view dashboard.",
+            variant: "destructive",
+          });
+        }, 900);
+        return () => clearTimeout(timer);
+      }
+      return;
+    }
+
+    if (error) {
+      const timer = setTimeout(() => {
+        toast({
+          title: "Error",
+          description: error,
+          variant: "destructive",
+        });
+      }, 900);
+      return () => clearTimeout(timer);
+    }
+
+    if (!scoresLoading && !loading && assignments.length === 0 && scores.length === 0) {
+      const timer = setTimeout(() => {
+        toast({
+          title: "No Data Available",
+          description: "You have no assignments or scores to display at this time.",
+          variant: "default",
+        });
+      }, 900);
+      return () => clearTimeout(timer);
+    }
+  }, [isAuthenticated, user, scoresLoading, loading, error, assignments, scores]);
 
   const calculateAverageWPM = (): string => {
     if (scores.length === 0) return "0";
@@ -148,11 +189,14 @@ const DashboardContent: React.FC = () => {
 
   const calculateAverageAccuracy = (): string => {
     if (scores.length === 0) return "0";
-    const totalAccuracy = scores.reduce(
-      (sum, score) => sum + score.accuracy,
-      0
-    );
+    const totalAccuracy = scores.reduce((sum, score) => sum + score.accuracy, 0);
     return Math.round(totalAccuracy / scores.length).toString();
+  };
+
+  const calculateTotalTime = (): string => {
+    if (scores.length === 0) return "0.0";
+    const totalSeconds = scores.reduce((sum, score) => sum + (score.timeElapsed || 0), 0);
+    return (totalSeconds / 3600).toFixed(1);
   };
 
   const stats = [
@@ -174,7 +218,25 @@ const DashboardContent: React.FC = () => {
       icon: Target,
       color: "from-green-500 to-green-600",
     },
+    {
+      title: "Time Practiced",
+      value: `${calculateTotalTime()}h`,
+      icon: Clock,
+      color: "from-orange-500 to-orange-600",
+    },
   ];
+
+  const handleStartPractice = () => {
+    router.push("/dashboard/student/practice");
+  };
+
+  if (isLoading && !isAuthenticated && !user) {
+    return (
+      <div className="space-y-6">
+        <p className="text-muted-foreground">Loading dashboard...</p>
+      </div>
+    );
+  }
 
   if (!user) {
     return (
@@ -200,7 +262,8 @@ const DashboardContent: React.FC = () => {
           </p>
         </div>
       </div>
-      <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-3 lg:grid-cols-3 mb-6">
+
+      <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 mb-6">
         {stats.map((stat, index) => {
           const Icon = stat.icon;
           return (
@@ -208,7 +271,7 @@ const DashboardContent: React.FC = () => {
               key={index}
               className={`relative group overflow-hidden bg-gradient-to-br backdrop-blur-xl border-0 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1 ${
                 colorScheme === "dark"
-                  ? "from-gray-900/80 via-gray-80/60 to-gray-700/40"
+                  ? "from-gray-900/80 via-gray-800/60 to-gray-700/40"
                   : "from-white/80 via-white/60 to-white/40"
               }`}
             >
@@ -242,7 +305,18 @@ const DashboardContent: React.FC = () => {
           );
         })}
       </div>
-      <AssignmentList assignments={assignments} />
+
+      <AssignmentList assignments={assignments}/>
+
+      {assignments.length === 0 && scores.length === 0 && !scoresLoading && !loading && (
+        <p
+          className={`text-sm sm:text-base mt-4 ${
+            colorScheme === "dark" ? "text-dark" : "text-light"
+          }`}
+        >
+          No assignments or scores available at this time.
+        </p>
+      )}
     </div>
   );
 };
