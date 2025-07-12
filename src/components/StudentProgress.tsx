@@ -77,9 +77,11 @@ const StudentProgressContent: React.FC<{ classId?: string }> = ({
 
   // Get assignment title by ID
   const getAssignmentTitle = (assignmentId: string): string => {
-    if (assignmentId === "typing-test") return "Typing Test";
     const assignment = assignments.find((a) => a.id === assignmentId);
-    return assignment?.title || "Unknown Assignment";
+    if (!assignment) {
+      return "No Assignments";
+    }
+    return assignment?.title || assignment?.id;
   };
 
   // Calculate accuracy improvement

@@ -12,7 +12,7 @@ interface UseStudentAssignmentsReturn {
   error: string | null;
   fetchAssignments: (classId: string) => Promise<void>;
   getAssignment: (assignmentId: string) => Promise<Assignment | null>;
-  submitScore: (score: Score) => Promise<void>; // Changed from createScore
+  submitScore: (score: Score) => Promise<void>;
   fetchScores: (studentId: string) => Promise<void>;
 }
 

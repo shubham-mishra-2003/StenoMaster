@@ -14,12 +14,12 @@ import {
   RefreshCw,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
-import { useStudentAssignments } from "@/hooks/useStudentAssignments";
 import { toast } from "@/hooks/use-toast";
 import { useTheme } from "@/hooks/ThemeProvider";
 import { Score } from "@/types";
 import { sampleTexts } from "./sample-texts";
 import { useRouter } from "next/navigation";
+import { useStudentSide } from "@/hooks/useScore";
 
 const TypingTestContent = () => {
   const [currentText, setCurrentText] = useState(sampleTexts[0]);
@@ -29,49 +29,14 @@ const TypingTestContent = () => {
   const [isCompleted, setIsCompleted] = useState(false);
   const [timeElapsed, setTimeElapsed] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
-  const [hasFetched, setHasFetched] = useState(false);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const { user } = useAuth();
   const { colorScheme } = useTheme();
-  const { scores, fetchScores, submitScore, error } = useStudentAssignments();
+  const { scores, submitScore, fetchScores } = useStudentSide();
 
-  useEffect(() => {
-    if (!user?.userId || hasFetched) {
-      setIsLoading(false);
-      return;
-    }
-
-    const fetchTestResults = async () => {
-      setIsLoading(true);
-      try {
-        await fetchScores(user.userId);
-        setHasFetched(true);
-      } catch (error) {
-        toast({
-          title: "Error",
-          description:
-            error instanceof Error
-              ? error.message
-              : "Failed to load test results",
-          variant: "destructive",
-        });
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchTestResults();
-  }, [user, fetchScores, hasFetched]);
-
-  useEffect(() => {
-    if (error) {
-      toast({
-        title: "Error",
-        description: error,
-        variant: "destructive",
-      });
-    }
-  }, [error]);
+  if (!user) {
+    return;
+  }
 
   useEffect(() => {
     let interval: NodeJS.Timeout;
@@ -84,6 +49,7 @@ const TypingTestContent = () => {
   }, [isStarted, startTime, isCompleted]);
 
   useEffect(() => {
+    fetchScores(user?.userId);
     if (typedText.length === currentText.length && isStarted && !isCompleted) {
       handleComplete();
     }
@@ -118,24 +84,26 @@ const TypingTestContent = () => {
     setIsCompleted(true);
     const accuracy = calculateAccuracy();
     const wpm = calculateWPM();
+    const word = currentText.split(/\s+/);
+    const scoreId = word.slice(0, 4).join(" ");
 
     const result: Score = {
       id: `test-${Date.now()}`,
       studentId: user.userId,
-      assignmentId: "typing-test",
+      assignmentId: `typing-test-${scoreId}`,
       typedText,
       accuracy,
       wpm,
       timeElapsed,
       completedAt: new Date(),
-      isTypingTest: true,
     };
 
     try {
-      await submitScore(result);
-      toast({
-        title: "Typing Test Completed!",
-        description: `WPM: ${wpm}, Accuracy: ${accuracy}%`,
+      await submitScore(result).then(() => {
+        toast({
+          title: "Typing Test Completed!",
+          description: `WPM: ${wpm}, Accuracy: ${accuracy}%, Time: ${timeElapsed}`,
+        });
       });
     } catch (error) {
       toast({
@@ -228,6 +196,15 @@ const TypingTestContent = () => {
 
   return (
     <div className="space-y-6">
+      <Button
+        variant="outline"
+        onClick={() => {
+          fetchScores(user?.userId);
+        }}
+        className="gradient-button"
+      >
+        Fetch Scores
+      </Button>
       <Card>
         <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 via-purple-500/5 to-indigo-500/5"></div>
         <CardHeader>
@@ -404,7 +381,8 @@ const TypingTestContent = () => {
           </div>
         </CardContent>
       </Card>
-      {scores.filter((score) => score.isTypingTest).length > 0 && (
+      {scores.filter((score) => score.assignmentId.startsWith("typing-test"))
+        .length > 0 && (
         <Card className="max-h-[70vh] overflow-auto bg-gradient-to-br from-purple-500/5 via-indigo-500/5 to-blue-500/5">
           <CardHeader>
             <CardTitle>Recent Test Results</CardTitle>
@@ -412,8 +390,7 @@ const TypingTestContent = () => {
           <CardContent>
             <div className="space-y-3">
               {scores
-                .filter((score) => score.isTypingTest)
-                .slice(-5)
+                .filter((score) => score.assignmentId.startsWith("typing-test"))
                 .reverse()
                 .map((result) => (
                   <div

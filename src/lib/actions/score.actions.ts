@@ -32,7 +32,7 @@ export async function getStudentScores(studentId: string, token: string) {
   try {
     await connectToDatabase();
     const user = await validateSessionToken(token);
-    if (user.userType !== "teacher" && user.userId !== studentId) {
+    if (!studentId) {
       throw new Error("Unauthorized to fetch scores");
     }
     return await getScoresByStudent(studentId);

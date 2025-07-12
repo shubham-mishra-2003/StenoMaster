@@ -10,12 +10,12 @@ interface studentSideProps {
   assignments: Assignment[];
   studentClass: Class[];
   scores: Score[];
+  fetchScores: (studentId: string) => Promise<void>;
 }
 
 export const useStudentSide = (): studentSideProps => {
   const token = localStorage.getItem("StenoMaster-token");
   const [loading, setLoading] = useState(false);
-
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [studentClass, setStudentClass] = useState<Class[]>([]);
   const [scores, setScores] = useState<Score[]>([]);
@@ -111,9 +111,10 @@ export const useStudentSide = (): studentSideProps => {
         ? JSON.parse(text)
         : { status: "error", message: "Failed to fetch assignment" };
 
-      console.log("Scores from API - ", response);
       if (response.ok && result.status === "success") {
-        setScores(result.data);
+        toast({
+          title: "Scores Saved",
+        });
       } else {
         toast({
           title: "Error",
@@ -128,7 +129,37 @@ export const useStudentSide = (): studentSideProps => {
         description: "Failed to fetch assignments",
         variant: "destructive",
       });
-      setScores([]);
+    }
+  };
+
+  const fetchScores = async (studentId: string) => {
+    try {
+      const response = await fetch("/api/score/fetch", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ studentId, token }),
+        signal: AbortSignal.timeout(5000),
+      });
+      const text = await response.text();
+      const result = text
+        ? JSON.parse(text)
+        : { status: "error", message: "Failed to fetch scores" };
+      if (response.ok && result.status === "success") {
+        setScores(result.data);
+      } else {
+        toast({
+          title: "Error",
+          description: result.message || "Failed to fetch assignments",
+          variant: "destructive",
+        });
+        setScores([]);
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to fetch assignments",
+        variant: "destructive",
+      });
     }
   };
 
@@ -137,6 +168,7 @@ export const useStudentSide = (): studentSideProps => {
     fetchClasses,
     submitScore,
     setAssignments,
+    fetchScores,
     assignments,
     scores,
     studentClass,

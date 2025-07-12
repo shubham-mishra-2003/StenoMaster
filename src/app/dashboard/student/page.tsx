@@ -3,33 +3,25 @@
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { BookOpen, Target, Zap, Clock } from "lucide-react";
-import { useRouter } from "next/navigation";
 import AssignmentList from "@/components/AssignmentList";
 import { useTheme } from "@/hooks/ThemeProvider";
 import { useAuth } from "@/hooks/useAuth";
-import { Assignment, Class, Score } from "@/types";
 import { toast } from "@/hooks/use-toast";
-import { useStudentAssignments } from "@/hooks/useStudentAssignments";
 import { useStudentSide } from "@/hooks/useScore";
 
 const DashboardContent: React.FC = () => {
-  const token = localStorage.getItem("StenoMaster-token");
   const [loading, setLoading] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const { colorScheme } = useTheme();
   const { user, isAuthenticated } = useAuth();
-  const {
-    scores,
-    loading: scoresLoading,
-    error,
-    fetchScores,
-  } = useStudentAssignments();
   const {
     assignments,
     fetchAssignments,
     fetchClasses,
     setAssignments,
     studentClass,
+    fetchScores,
+    scores,
   } = useStudentSide();
 
   useEffect(() => {
@@ -53,7 +45,7 @@ const DashboardContent: React.FC = () => {
           variant: "destructive",
         });
       } finally {
-        setIsLoading(scoresLoading || loading);
+        setIsLoading(loading);
       }
     };
 
@@ -77,7 +69,7 @@ const DashboardContent: React.FC = () => {
 
   useEffect(() => {
     if (!isAuthenticated || !user?.userId) {
-      if (!scoresLoading && !loading) {
+      if (!loading) {
         const timer = setTimeout(() => {
           toast({
             title: "Authentication Required",
@@ -91,7 +83,6 @@ const DashboardContent: React.FC = () => {
     }
 
     if (
-      !scoresLoading &&
       !loading &&
       assignments.length === 0 &&
       scores.length === 0
@@ -109,9 +100,7 @@ const DashboardContent: React.FC = () => {
   }, [
     isAuthenticated,
     user,
-    scoresLoading,
     loading,
-    error,
     assignments,
     scores,
   ]);
@@ -159,12 +148,6 @@ const DashboardContent: React.FC = () => {
       icon: Target,
       color: "from-green-500 to-green-600",
     },
-    {
-      title: "Time Practiced",
-      value: `${calculateTotalTime()}h`,
-      icon: Clock,
-      color: "from-orange-500 to-orange-600",
-    },
   ];
 
   if (isLoading && !isAuthenticated && !user) {
@@ -200,7 +183,7 @@ const DashboardContent: React.FC = () => {
         </div>
       </div>
 
-      <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 mb-6">
+      <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-3 lg:grid-cols-3 mb-6">
         {stats.map((stat, index) => {
           const Icon = stat.icon;
           return (
@@ -247,7 +230,6 @@ const DashboardContent: React.FC = () => {
 
       {assignments.length === 0 &&
         scores.length === 0 &&
-        !scoresLoading &&
         !loading && (
           <p
             className={`text-sm sm:text-base mt-4 ${
