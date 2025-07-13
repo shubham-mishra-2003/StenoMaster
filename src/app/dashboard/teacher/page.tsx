@@ -2,105 +2,106 @@
 
 import React, { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Users, BookOpen } from "lucide-react";
+import { Users, BookOpen, RefreshCcw } from "lucide-react";
 import { useTheme } from "@/hooks/ThemeProvider";
 import StudentsScores from "@/components/StudentsScores";
 import { useAuth } from "@/hooks/useAuth";
-import { useAssignment } from "@/hooks/useAssignments";
-import { useClass } from "@/hooks/useClasses";
-import { Score } from "@/types";
+import { Button } from "@/components/ui/button";
+import { useScore } from "@/hooks/useScore";
 
 const TeacherDashboard = () => {
-  const { user, fetchStudent, students } = useAuth();
-  const { assignments, fetchAssignments } = useAssignment();
-  const { classes, fetchClasses, fetchStudentsInClass } = useClass();
+  const { user } = useAuth();
   const { colorScheme } = useTheme();
-  const [hasFetched, setHasFetched] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [studentClasses, setStudentClasses] = useState<Record<string, string>>(
-    {}
-  );
-  const [allScores, setAllScores] = useState<Score[]>([]);
 
-  useEffect(() => {
-    if (!user?.userType || user.userType !== "teacher" || hasFetched) {
-      return;
-    }
+  const [fetched, setFetched] = useState({
+    data: false,
+    assignment: false,
+    teacherClass: false,
+    studentInClass: false,
+    score: false,
+  });
+  const [isLoading, setIsLoading] = useState({
+    dataLoading: false,
+    assignmentsLoading: false,
+    teacherClass: false,
+    studentInClass: false,
+    score: false,
+  });
+  const {
+    assignments,
+    fetchAssignments,
+    fetchClasses,
+    setAssignments,
+    studentClass,
+    fetchScores,
+    scores,
+    fetchClassesForTeacher,
+    classes,
+    fetchStudentsInClass,
+    studentsInClass,
+  } = useScore();
 
-    const fetchData = async () => {
-      setLoading(true);
-      try {
-        await Promise.all([fetchClasses(), fetchStudent(), fetchAssignments()]);
-
-        const studentClassMap: Record<string, string> = {};
-        const aggregatedScores: Score[] = [];
-        const token = localStorage.getItem("StenoMaster-token");
-
-        const fetchPromises = classes.map(async (classItem) => {
-          const studentsInClass = await fetchStudentsInClass(classItem.id);
-          const scorePromises = studentsInClass.map(async (student) => {
-            studentClassMap[student.userId] = classItem.id;
-            const response = await fetch("/api/score/fetch", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ studentId: student.userId, token }),
-              signal: AbortSignal.timeout(5000),
-            });
-
-            const text = await response.text();
-            const result = text
-              ? JSON.parse(text)
-              : { status: "error", message: "Empty response from server" };
-
-            if (result.status === "success" && Array.isArray(result.data)) {
-              aggregatedScores.push(...result.data);
-            } else {
-              console.warn(`No scores for student ${student.userId}`);
-            }
-          });
-          return Promise.all(scorePromises);
+  const load = async () => {
+    if (user) {
+      if (user.userType == "student") {
+        await fetchClasses();
+        await fetchScores(user.userId);
+      } else if (user.userType == "teacher") {
+        setIsLoading((prev) => ({ ...prev, teacherClass: true }));
+        console.log("Fetch started");
+        await fetchClassesForTeacher().then(() => {
+          setIsLoading((prev) => ({ ...prev, teacherClass: false }));
+          setFetched((prev) => ({ ...prev, teacherClass: true }));
+          console.log("Fetched classes", classes);
         });
-
-        await Promise.all(fetchPromises);
-
-        setStudentClasses(studentClassMap);
-        setAllScores(aggregatedScores);
-        setHasFetched(true);
-      } catch (err) {
-        console.error("[TeacherDashboard] Error fetching data:", err);
-      } finally {
-        setLoading(false);
+        if (fetched.teacherClass && classes.length > 0) {
+          setIsLoading((prev) => ({ ...prev, studentInClass: true }));
+          classes.map(async (c) => {
+            await fetchStudentsInClass(c.id).then(() => {
+              setIsLoading((prev) => ({ ...prev, studentInClass: false }));
+              setFetched((prev) => ({ ...prev, studentInClass: true }));
+            });
+          });
+          console.log("Fetched students", studentsInClass);
+        }
+        if (fetched.studentInClass && studentsInClass.length > 0) {
+          setIsLoading((prev) => ({ ...prev, score: true }));
+          studentsInClass.map(async (s) => {
+            await fetchScores(s.userId).then(() => {
+              setFetched((prev) => ({ ...prev, score: true }));
+              setIsLoading((prev) => ({ ...prev, score: true }));
+            });
+          });
+          console.log("Fetched scores", scores);
+        }
       }
-    };
-
-    fetchData();
-  }, [user, classes, hasFetched]);
-
-  if (loading || !students || !assignments || !classes) {
-    return (
-      <div className="space-y-4 sm:space-y-6 lg:space-y-8">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <div className="h-8 w-64 bg-gray-200 dark:bg-gray-700 animate-pulse rounded" />
-            <div className="h-4 w-48 bg-gray-200 dark:bg-gray-700 animate-pulse mt-2 rounded" />
-          </div>
-        </div>
-        <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-3 lg:grid-cols-3">
-          {[...Array(3)].map((_, index) => (
-            <Card key={index} className="group">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative z-10">
-                <div className="h-4 w-24 bg-gray-200 dark:bg-gray-700 animate-pulse rounded" />
-                <div className="p-2 rounded-lg bg-gray-200 dark:bg-gray-700 animate-pulse h-8 w-8" />
-              </CardHeader>
-              <CardContent className="relative z-10">
-                <div className="h-6 w-12 bg-gray-200 dark:bg-gray-700 animate-pulse rounded" />
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      </div>
-    );
-  }
+      if (user || studentClass.length > 0 || classes) {
+        setIsLoading((prev) => ({
+          ...prev,
+          assignmentsLoading: true,
+        }));
+        if (!fetched.assignment) {
+          if (classes.length > 0 || studentClass.length > 0) {
+            await fetchAssignments(
+              user.userType == "student" ? studentClass[0].id : ""
+            ).then(() => {
+              setIsLoading((prev) => ({
+                ...prev,
+                assignmentsLoading: false,
+              }));
+              setFetched((prev) => ({
+                ...prev,
+                assignment: true,
+              }));
+              console.log("Assignments - ", assignments);
+            });
+          }
+        }
+      } else if (!isLoading && studentClass.length === 0 && !classes) {
+        setAssignments([]);
+      }
+    }
+  };
 
   const stats = [
     {
@@ -117,7 +118,7 @@ const TeacherDashboard = () => {
     },
     {
       title: "Students",
-      value: students.length,
+      value: studentsInClass.length,
       icon: Users,
       color: "from-indigo-500 Otis500 to-indigo-600",
     },
@@ -138,6 +139,16 @@ const TeacherDashboard = () => {
             Manage your classes and track student progress
           </p>
         </div>
+        <Button
+          title="Refresh"
+          className={`cursor-pointer mr-10 ${
+            colorScheme == "dark" ? "bg-slate-800" : "bg-slate-300"
+          }`}
+          onClick={load}
+          disabled={isLoading.assignmentsLoading && isLoading.dataLoading}
+        >
+          <RefreshCcw className="h-6 w-6" />
+        </Button>
       </div>
 
       <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-3 lg:grid-cols-3">
@@ -172,11 +183,11 @@ const TeacherDashboard = () => {
         })}
       </div>
       <StudentsScores
-        allScores={allScores}
-        studentClasses={studentClasses}
+        allScores={scores}
+        studentClasses={classes}
         assignments={assignments}
         classes={classes}
-        students={students}
+        students={studentsInClass}
       />
     </div>
   );

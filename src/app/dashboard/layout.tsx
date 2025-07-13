@@ -23,10 +23,16 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
   const [fetched, setFetched] = useState({
     data: false,
     assignment: false,
+    teacherClass: false,
+    studentInClass: false,
+    score: false,
   });
   const [isLoading, setIsLoading] = useState({
     dataLoading: false,
     assignmentsLoading: false,
+    teacherClass: false,
+    studentInClass: false,
+    score: false,
   });
   const {
     assignments,
@@ -36,6 +42,10 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
     studentClass,
     fetchScores,
     scores,
+    fetchClassesForTeacher,
+    classes,
+    fetchStudentsInClass,
+    studentsInClass,
   } = useScore();
 
   const isAssignmentPage =
@@ -61,8 +71,63 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
       }));
       try {
         if (user) {
-          await fetchClasses();
-          await fetchScores(user.userId);
+          if (user.userType == "student") {
+            await fetchClasses();
+            await fetchScores(user.userId);
+          } else if (user.userType == "teacher") {
+            setIsLoading((prev) => ({ ...prev, teacherClass: true }));
+            console.log("Fetch started");
+            await fetchClassesForTeacher().then(() => {
+              setIsLoading((prev) => ({ ...prev, teacherClass: false }));
+              setFetched((prev) => ({ ...prev, teacherClass: true }));
+              console.log("Fetched classes", classes);
+            });
+            if (fetched.teacherClass && classes.length > 0) {
+              setIsLoading((prev) => ({ ...prev, studentInClass: true }));
+              classes.map(async (c) => {
+                await fetchStudentsInClass(c.id).then(() => {
+                  setIsLoading((prev) => ({ ...prev, studentInClass: false }));
+                  setFetched((prev) => ({ ...prev, studentInClass: true }));
+                });
+              });
+              console.log("Fetched students", studentsInClass);
+            }
+            if (fetched.studentInClass && studentsInClass.length > 0) {
+              setIsLoading((prev) => ({ ...prev, score: true }));
+              studentsInClass.map(async (s) => {
+                await fetchScores(s.userId).then(() => {
+                  setFetched((prev) => ({ ...prev, score: true }));
+                  setIsLoading((prev) => ({ ...prev, score: true }));
+                });
+              });
+              console.log("Fetched scores", scores);
+            }
+          }
+          if (user || studentClass.length > 0 || classes) {
+            setIsLoading((prev) => ({
+              ...prev,
+              assignmentsLoading: true,
+            }));
+            if (!fetched.assignment) {
+              if (classes.length > 0 || studentClass.length > 0) {
+                await fetchAssignments(
+                  user.userType == "student" ? studentClass[0].id : ""
+                ).then(() => {
+                  setIsLoading((prev) => ({
+                    ...prev,
+                    assignmentsLoading: false,
+                  }));
+                  setFetched((prev) => ({
+                    ...prev,
+                    assignment: true,
+                  }));
+                  console.log("Assignments - ", assignments);
+                });
+              }
+            }
+          } else if (!isLoading && studentClass.length === 0 && !classes) {
+            setAssignments([]);
+          }
         }
       } catch (err) {
         // console.error("Failed to load data:", err);
@@ -73,7 +138,7 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
         }));
       }
     };
-    if (!fetched.data && user.userType == "student") {
+    if (!fetched.data) {
       loadData().then(() => {
         setFetched((prev) => ({
           ...prev,
@@ -81,34 +146,7 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
         }));
       });
     }
-  }, [isAuthenticated, user]);
-
-  useEffect(() => {
-    if (user?.userType == "student" && studentClass.length > 0) {
-      setIsLoading((prev) => ({
-        ...prev,
-        assignmentsLoading: true,
-      }));
-      if (!fetched.assignment) {
-        fetchAssignments(studentClass[0].id).then(() => {
-          setIsLoading((prev) => ({
-            ...prev,
-            assignmentsLoading: false,
-          }));
-          setFetched((prev) => ({
-            ...prev,
-            assignment: true,
-          }));
-        });
-      }
-    } else if (
-      !isLoading &&
-      user?.userType == "student" &&
-      studentClass.length === 0
-    ) {
-      setAssignments([]);
-    }
-  }, [studentClass, user]);
+  }, []);
 
   useEffect(() => {
     if (!isAuthenticated || !user?.userId) {
@@ -142,22 +180,48 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
     return null;
   }
 
-  if (!fetched.assignment && !fetched.data) {
-    return (
-      <div className="flex justify-center items-center h-screen p-20">
-        <Card className="animate-bounce">
-          <CardContent className="flex items-center justify-center p-20 h-full">
-            <p
-              className={`text-lg font-bold ${
-                colorScheme == "dark" ? "text-dark-muted" : "text-light-muted"
-              }`}
-            >
-              Loading...
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-    );
+  if (user.userType == "student") {
+    if (!fetched.assignment && !fetched.data) {
+      return (
+        <div className="flex justify-center items-center h-screen p-20">
+          <Card className="animate-bounce">
+            <CardContent className="flex flex-col gap-2 items-center justify-center p-20 h-full">
+              <Logo />
+              <p
+                className={`text-lg font-bold ${
+                  colorScheme == "dark" ? "text-dark-muted" : "text-light-muted"
+                }`}
+              >
+                Loading...
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+      );
+    }
+  } else if (user.userType == "teacher") {
+    if (
+      !fetched.assignment &&
+      !fetched.studentInClass &&
+      !fetched.teacherClass
+    ) {
+      return (
+        <div className="flex justify-center items-center h-screen p-20">
+          <Card className="animate-bounce">
+            <CardContent className="flex flex-col gap-2 items-center justify-center p-20 h-full">
+              <Logo />
+              <p
+                className={`text-lg font-bold ${
+                  colorScheme == "dark" ? "text-dark-muted" : "text-light-muted"
+                }`}
+              >
+                Loading...
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+      );
+    }
   }
 
   return (

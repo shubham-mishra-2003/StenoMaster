@@ -29,18 +29,17 @@ import { useAssignment } from "@/hooks/useAssignments";
 import { useClass } from "@/hooks/useClasses";
 import { Calendar24 } from "@/components/ui/calendar";
 import moment from "moment";
+import { useScore } from "@/hooks/useScore";
 
 const AssignmentPage = () => {
   const {
-    assignments,
     loading,
-    fetchAssignments,
     createAssignment,
     toggleAssignmentStatus,
     deleteAssignment,
     updateAssignment,
   } = useAssignment();
-  const { classes, fetchClasses } = useClass();
+  const { classes, assignments, fetchAssignments } = useScore();
   const { colorScheme } = useTheme();
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [editingAssignment, setEditingAssignment] = useState<Assignment | null>(
@@ -54,11 +53,6 @@ const AssignmentPage = () => {
     imageFile: null as File | null,
     imageUrl: "",
   });
-
-  useEffect(() => {
-    fetchAssignments();
-    fetchClasses();
-  }, [fetchAssignments, fetchClasses]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -100,6 +94,7 @@ const AssignmentPage = () => {
         imageUrl: "",
       });
       setIsCreateDialogOpen(false);
+      await fetchAssignments();
     } catch (err) {
       // Error handled by hook's toast
     }
@@ -117,6 +112,7 @@ const AssignmentPage = () => {
         classId: updatedAssignment.classId,
         imageUrl: updatedAssignment.imageUrl,
       });
+      await fetchAssignments();
       setEditingAssignment(null);
     } catch (err) {
       // Error handled by hook's toast
@@ -423,7 +419,11 @@ const AssignmentPage = () => {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => toggleAssignmentStatus(assignment.id)}
+                      onClick={() =>
+                        toggleAssignmentStatus(assignment.id).then(() => {
+                          fetchAssignments();
+                        })
+                      }
                       className={`flex-1 cursor-pointer ${
                         colorScheme == "dark"
                           ? "text-green-200 bg-slate-800 hover:bg-slate-900"
@@ -436,7 +436,11 @@ const AssignmentPage = () => {
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() => deleteAssignment(assignment.id)}
+                      onClick={() => {
+                        deleteAssignment(assignment.id).then(() => {
+                          fetchAssignments();
+                        });
+                      }}
                       className="text-destructive hover:text-destructive cursor-pointer hover:bg-red-500 hover:text-white"
                       disabled={loading}
                     >

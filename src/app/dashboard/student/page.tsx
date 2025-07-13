@@ -127,22 +127,6 @@ const DashboardContent: React.FC = () => {
       !scores.some((score) => score.assignmentId === assignment.id)
   );
 
-  if (isLoading.assignmentsLoading && !isLoading.dataLoading) {
-    return (
-      <Card>
-        <CardContent className="flex items-center justify-center p-20 h-full">
-          <p
-            className={`text-lg font-bold ${
-              colorScheme == "dark" ? "text-dark-muted" : "text-light-muted"
-            }`}
-          >
-            Loading...
-          </p>
-        </CardContent>
-      </Card>
-    );
-  }
-
   return (
     <div className="space-y-4 sm:space-y-6 lg:space-y-8">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">

@@ -22,6 +22,7 @@ import { toast } from "@/hooks/use-toast";
 import { useTheme } from "@/hooks/ThemeProvider";
 import { useClass } from "@/hooks/useClasses";
 import { useAuth } from "@/hooks/useAuth";
+import { useScore } from "@/hooks/useScore";
 
 interface StudentManagementProps {
   classItem: Class;
@@ -34,15 +35,10 @@ const StudentManagement = ({
   isOpen,
   onClose,
 }: StudentManagementProps) => {
-  const {
-    classes,
-    fetchStudentsInClass,
-    assignStudentToClass,
-    removeStudentFromClass,
-  } = useClass();
+  const { assignStudentToClass, removeStudentFromClass } = useClass();
+  const { studentsInClass, fetchStudentsInClass, classes, fetchClassesForTeacher } = useScore();
   const { createStudent, deleteAccount } = useAuth();
   const { colorScheme } = useTheme();
-  const [classStudents, setClassStudents] = useState<User[]>([]);
   const [newStudent, setNewStudent] = useState({
     name: "",
     email: "",
@@ -53,23 +49,6 @@ const StudentManagement = ({
   const generateRandomPassword = () => {
     return Math.random().toString(36).slice(-8);
   };
-
-  useEffect(() => {
-    const loadStudents = async () => {
-      setIsLoadingStudents(true);
-      try {
-        const students = await fetchStudentsInClass(classItem.id);
-        setClassStudents(students);
-      } catch (error) {
-        console.error("[StudentManagement] Error fetching students:", error);
-      } finally {
-        setIsLoadingStudents(false);
-      }
-    };
-    if (isOpen) {
-      loadStudents();
-    }
-  }, [classItem.id, fetchStudentsInClass, isOpen]);
 
   const handleAddStudent = async () => {
     if (!newStudent.name.trim() || !newStudent.email.trim()) {
@@ -90,8 +69,8 @@ const StudentManagement = ({
         password,
       });
       await assignStudentToClass(classItem.id, newUser.userId);
-      setClassStudents((prev) => [...prev, newUser]);
-      setNewStudent({ name: "", email: "", password: "" });
+      await fetchStudentsInClass(classItem.id);
+      await fetchClassesForTeacher();
       toast({
         title: "Success",
         description: `${newStudent.name} added successfully. Email: ${newStudent.email}, Password: ${password}`,
@@ -109,7 +88,8 @@ const StudentManagement = ({
     try {
       await removeStudentFromClass(classItem.id, studentId);
       await deleteAccount(studentId);
-      setClassStudents((prev) => prev.filter((s) => s.userId !== studentId));
+      await fetchStudentsInClass(classItem.id);
+      await fetchClassesForTeacher();
       toast({
         title: "Success",
         description: "Student removed successfully.",
@@ -128,7 +108,8 @@ const StudentManagement = ({
     try {
       await removeStudentFromClass(classItem.id, studentId);
       await assignStudentToClass(newClassId, studentId);
-      setClassStudents((prev) => prev.filter((s) => s.userId !== studentId));
+      await fetchStudentsInClass(classItem.id);
+      await fetchClassesForTeacher();
       toast({
         title: "Success",
         description: "Student moved to new class successfully.",
@@ -222,13 +203,13 @@ const StudentManagement = ({
               <CardTitle
                 className={colorScheme == "dark" ? "text-dark" : "text-light"}
               >
-                Current Students ({classStudents.length})
+                Current Students ({studentsInClass.length})
               </CardTitle>
             </CardHeader>
             <CardContent>
               {isLoadingStudents ? (
                 <div className="text-center py-8">Loading students...</div>
-              ) : classStudents.length === 0 ? (
+              ) : studentsInClass.length === 0 ? (
                 <div className="text-center py-8">
                   <User2 className="h-12 w-12 text-white mx-auto mb-4" />
                   <p
@@ -243,7 +224,7 @@ const StudentManagement = ({
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {classStudents.map((student) => (
+                  {studentsInClass.map((student) => (
                     <div
                       key={student.userId}
                       className={`flex flex-col p-4 border rounded-xl gap-3 ${

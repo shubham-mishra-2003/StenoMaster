@@ -18,23 +18,38 @@ import { Plus, Users, Trash2 } from "lucide-react";
 import StudentManagement from "@/components/StudentManagement";
 import { useTheme } from "@/hooks/ThemeProvider";
 import { useClass } from "@/hooks/useClasses";
+import { useScore } from "@/hooks/useScore";
+import { useAssignment } from "@/hooks/useAssignments";
 
 const ClassPage = () => {
-  const { classes, isLoading, createClass, deleteClass, fetchClasses } =
-    useClass();
+  const { isLoading, createClass, deleteClass } = useClass();
+  const { classes, fetchClassesForTeacher } = useScore();
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [newClassName, setNewClassName] = useState("");
   const [selectedClass, setSelectedClass] = useState<Class | null>(null);
   const { colorScheme } = useTheme();
-
-  useEffect(() => {
-    fetchClasses();
-  }, [fetchClasses, isCreateDialogOpen]);
+  const { assignments } = useScore();
+  const { deleteAssignment } = useAssignment();
 
   const handleCreateClass = async () => {
     await createClass(newClassName);
     setNewClassName("");
+    setTimeout(() => {
+      fetchClassesForTeacher();
+    }, 2000);
     setIsCreateDialogOpen(false);
+  };
+
+  const handleDelete = (classItem: Class) => {
+    deleteClass(classItem.id).then(() => {
+      fetchClassesForTeacher();
+      const assignmentsToDelete = assignments.filter(
+        (a) => a.classId === classItem.id
+      );
+      assignmentsToDelete.forEach((a) => {
+        deleteAssignment(a.id);
+      });
+    });
   };
 
   return (
@@ -125,7 +140,7 @@ const ClassPage = () => {
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => deleteClass(classItem.id)}
+                    onClick={() => handleDelete(classItem)}
                     className="text-destructive hover:text-destructive cursor-pointer hover:bg-red-500 hover:text-white"
                     disabled={isLoading}
                   >

@@ -23,6 +23,7 @@ import { useTheme } from "@/hooks/ThemeProvider";
 import { useAssignment } from "@/hooks/useAssignments";
 import { Calendar24 } from "@/components/ui/calendar";
 import moment from "moment";
+import { useScore } from "@/hooks/useScore";
 
 interface EditAssignmentModalProps {
   assignment: Assignment | null;
@@ -49,6 +50,7 @@ const EditAssignmentModal = ({
     imageFile: null as File | null,
     imageUrl: assignment?.imageUrl || "",
   });
+  const { assignments, fetchAssignments } = useScore();
 
   useEffect(() => {
     if (assignment) {
@@ -113,6 +115,7 @@ const EditAssignmentModal = ({
         classId: editForm.classId,
         imageUrl: editForm.imageUrl,
       });
+      fetchAssignments();
       onClose();
     } catch (err) {
       // Error handled by hook's toast

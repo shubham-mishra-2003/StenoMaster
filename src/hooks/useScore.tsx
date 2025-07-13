@@ -8,11 +8,15 @@ interface studentSideProps {
   assignments: Assignment[];
   studentClass: Class[];
   scores: Score[];
+  classes: Class[];
+  studentsInClass: User[];
   fetchClasses: () => Promise<void>;
-  fetchAssignments: (classId: string) => Promise<void>;
+  fetchAssignments: (classId?: string) => Promise<void>;
   submitScore: (score: Score) => Promise<void>;
   setAssignments: (assignment: Assignment[]) => void;
   fetchScores: (studentId: string) => Promise<void>;
+  fetchClassesForTeacher: () => Promise<void>;
+  fetchStudentsInClass: (classId: string) => Promise<void>;
 }
 
 const ScoreContext = createContext<studentSideProps | undefined>(undefined);
@@ -24,6 +28,8 @@ export const ScoreProvider: React.FC<{ children: React.ReactNode }> = ({
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [studentClass, setStudentClass] = useState<Class[]>([]);
   const [scores, setScores] = useState<Score[]>([]);
+  const [classes, setClasses] = useState<Class[]>([]);
+  const [studentsInClass, setStudentInClass] = useState<User[]>([]);
 
   const getToken = () => localStorage.getItem("StenoMaster-token");
 
@@ -74,7 +80,7 @@ export const ScoreProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   };
 
-  const fetchAssignments = async (classId: string) => {
+  const fetchAssignments = async (classId?: string) => {
     const token = getToken();
     try {
       const response = await fetch("/api/assignment/fetch", {
@@ -146,7 +152,6 @@ export const ScoreProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const fetchScores = async (studentId: string) => {
     const token = getToken();
-
     try {
       const response = await fetch("/api/score/fetch", {
         method: "POST",
@@ -171,23 +176,86 @@ export const ScoreProvider: React.FC<{ children: React.ReactNode }> = ({
     } catch (error) {
       toast({
         title: "Error",
-        description: "Failed to fetch assignments",
+        description: "Failed to fetch scores",
         variant: "destructive",
       });
+    }
+  };
+
+  const fetchClassesForTeacher = async () => {
+    const token = getToken();
+    try {
+      const response = await fetch("/api/classes", {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      const text = await response.text();
+      const result = text
+        ? JSON.parse(text)
+        : { status: "error", message: "Failed to fetch classes" };
+      if (response.ok && result.status === "success") {
+        setClasses(result.data);
+        console.log("Hook class - ", classes);
+      } else {
+        toast({
+          title: "Error",
+          description: result.message || "Failed to fetch classes",
+          variant: "destructive",
+        });
+        setClasses([]);
+      }
+    } catch (error) {
+      console.log("Error in fetching classed at teacher", error);
+    }
+  };
+
+  const fetchStudentsInClass = async (classId: string) => {
+    const token = getToken();
+    try {
+      const response = await fetch("/api/classes/fetch-students", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ classId, token }),
+      });
+      const text = await response.text();
+      const result = text
+        ? JSON.parse(text)
+        : { status: "error", message: "Failed to fetch classes" };
+      if (response.ok && result.status === "success") {
+        setStudentInClass(result.data);
+      } else {
+        toast({
+          title: "Error",
+          description: result.message || "Failed to fetch classes",
+          variant: "destructive",
+        });
+        setStudentInClass([]);
+      }
+    } catch (error) {
+      console.log("Error in fetching students from class", error);
     }
   };
 
   return (
     <ScoreContext.Provider
       value={{
+        assignments,
+        scores,
+        studentClass,
+        classes,
+        studentsInClass,
         fetchAssignments,
         fetchClasses,
         submitScore,
         setAssignments,
         fetchScores,
-        assignments,
-        scores,
-        studentClass,
+        fetchClassesForTeacher,
+        fetchStudentsInClass,
       }}
     >
       {children}

@@ -9,7 +9,7 @@ import StudentScoreDetails from "./StudentScoreDetails";
 
 type StudentsScoresProps = {
   allScores: Score[];
-  studentClasses: Record<string, string>;
+  studentClasses: Class[];
   assignments: Assignment[];
   classes: Class[];
   students: User[];
@@ -33,10 +33,10 @@ const StudentsScores = ({
   };
 
   const getClassName = (studentId: string) => {
-    const classId = studentClasses[studentId];
-    if (!classId) return "Unknown Class";
-    const classItem = classes.find((c) => c.id === classId);
-    return classItem?.name || `Class ${classId}`;
+    const foundClass = classes.find((classItem) =>
+      classItem.students.includes(studentId)
+    );
+    return foundClass?.name;
   };
 
   const calculateAverageAccuracy = (studentScores: Score[]) => {
