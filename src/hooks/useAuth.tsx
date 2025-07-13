@@ -75,10 +75,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       pathname.startsWith(route)
     );
 
-    //console.log("[useAuth] Validating for route:", pathname, "Token:", !!token);
+    // console.log("[useAuth] Validating for route:", pathname, "Token:", !!token);
 
     if (!token || typeof token !== "string" || token.trim() === "") {
-      //console.log("[useAuth] No valid token found");
+      // console.log("[useAuth] No valid token found");
       setAuthState((prev) => ({
         ...prev,
         isAuthenticated: false,
@@ -87,9 +87,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         loading: false,
       }));
       if (isProtectedRoute) {
-        //console.log(
-          "[useAuth] Redirecting to /?showLogin=true from protected route"
-        );
+        // console.log(
+        //   "[useAuth] Redirecting to /?showLogin=true from protected route"
+        // );
         toast({
           title: "Session Error",
           description: "Invalid session. Please log in again.",
@@ -108,7 +108,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
     while (attempt <= maxRetries) {
       try {
-        //console.log(`[useAuth] Validation attempt ${attempt} with token`);
+        // console.log(`[useAuth] Validation attempt ${attempt} with token`);
         const response = await fetch("/api/auth/validate", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -117,7 +117,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         });
 
         const text = await response.text();
-        //console.log("[useAuth] Validate response body:", text);
+        // console.log("[useAuth] Validate response body:", text);
         const result = text
           ? JSON.parse(text)
           : { status: "error", message: "Empty response from server" };
@@ -135,11 +135,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
           );
           return;
         } else {
-          console.error("[useAuth] Validate error:", result.message);
+          // console.error("[useAuth] Validate error:", result.message);
           throw new Error(result.message || "Failed to validate session");
         }
       } catch (error: any) {
-        console.error(`[useAuth] Validate attempt ${attempt} failed:`, error);
+        // console.error(`[useAuth] Validate attempt ${attempt} failed:`, error);
         if (attempt === maxRetries) {
           toast({
             title: "Session Error",
@@ -158,9 +158,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
           localStorage.removeItem("StenoMaster-token");
           localStorage.removeItem("StenoMaster-user");
           if (isProtectedRoute) {
-            //console.log(
-              "[useAuth] Validation failed, redirecting to /?showLogin=true"
-            );
+            // console.log(
+            //   "[useAuth] Validation failed, redirecting to /?showLogin=true"
+            // );
             router.push("/");
           }
           return;
@@ -172,7 +172,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   }, [router, pathname]);
 
   useEffect(() => {
-    //console.log("[useAuth] useEffect triggered for pathname:", pathname);
+    // console.log("[useAuth] useEffect triggered for pathname:", pathname);
     validate();
   }, [validate, pathname]);
 
@@ -204,7 +204,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         });
 
         const text = await response.text();
-        //console.log("[useAuth] Login response body:", text);
+        // console.log("[useAuth] Login response body:", text);
         const result = text
           ? JSON.parse(text)
           : { status: "error", message: "Empty response from server" };
@@ -214,7 +214,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
           setAuthState({ isAuthenticated: true, user, token, loading: false });
           localStorage.setItem("StenoMaster-token", token);
           localStorage.setItem("StenoMaster-user", JSON.stringify(user));
-          //console.log("[useAuth] Login successful, user:", user);
+          // console.log("[useAuth] Login successful, user:", user);
 
           const dashboardPath =
             userType === "teacher"
@@ -235,7 +235,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
           setAuthState((prev) => ({ ...prev, loading: false }));
         }
       } catch (error) {
-        console.error("[useAuth] Login error:", error);
+        // console.error("[useAuth] Login error:", error);
         toast({
           title: "Error",
           description: "An unexpected error occurred during login.",
@@ -287,7 +287,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         });
 
         const text = await response.text();
-        //console.log("[useAuth] Signup response body:", text);
+        // console.log("[useAuth] Signup response body:", text);
         const result = text
           ? JSON.parse(text)
           : { status: "error", message: "Empty response from server" };
@@ -297,7 +297,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
           setAuthState({ isAuthenticated: true, user, token, loading: false });
           localStorage.setItem("StenoMaster-token", token);
           localStorage.setItem("StenoMaster-user", JSON.stringify(user));
-          //console.log("[useAuth] Signup successful, user:", user);
+          // console.log("[useAuth] Signup successful, user:", user);
 
           const dashboardPath =
             userType === "teacher"
@@ -319,12 +319,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
           setAuthState((prev) => ({ ...prev, loading: false }));
         }
       } catch (error) {
-        console.error("[useAuth] Signup error:", error);
-        toast({
-          title: "Error",
-          description: "An unexpected error occurred during signup.",
-          variant: "destructive",
-        });
+        // console.error("[useAuth] Signup error:", error);
         setAuthState((prev) => ({ ...prev, loading: false }));
       }
     },
@@ -393,7 +388,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         });
 
         const text = await response.text();
-        //console.log("[useAuth] Create student response body:", text);
+        // console.log("[useAuth] Create student response body:", text);
         const result = text
           ? JSON.parse(text)
           : { status: "error", message: "Empty response from server" };
@@ -416,7 +411,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
           throw new Error(result.message || "Failed to create student");
         }
       } catch (error) {
-        console.error("[useAuth] Create student error:", error);
+        // console.error("[useAuth] Create student error:", error);
         toast({
           title: "Error",
           description:
@@ -458,7 +453,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       });
 
       const text = await response.text();
-      //console.log("[useAuth] Logout response body:", text);
+      // console.log("[useAuth] Logout response body:", text);
       const result = text
         ? JSON.parse(text)
         : { status: "error", message: "Empty response from server" };
@@ -472,7 +467,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         });
         localStorage.removeItem("StenoMaster-token");
         localStorage.removeItem("StenoMaster-user");
-        //console.log("[useAuth] Logout successful");
+        // console.log("[useAuth] Logout successful");
         router.push("/?showLogin=true");
         router.refresh();
 
@@ -489,7 +484,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         setAuthState((prev) => ({ ...prev, loading: false }));
       }
     } catch (error) {
-      console.error("[useAuth] Logout error:", error);
+      // console.error("[useAuth] Logout error:", error);
       toast({
         title: "Error",
         description: "An unexpected error occurred during logout.",
@@ -538,7 +533,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         });
 
         const text = await response.text();
-        //console.log("[useAuth] Delete account response body:", text);
+        // console.log("[useAuth] Delete account response body:", text);
         const result = text
           ? JSON.parse(text)
           : { status: "error", message: "Empty response from server" };
@@ -575,13 +570,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
           setAuthState((prev) => ({ ...prev, loading: false }));
         }
       } catch (error) {
-        console.error("[useAuth] Delete account error:", error);
-        toast({
-          title: "Error",
-          description:
-            "An unexpected error occurred while deleting the account.",
-          variant: "destructive",
-        });
+        // console.error("[useAuth] Delete account error:", error);
+        // toast({
+        //   title: "Error",
+        //   description:
+        //     "An unexpected error occurred while deleting the account.",
+        //   variant: "destructive",
+        // });
         setAuthState((prev) => ({ ...prev, loading: false }));
       }
     },
@@ -633,7 +628,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         throw new Error(result.message || "Failed to fetch students");
       }
     } catch (error) {
-      console.error("[useAuth] Fetch student error:", error);
+      // console.error("[useAuth] Fetch student error:", error);
       toast({
         title: "Error",
         description: "An unexpected error occurred while fetching students.",

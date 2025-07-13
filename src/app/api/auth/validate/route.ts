@@ -35,10 +35,10 @@ export async function POST(request: NextRequest) {
 
     const user = await validateSessionToken(body.token);
     if (!user || !user._id || !user.userId || !user.email || !user.userType) {
-      //console.log(
-        "[validate] Invalid user data from validateSessionToken:",
-        user
-      );
+      // console.log(
+      //   "[validate] Invalid user data from validateSessionToken:",
+      //   user
+      // );
       return NextResponse.json(
         { status: "error", message: "Invalid or expired token" },
         { status: 401, headers: { "Content-Type": "application/json" } }
