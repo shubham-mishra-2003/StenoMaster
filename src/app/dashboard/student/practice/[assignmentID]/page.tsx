@@ -1,19 +1,19 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { useTheme } from "@/hooks/ThemeProvider";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "@/hooks/use-toast";
-import { Assignment, Class, Score } from "@/types";
+import { Score } from "@/types";
 import { Clock, Target } from "lucide-react";
 import Image from "next/image";
 import { Progress } from "@/components/ui/progress";
 import { Textarea } from "@/components/ui/textarea";
-import { useStudentSide } from "@/hooks/useScore";
+import { useScore } from "@/hooks/useScore";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 const AssignmentPracticeContent = () => {
   const params = useParams();
@@ -28,93 +28,30 @@ const AssignmentPracticeContent = () => {
   const { assignmentID } = useParams();
   const router = useRouter();
   const [loading, setLoading] = useState(false);
-  const [assignment, setAssignment] = useState<Assignment | null>(null);
 
-  const {
-    assignments,
-    fetchClasses,
-    fetchAssignments,
-    setAssignments,
-    studentClass,
-    submitScore,
-  } = useStudentSide();
+  const { assignments, studentClass, submitScore } = useScore();
 
-  useEffect(() => {
-    if (!isAuthenticated || !user?.userId) {
-      setLoading(false);
-      return;
-    }
+  const { colorScheme } = useTheme();
 
-    const loadData = async () => {
-      setLoading(true);
-      try {
-        if (user) {
-          await fetchClasses();
-        }
-      } catch (err) {
-        console.error("Failed to load data:", err);
-        toast({
-          title: "Error",
-          description: "Failed to load dashboard data.",
-          variant: "destructive",
-        });
-      } finally {
-        setLoading(loading);
-      }
-    };
+  const assignment = assignments.find((a) => a.id == assignmentID);
 
-    loadData();
-  }, [isAuthenticated, user]);
+  const mobile = useIsMobile();
 
-  useEffect(() => {
-    if (studentClass.length > 0) {
-      fetchAssignments(studentClass[0].id);
-      const foundAssignment = assignments.find((a) => a.id == assignmentID);
-      if (!foundAssignment) {
-        return;
-      }
-      setAssignment(foundAssignment);
-    } else if (!loading && studentClass.length === 0) {
-      setAssignments([]);
-      if (!studentClass) {
-        toast({
-          title: "No Classes",
-          description: "No classes found for this student.",
-          variant: "destructive",
-        });
-      }
-    }
-  }, [studentClass, loading, user]);
-
-  // useEffect(() => {
-  //   if (studentClass.length > 0) {
-  //     fetchAssignments(studentClass[0].id);
-  //   } else if (!loading && studentClass.length === 0) {
-  //     setAssignments([]);
-  //     if (!studentClass) {
-  //       toast({
-  //         title: "No Classes",
-  //         description: "No classes found for this student.",
-  //         variant: "destructive",
-  //       });
-  //     }
-  //   }
-
-  //   if (assignments.length > 0 && assignmentID) {
-  //     const foundAssignment = assignments.find((a) => a.id === assignmentID);
-  //     if (!foundAssignment) {
-  //       return;
-  //     }
-  //     setAssignment(foundAssignment);
-  //     if (!foundAssignment) {
-  //       toast({
-  //         title: "Error",
-  //         description: "Assignment not found.",
-  //         variant: "destructive",
-  //       });
-  //     }
-  //   }
-  // }, [studentClass, loading, user, assignments, assignmentID]);
+  if (mobile) {
+    return (
+      <Card>
+        <CardContent className="flex flex-col items-center justify-center py-12">
+          <p
+            className={
+              colorScheme == "dark" ? "text-dark-muted" : "text-light-muted"
+            }
+          >
+            Tests are assignments can not be performed on mobile phones
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
 
   const handleStart = () => {
     setIsStarted(true);

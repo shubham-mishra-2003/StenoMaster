@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useTheme } from "@/hooks/ThemeProvider";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
-import { useStudentSide } from "@/hooks/useScore";
+import { useScore } from "@/hooks/useScore";
 import { Score } from "@/types";
 import { Clock, Target, TrendingUp, Trophy } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -15,56 +15,8 @@ const StudentProgress = () => {
   const { user, isAuthenticated } = useAuth();
   const {
     assignments,
-    fetchAssignments,
-    fetchClasses,
-    setAssignments,
-    studentClass,
-    fetchScores,
     scores,
-  } = useStudentSide();
-
-  useEffect(() => {
-    if (!isAuthenticated || !user?.userId) {
-      setIsLoading(false);
-      return;
-    }
-
-    const loadData = async () => {
-      setIsLoading(true);
-      try {
-        if (user) {
-          await fetchClasses();
-          await fetchScores(user.userId);
-        }
-      } catch (err) {
-        console.error("Failed to load data:", err);
-        toast({
-          title: "Error",
-          description: "Failed to load dashboard data.",
-          variant: "destructive",
-        });
-      } finally {
-        setIsLoading(isLoading);
-      }
-    };
-
-    loadData();
-  }, [isAuthenticated, user, fetchScores]);
-
-  useEffect(() => {
-    if (studentClass.length > 0) {
-      fetchAssignments(studentClass[0].id);
-    } else if (!isLoading && studentClass.length === 0) {
-      setAssignments([]);
-      if (!studentClass) {
-        toast({
-          title: "No Classes",
-          description: "No classes found for this student.",
-          variant: "destructive",
-        });
-      }
-    }
-  }, [studentClass, isLoading, user]);
+  } = useScore();
 
   useEffect(() => {
     if (!isAuthenticated || !user?.userId) {

@@ -41,7 +41,7 @@ export const useStudentAssignments = (): UseStudentAssignmentsReturn => {
         throw new Error("Invalid session. Please log in again.");
       }
 
-      console.log(
+      //console.log(
         `[useStudentAssignments] Fetching assignments for classId: ${classId}`
       );
       const response = await fetch("/api/assignment/fetch", {
@@ -56,7 +56,7 @@ export const useStudentAssignments = (): UseStudentAssignmentsReturn => {
       }
 
       const result = await response.json();
-      console.log(
+      //console.log(
         `[useStudentAssignments] API response for classId ${classId}:`,
         result
       );
@@ -74,7 +74,7 @@ export const useStudentAssignments = (): UseStudentAssignmentsReturn => {
       }
 
       const now = new Date();
-      console.log(
+      //console.log(
         `[useStudentAssignments] Current time for comparison: ${now.toISOString()}`
       );
 
@@ -93,7 +93,7 @@ export const useStudentAssignments = (): UseStudentAssignmentsReturn => {
               `Invalid deadline format for assignment ${assignment.id}`
             );
           }
-          console.log(
+          //console.log(
             `[useStudentAssignments] Parsed deadline for assignment ${
               assignment.id
             }: ${deadline.toISOString()}`
@@ -106,7 +106,7 @@ export const useStudentAssignments = (): UseStudentAssignmentsReturn => {
         }
       );
 
-      console.log(
+      //console.log(
         `[useStudentAssignments] Formatted assignments for classId ${classId}:`,
         formattedAssignments
       );
@@ -114,7 +114,7 @@ export const useStudentAssignments = (): UseStudentAssignmentsReturn => {
       const activeAssignments = formattedAssignments.filter((a: Assignment) => {
         const deadlineDate = new Date(a.deadline);
         const isActive = a.isActive && deadlineDate > now;
-        console.log(
+        //console.log(
           `[useStudentAssignments] Assignment ${a.id} - isActive: ${
             a.isActive
           }, deadline: ${deadlineDate.toISOString()}, isFuture: ${
@@ -124,7 +124,7 @@ export const useStudentAssignments = (): UseStudentAssignmentsReturn => {
         return isActive;
       });
 
-      console.log(
+      //console.log(
         `[useStudentAssignments] Active assignments for classId ${classId}:`,
         activeAssignments
       );
@@ -135,7 +135,7 @@ export const useStudentAssignments = (): UseStudentAssignmentsReturn => {
           (a) => !existingIds.has(a.id)
         );
         const updatedAssignments = [...prev, ...newAssignments];
-        console.log(
+        //console.log(
           `[useStudentAssignments] Updated assignments state:`,
           updatedAssignments
         );
@@ -179,7 +179,7 @@ export const useStudentAssignments = (): UseStudentAssignmentsReturn => {
         throw new Error("Invalid session. Please log in again.");
       }
 
-      console.log(
+      //console.log(
         `[useStudentAssignments] Fetching assignment with id: ${assignmentId}`
       );
 
@@ -195,7 +195,7 @@ export const useStudentAssignments = (): UseStudentAssignmentsReturn => {
       });
 
       let result = await response.json();
-      console.log(
+      //console.log(
         `[useStudentAssignments] POST /api/assignment/fetch response for id ${assignmentId}:`,
         result
       );
@@ -216,7 +216,7 @@ export const useStudentAssignments = (): UseStudentAssignmentsReturn => {
         });
 
         result = await response.json();
-        console.log(
+        //console.log(
           `[useStudentAssignments] POST /api/assignment/fetch with assignmentId response:`,
           result
         );
@@ -233,7 +233,7 @@ export const useStudentAssignments = (): UseStudentAssignmentsReturn => {
           });
 
           result = await response.json();
-          console.log(
+          //console.log(
             `[useStudentAssignments] GET /api/assignment/${assignmentId} response:`,
             result
           );
@@ -270,7 +270,7 @@ export const useStudentAssignments = (): UseStudentAssignmentsReturn => {
         createdAt: new Date(assignment.createdAt),
         deadline,
       } as Assignment;
-      console.log(
+      //console.log(
         `[useStudentAssignments] Formatted assignment:`,
         formattedAssignment
       );
@@ -303,7 +303,7 @@ export const useStudentAssignments = (): UseStudentAssignmentsReturn => {
         throw new Error("Invalid session. Please log in again.");
       }
 
-      console.log("[useStudentAssignments] Submitting score:", score);
+      //console.log("[useStudentAssignments] Submitting score:", score);
       const response = await fetch("/api/score/create", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -316,7 +316,7 @@ export const useStudentAssignments = (): UseStudentAssignmentsReturn => {
       }
 
       const result = await response.json();
-      console.log("[useStudentAssignments] Score submission response:", result);
+      //console.log("[useStudentAssignments] Score submission response:", result);
 
       if (result.status !== "success") {
         throw new Error(result.message || "Failed to save score");
@@ -357,7 +357,7 @@ export const useStudentAssignments = (): UseStudentAssignmentsReturn => {
         throw new Error("Invalid session. Please log in again.");
       }
 
-      console.log(
+      //console.log(
         `[useStudentAssignments] Fetching scores for studentId: ${studentId}`
       );
       const response = await fetch("/api/score/fetch", {
@@ -372,7 +372,7 @@ export const useStudentAssignments = (): UseStudentAssignmentsReturn => {
       }
 
       const result = await response.json();
-      console.log("[useStudentAssignments] Scores fetch response:", result);
+      //console.log("[useStudentAssignments] Scores fetch response:", result);
 
       if (result.status !== "success") {
         throw new Error(result.message || "Failed to fetch scores");

@@ -19,7 +19,8 @@ import { useTheme } from "@/hooks/ThemeProvider";
 import { Score } from "@/types";
 import { sampleTexts } from "./sample-texts";
 import { useRouter } from "next/navigation";
-import { useStudentSide } from "@/hooks/useScore";
+import { useScore } from "@/hooks/useScore";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 const TypingTestContent = () => {
   const [currentText, setCurrentText] = useState(sampleTexts[0]);
@@ -32,7 +33,7 @@ const TypingTestContent = () => {
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const { user } = useAuth();
   const { colorScheme } = useTheme();
-  const { scores, submitScore, fetchScores } = useStudentSide();
+  const { scores, submitScore } = useScore();
 
   if (!user) {
     return;
@@ -49,7 +50,6 @@ const TypingTestContent = () => {
   }, [isStarted, startTime, isCompleted]);
 
   useEffect(() => {
-    fetchScores(user?.userId);
     if (typedText.length === currentText.length && isStarted && !isCompleted) {
       handleComplete();
     }
@@ -180,7 +180,7 @@ const TypingTestContent = () => {
 
   const progress = (typedText.length / currentText.length) * 100;
   const currentWPM = timeElapsed > 0 ? calculateWPM() : 0;
-  const currentAccuracy = typedText.length > 0 ? calculateAccuracy() : 100;
+  const currentAccuracy = typedText.length > 0 ? calculateAccuracy() : 0;
 
   if (isLoading) {
     return (
@@ -196,15 +196,6 @@ const TypingTestContent = () => {
 
   return (
     <div className="space-y-6">
-      <Button
-        variant="outline"
-        onClick={() => {
-          fetchScores(user?.userId);
-        }}
-        className="gradient-button"
-      >
-        Fetch Scores
-      </Button>
       <Card>
         <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 via-purple-500/5 to-indigo-500/5"></div>
         <CardHeader>

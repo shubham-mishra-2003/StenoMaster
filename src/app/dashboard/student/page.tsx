@@ -7,11 +7,14 @@ import AssignmentList from "@/components/AssignmentList";
 import { useTheme } from "@/hooks/ThemeProvider";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "@/hooks/use-toast";
-import { useStudentSide } from "@/hooks/useScore";
+import { useScore } from "@/hooks/useScore";
+import { Assignment } from "@/types";
 
 const DashboardContent: React.FC = () => {
-  const [loading, setLoading] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState({
+    dataLoading: false,
+    assignmentsLoading: false,
+  });
   const { colorScheme } = useTheme();
   const { user, isAuthenticated } = useAuth();
   const {
@@ -22,16 +25,18 @@ const DashboardContent: React.FC = () => {
     studentClass,
     fetchScores,
     scores,
-  } = useStudentSide();
+  } = useScore();
 
   useEffect(() => {
     if (!isAuthenticated || !user?.userId) {
-      setIsLoading(false);
       return;
     }
 
     const loadData = async () => {
-      setIsLoading(true);
+      setIsLoading((prev) => ({
+        ...prev,
+        dataLoading: true,
+      }));
       try {
         if (user) {
           await fetchClasses();
@@ -45,17 +50,28 @@ const DashboardContent: React.FC = () => {
           variant: "destructive",
         });
       } finally {
-        setIsLoading(loading);
+        setIsLoading((prev) => ({
+          ...prev,
+          dataLoading: false,
+        }));
       }
     };
-
     loadData();
-  }, [isAuthenticated, user, fetchScores]);
+  }, [isAuthenticated, user]);
 
   useEffect(() => {
     if (studentClass.length > 0) {
-      fetchAssignments(studentClass[0].id);
-    } else if (!loading && studentClass.length === 0) {
+      setIsLoading((prev) => ({
+        ...prev,
+        assignmentsLoading: true,
+      }));
+      fetchAssignments(studentClass[0].id).then(() => {
+        setIsLoading((prev) => ({
+          ...prev,
+          assignmentsLoading: false,
+        }));
+      });
+    } else if (!isLoading && studentClass.length === 0) {
       setAssignments([]);
       if (!studentClass) {
         toast({
@@ -65,11 +81,11 @@ const DashboardContent: React.FC = () => {
         });
       }
     }
-  }, [studentClass, loading, user]);
+  }, [studentClass, user]);
 
   useEffect(() => {
     if (!isAuthenticated || !user?.userId) {
-      if (!loading) {
+      if (!isLoading) {
         const timer = setTimeout(() => {
           toast({
             title: "Authentication Required",
@@ -82,11 +98,7 @@ const DashboardContent: React.FC = () => {
       return;
     }
 
-    if (
-      !loading &&
-      assignments.length === 0 &&
-      scores.length === 0
-    ) {
+    if (!isLoading && assignments.length === 0 && scores.length === 0) {
       const timer = setTimeout(() => {
         toast({
           title: "No Data Available",
@@ -97,13 +109,7 @@ const DashboardContent: React.FC = () => {
       }, 900);
       return () => clearTimeout(timer);
     }
-  }, [
-    isAuthenticated,
-    user,
-    loading,
-    assignments,
-    scores,
-  ]);
+  }, [isAuthenticated, user, assignments, scores]);
 
   const calculateAverageWPM = (): string => {
     if (scores.length === 0) return "0";
@@ -166,6 +172,11 @@ const DashboardContent: React.FC = () => {
     );
   }
 
+  const availableAssignments = assignments.filter(
+    (assignment) =>
+      !scores.some((score) => score.assignmentId === assignment.id)
+  );
+
   return (
     <div className="space-y-4 sm:space-y-6 lg:space-y-8">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -226,19 +237,25 @@ const DashboardContent: React.FC = () => {
         })}
       </div>
 
-      <AssignmentList assignments={assignments} />
+      {isLoading.assignmentsLoading ? (
+        <Card>
+          <CardContent>
+            <CardTitle>Loading Assignments</CardTitle>
+          </CardContent>
+        </Card>
+      ) : (
+        <AssignmentList assignments={availableAssignments} />
+      )}
 
-      {assignments.length === 0 &&
-        scores.length === 0 &&
-        !loading && (
-          <p
-            className={`text-sm sm:text-base mt-4 ${
-              colorScheme === "dark" ? "text-dark" : "text-light"
-            }`}
-          >
-            No assignments or scores available at this time.
-          </p>
-        )}
+      {assignments.length === 0 && scores.length === 0 && !isLoading && (
+        <p
+          className={`text-sm sm:text-base mt-4 ${
+            colorScheme === "dark" ? "text-dark" : "text-light"
+          }`}
+        >
+          No assignments or scores available at this time.
+        </p>
+      )}
     </div>
   );
 };

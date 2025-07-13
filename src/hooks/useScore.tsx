@@ -1,26 +1,35 @@
-import { useState } from "react";
-import { Assignment, Class, Score } from "@/types";
+"use client";
+
+import { createContext, useContext, useEffect, useState } from "react";
+import { Assignment, Class, Score, User } from "@/types";
 import { toast } from "./use-toast";
 
 interface studentSideProps {
+  assignments: Assignment[];
+  studentClass: Class[];
+  scores: Score[];
   fetchClasses: () => Promise<void>;
   fetchAssignments: (classId: string) => Promise<void>;
   submitScore: (score: Score) => Promise<void>;
   setAssignments: (assignment: Assignment[]) => void;
-  assignments: Assignment[];
-  studentClass: Class[];
-  scores: Score[];
   fetchScores: (studentId: string) => Promise<void>;
 }
 
-export const useStudentSide = (): studentSideProps => {
-  const token = localStorage.getItem("StenoMaster-token");
+const ScoreContext = createContext<studentSideProps | undefined>(undefined);
+
+export const ScoreProvider: React.FC<{ children: React.ReactNode }> = ({
+  children,
+}) => {
   const [loading, setLoading] = useState(false);
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [studentClass, setStudentClass] = useState<Class[]>([]);
   const [scores, setScores] = useState<Score[]>([]);
 
+  const getToken = () => localStorage.getItem("StenoMaster-token");
+
   const fetchClasses = async () => {
+    const token = getToken();
+
     if (loading || !token) return;
     setLoading(true);
     try {
@@ -66,6 +75,7 @@ export const useStudentSide = (): studentSideProps => {
   };
 
   const fetchAssignments = async (classId: string) => {
+    const token = getToken();
     try {
       const response = await fetch("/api/assignment/fetch", {
         method: "POST",
@@ -99,6 +109,8 @@ export const useStudentSide = (): studentSideProps => {
   };
 
   const submitScore = async (score: Score) => {
+    const token = getToken();
+
     try {
       const response = await fetch("/api/score/create", {
         method: "POST",
@@ -133,6 +145,8 @@ export const useStudentSide = (): studentSideProps => {
   };
 
   const fetchScores = async (studentId: string) => {
+    const token = getToken();
+
     try {
       const response = await fetch("/api/score/fetch", {
         method: "POST",
@@ -163,14 +177,28 @@ export const useStudentSide = (): studentSideProps => {
     }
   };
 
-  return {
-    fetchAssignments,
-    fetchClasses,
-    submitScore,
-    setAssignments,
-    fetchScores,
-    assignments,
-    scores,
-    studentClass,
-  };
+  return (
+    <ScoreContext.Provider
+      value={{
+        fetchAssignments,
+        fetchClasses,
+        submitScore,
+        setAssignments,
+        fetchScores,
+        assignments,
+        scores,
+        studentClass,
+      }}
+    >
+      {children}
+    </ScoreContext.Provider>
+  );
+};
+
+export const useScore = () => {
+  const context = useContext(ScoreContext);
+  if (context === undefined) {
+    throw new Error("useClass must be used within a ClassProvider");
+  }
+  return context;
 };

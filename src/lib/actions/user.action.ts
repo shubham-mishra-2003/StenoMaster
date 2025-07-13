@@ -41,10 +41,10 @@ export async function createUser(user: CreateUserParams) {
       userType: user.userType,
       teacherId: user.userType === "student" ? user.teacherId : undefined,
     };
-    console.log("User data to create:", userData);
+    //console.log("User data to create:", userData);
     const newUser = await User.create(userData);
     const userObject = newUser.toObject();
-    console.log("Created user:", userObject);
+    //console.log("Created user:", userObject);
     return userObject;
   } catch (error) {
     handleError(error);

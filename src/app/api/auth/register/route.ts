@@ -56,7 +56,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    console.log("Register input:", body);
+    //console.log("Register input:", body);
 
     const existingUser = await User.findOne({ email: body.email });
     if (existingUser) {
@@ -85,7 +85,7 @@ export async function POST(request: NextRequest) {
     // Generate JWT and store in database
     const token = jwt.sign(
       { userId: newUser.userId, userType: newUser.userType },
-      process.env.JWT_SECRET || "",
+      process.env.JWT_SECRET || ""
     );
 
     await User.updateOne(

@@ -26,7 +26,7 @@ export async function POST(request: NextRequest) {
       typeof body.token !== "string" ||
       body.token.trim() === ""
     ) {
-      console.log("[validate] Missing or invalid token:", body.token);
+      //console.log("[validate] Missing or invalid token:", body.token);
       return NextResponse.json(
         { status: "error", message: "Valid token is required" },
         { status: 400, headers: { "Content-Type": "application/json" } }
@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
 
     const user = await validateSessionToken(body.token);
     if (!user || !user._id || !user.userId || !user.email || !user.userType) {
-      console.log(
+      //console.log(
         "[validate] Invalid user data from validateSessionToken:",
         user
       );
@@ -45,7 +45,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.log("[validate] Session validated for user:", user.userId);
+    //console.log("[validate] Session validated for user:", user.userId);
     return NextResponse.json(
       {
         status: "success",

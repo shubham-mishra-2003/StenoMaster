@@ -34,7 +34,7 @@ export async function POST(request: NextRequest) {
     // Validate userType
     validateUserType(body.userType);
 
-    console.log("Login query:", { email: body.email, userType: body.userType });
+    //console.log("Login query:", { email: body.email, userType: body.userType });
 
     const user: IUser | null = await User.findOne({
       email: body.email,
@@ -52,7 +52,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.log("Found user:", user);
+    //console.log("Found user:", user);
 
     // Check userType match, with fallback for undefined
     if (!user.userType) {
@@ -61,7 +61,7 @@ export async function POST(request: NextRequest) {
         { $set: { userType: body.userType } }
       );
       user.userType = body.userType;
-      console.log("Updated userType to:", body.userType);
+      //console.log("Updated userType to:", body.userType);
     } else if (user.userType !== body.userType) {
       return NextResponse.json(
         {
@@ -82,7 +82,7 @@ export async function POST(request: NextRequest) {
     // Generate JWT and store in database
     const token = jwt.sign(
       { userId: user.userId, userType: user.userType },
-      process.env.JWT_SECRET || "",
+      process.env.JWT_SECRET || ""
     );
 
     // Update user with new session token, invalidating previous sessions

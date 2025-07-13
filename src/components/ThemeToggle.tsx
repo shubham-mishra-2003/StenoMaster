@@ -15,7 +15,7 @@ export function ThemeToggle() {
       newTheme = "light";
     }
     setTheme(newTheme);
-    console.log("Theme changed to:", newTheme);
+    //console.log("Theme changed to:", newTheme);
   };
 
   return (
