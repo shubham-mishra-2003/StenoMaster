@@ -1,11 +1,13 @@
-import React from "react";
+import React, { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Assignment } from "@/types";
-import { BookOpen, Play, Clock, FileText } from "lucide-react";
+import { BookOpen, Play, Clock, FileText, RefreshCcw } from "lucide-react";
 import { useTheme } from "@/hooks/ThemeProvider";
 import { useRouter } from "next/navigation";
+import { useScore } from "@/hooks/useScore";
+import { useAuth } from "@/hooks/useAuth";
 
 interface AssignmentListProps {
   assignments: Assignment[];
@@ -23,7 +25,6 @@ const AssignmentList = ({ assignments }: AssignmentListProps) => {
   if (assignments.length === 0) {
     return (
       <Card>
-        <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 via-purple-500/5 to-indigo-500/5"></div>
         <CardContent className="flex flex-col items-center justify-center py-12">
           <div className="w-16 h-16 bg-gradient-to-br from-blue-500 via-purple-500 to-indigo-500 rounded-full flex items-center justify-center mb-4 shadow-lg">
             <BookOpen className="h-8 w-8 text-white" />
@@ -50,17 +51,21 @@ const AssignmentList = ({ assignments }: AssignmentListProps) => {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2
-          className={`text-2xl font-bold ${
-            colorScheme == "dark" ? "text-dark" : "text-light"
-          }`}
-        >
-          Available Assignments
-        </h2>
-        <p className={`${colorScheme == "dark" ? "text-dark" : "text-light"}`}>
-          Practice your stenography skills
-        </p>
+      <div className="flex justify-between w-full items-center p-1">
+        <div>
+          <h2
+            className={`text-2xl font-bold ${
+              colorScheme == "dark" ? "text-dark" : "text-light"
+            }`}
+          >
+            Available Assignments
+          </h2>
+          <p
+            className={`${colorScheme == "dark" ? "text-dark" : "text-light"}`}
+          >
+            Practice your stenography skills
+          </p>
+        </div>
       </div>
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">

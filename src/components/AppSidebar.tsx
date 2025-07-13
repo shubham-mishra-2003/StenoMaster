@@ -13,19 +13,15 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
-import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import {
   Home,
   Users,
   FileText,
-  BarChart3,
   BookOpen,
   Target,
   TrendingUp,
-  Plus,
 } from "lucide-react";
-import QuickActionModal from "./QuickActionModal";
 import { useTheme } from "@/hooks/ThemeProvider";
 import Logo from "./Logo";
 import UserButton from "./UserButton";
@@ -33,8 +29,6 @@ import UserButton from "./UserButton";
 const AppSidebar = () => {
   const { user } = useAuth();
   const pathname = usePathname();
-  const [quickActionOpen, setQuickActionOpen] = React.useState(false);
-  const [quickAction, setQuickAction] = React.useState("");
 
   const teacherItems = [
     {
@@ -86,16 +80,6 @@ const AppSidebar = () => {
     return pathname === url;
   };
 
-  const handleQuickAction = () => {
-    const action = user?.userType === "teacher" ? "assignments" : "speed-test";
-    setQuickAction(action);
-    setQuickActionOpen(true);
-  };
-
-  const handleActionSelect = (tab: string) => {
-    setQuickActionOpen(false);
-  };
-
   const { colorScheme } = useTheme();
 
   return (
@@ -121,7 +105,7 @@ const AppSidebar = () => {
           <Logo height={50} width={50} />
         </SidebarHeader>
         <SidebarContent
-          className={`bg-gradient-to-b from-transparent ${
+          className={`bg-gradient-to-b from-transparent flex flex-col justify-between ${
             colorScheme == "dark"
               ? "via-blue-950/20 to-purple-950/20"
               : "via-blue-50/20 to-purple-50/20"
@@ -171,26 +155,15 @@ const AppSidebar = () => {
               </SidebarMenu>
             </SidebarGroupContent>
           </SidebarGroup>
-
           <SidebarGroup>
-            <SidebarGroupLabel className="text-xs font-semibold text-muted-foreground/80 uppercase tracking-wider px-4 py-2 group-data-[collapsible=icon]:hidden">
-              Quick Actions
-            </SidebarGroupLabel>
             <SidebarGroupContent>
-              <div className="px-2">
-                <Button
-                  onClick={handleQuickAction}
-                  className="w-full gradient-button group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0"
-                  size="sm"
-                >
-                  <Plus className="h-4 w-4 group-data-[collapsible=icon]:mr-0 group-data-[collapsible=expanded]:mr-2" />
-                  <span className="group-data-[collapsible=icon]:sr-only">
-                    {user?.userType === "teacher"
-                      ? "Add Assignment"
-                      : "Start Practice"}
-                  </span>
-                </Button>
-              </div>
+              <p
+                className={
+                  `text-center text-[13px] w-full mb-1 copyright-message ${colorScheme == "dark" ? "text-dark-muted" : "text-light-muted"}`
+                }
+              >
+                Copyright © {new Date().getFullYear()} Made By Connect & Team
+              </p>
             </SidebarGroupContent>
           </SidebarGroup>
         </SidebarContent>
@@ -209,12 +182,6 @@ const AppSidebar = () => {
           </SidebarMenu>
         </SidebarFooter>
       </Sidebar>
-      <QuickActionModal
-        isOpen={quickActionOpen}
-        onClose={() => setQuickActionOpen(false)}
-        action={quickAction}
-        onActionSelect={handleActionSelect}
-      />
     </>
   );
 };

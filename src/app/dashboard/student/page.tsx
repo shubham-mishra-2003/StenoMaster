@@ -2,36 +2,34 @@
 
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { BookOpen, Target, Zap, Clock } from "lucide-react";
+import { BookOpen, Target, Zap, Clock, RefreshCcw } from "lucide-react";
 import AssignmentList from "@/components/AssignmentList";
 import { useTheme } from "@/hooks/ThemeProvider";
 import { useAuth } from "@/hooks/useAuth";
-import { toast } from "@/hooks/use-toast";
 import { useScore } from "@/hooks/useScore";
-import { Assignment } from "@/types";
+import { Button } from "@/components/ui/button";
 
 const DashboardContent: React.FC = () => {
+  const { colorScheme } = useTheme();
+  const { user, isAuthenticated } = useAuth();
+  const [fetched, setFetched] = useState({
+    data: false,
+    assignment: false,
+  });
   const [isLoading, setIsLoading] = useState({
     dataLoading: false,
     assignmentsLoading: false,
   });
-  const { colorScheme } = useTheme();
-  const { user, isAuthenticated } = useAuth();
   const {
     assignments,
     fetchAssignments,
     fetchClasses,
-    setAssignments,
     studentClass,
     fetchScores,
     scores,
   } = useScore();
 
-  useEffect(() => {
-    if (!isAuthenticated || !user?.userId) {
-      return;
-    }
-
+  const fetchDetails = async () => {
     const loadData = async () => {
       setIsLoading((prev) => ({
         ...prev,
@@ -43,12 +41,7 @@ const DashboardContent: React.FC = () => {
           await fetchScores(user.userId);
         }
       } catch (err) {
-        console.error("Failed to load data:", err);
-        toast({
-          title: "Error",
-          description: "Failed to load dashboard data.",
-          variant: "destructive",
-        });
+        // console.error("Failed to load data:", err);
       } finally {
         setIsLoading((prev) => ({
           ...prev,
@@ -56,60 +49,33 @@ const DashboardContent: React.FC = () => {
         }));
       }
     };
-    loadData();
-  }, [isAuthenticated, user]);
-
-  useEffect(() => {
-    if (studentClass.length > 0) {
-      setIsLoading((prev) => ({
-        ...prev,
-        assignmentsLoading: true,
-      }));
-      fetchAssignments(studentClass[0].id).then(() => {
+    if (!fetched.data && user?.userType == "student") {
+      loadData().then(() => {
+        setFetched((prev) => ({
+          ...prev,
+          data: true,
+        }));
         setIsLoading((prev) => ({
           ...prev,
-          assignmentsLoading: false,
+          assignmentsLoading: true,
         }));
-      });
-    } else if (!isLoading && studentClass.length === 0) {
-      setAssignments([]);
-      if (!studentClass) {
-        toast({
-          title: "No Classes",
-          description: "No classes found for this student.",
-          variant: "destructive",
-        });
-      }
-    }
-  }, [studentClass, user]);
-
-  useEffect(() => {
-    if (!isAuthenticated || !user?.userId) {
-      if (!isLoading) {
-        const timer = setTimeout(() => {
-          toast({
-            title: "Authentication Required",
-            description: "Please log in to view dashboard.",
-            variant: "destructive",
+        if (!fetched.assignment) {
+          fetchAssignments(studentClass[0].id).then(() => {
+            setIsLoading((prev) => ({
+              ...prev,
+              assignmentsLoading: false,
+            }));
+            setFetched((prev) => ({
+              ...prev,
+              assignment: true,
+            }));
           });
-        }, 900);
-        return () => clearTimeout(timer);
-      }
-      return;
+        } else {
+          return;
+        }
+      });
     }
-
-    if (!isLoading && assignments.length === 0 && scores.length === 0) {
-      const timer = setTimeout(() => {
-        toast({
-          title: "No Data Available",
-          description:
-            "You have no assignments or scores to display at this time.",
-          variant: "default",
-        });
-      }, 900);
-      return () => clearTimeout(timer);
-    }
-  }, [isAuthenticated, user, assignments, scores]);
+  };
 
   const calculateAverageWPM = (): string => {
     if (scores.length === 0) return "0";
@@ -156,41 +122,53 @@ const DashboardContent: React.FC = () => {
     },
   ];
 
-  if (isLoading && !isAuthenticated && !user) {
-    return (
-      <div className="space-y-6">
-        <p className="text-muted-foreground">Loading dashboard...</p>
-      </div>
-    );
-  }
-
-  if (!user) {
-    return (
-      <div className="text-center">
-        <p>Please log in to view your dashboard.</p>
-      </div>
-    );
-  }
-
   const availableAssignments = assignments.filter(
     (assignment) =>
       !scores.some((score) => score.assignmentId === assignment.id)
   );
 
+  if (isLoading.assignmentsLoading && !isLoading.dataLoading) {
+    return (
+      <Card>
+        <CardContent className="flex items-center justify-center p-20 h-full">
+          <p
+            className={`text-lg font-bold ${
+              colorScheme == "dark" ? "text-dark-muted" : "text-light-muted"
+            }`}
+          >
+            Loading...
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
     <div className="space-y-4 sm:space-y-6 lg:space-y-8">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold gradient-text">
-            Student Dashboard
-          </h1>
-          <p
-            className={`text-sm sm:text-base mt-1 ${
-              colorScheme === "dark" ? "text-dark" : "text-light"
+        <div className="flex justify-between w-full items-center">
+          <div>
+            <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold gradient-text">
+              Student Dashboard
+            </h1>
+            <p
+              className={`text-sm sm:text-base mt-1 ${
+                colorScheme === "dark" ? "text-dark" : "text-light"
+              }`}
+            >
+              Track your progress and practice stenography
+            </p>
+          </div>
+          <Button
+            title="Refresh"
+            className={`cursor-pointer mr-10 ${
+              colorScheme == "dark" ? "bg-slate-800" : "bg-slate-300"
             }`}
+            onClick={fetchDetails}
+            disabled={isLoading.assignmentsLoading && isLoading.dataLoading}
           >
-            Track your progress and practice stenography
-          </p>
+            <RefreshCcw className="h-6 w-6" />
+          </Button>
         </div>
       </div>
 
@@ -198,14 +176,7 @@ const DashboardContent: React.FC = () => {
         {stats.map((stat, index) => {
           const Icon = stat.icon;
           return (
-            <Card
-              key={index}
-              className={`relative group overflow-hidden bg-gradient-to-br backdrop-blur-xl border-0 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1 ${
-                colorScheme === "dark"
-                  ? "from-gray-900/80 via-gray-800/60 to-gray-700/40"
-                  : "from-white/80 via-white/60 to-white/40"
-              }`}
-            >
+            <Card key={index} className="group">
               <div
                 className={`absolute group-hover:opacity-10 inset-0 bg-gradient-to-br ${stat.color} opacity-5`}
               ></div>
@@ -237,17 +208,9 @@ const DashboardContent: React.FC = () => {
         })}
       </div>
 
-      {isLoading.assignmentsLoading ? (
-        <Card>
-          <CardContent>
-            <CardTitle>Loading Assignments</CardTitle>
-          </CardContent>
-        </Card>
-      ) : (
-        <AssignmentList assignments={availableAssignments} />
-      )}
+      <AssignmentList assignments={availableAssignments} />
 
-      {assignments.length === 0 && scores.length === 0 && !isLoading && (
+      {assignments.length === 0 && scores.length === 0 && (
         <p
           className={`text-sm sm:text-base mt-4 ${
             colorScheme === "dark" ? "text-dark" : "text-light"

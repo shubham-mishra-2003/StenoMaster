@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState } from "react";
 import { Assignment } from "@/types";
 import { toast } from "@/hooks/use-toast";
 import moment from "moment";
@@ -74,7 +74,7 @@ export const useAssignment = (): UseAssignmentReturn => {
     }
   };
 
-  const fetchAssignments = useCallback(async (classId?: string) => {
+  const fetchAssignments = async (classId?: string) => {
     setLoading(true);
     try {
       const token = localStorage.getItem("StenoMaster-token");
@@ -172,7 +172,7 @@ export const useAssignment = (): UseAssignmentReturn => {
     } finally {
       setLoading(false);
     }
-  }, []);
+  };
 
   const createAssignment = async (formData: AssignmentFormData) => {
     setLoading(true);

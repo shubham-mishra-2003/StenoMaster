@@ -1,6 +1,8 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
+@import url("https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400..800;1,400..800&family=LXGW+Marker+Gothic&family=Playfair+Display:ital,wght@0,400..900;1,400..900&display=swap");
+
 * {
   user-select: none;
 }
@@ -143,4 +145,11 @@
   --active-bg: #3b82f6;
   --today-indicator: #60a5fa;
   --toggle-color: #60a5fa;
+}
+
+
+.copyright-message {
+  font-family: "LXGW Marker Gothic";
+  font-weight: 400;
+  font-style: italic;
 }

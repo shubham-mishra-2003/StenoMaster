@@ -33,7 +33,7 @@ const TypingTestContent = () => {
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const { user } = useAuth();
   const { colorScheme } = useTheme();
-  const { scores, submitScore } = useScore();
+  const { scores, submitScore, fetchScores } = useScore();
 
   if (!user) {
     return;
@@ -99,11 +99,12 @@ const TypingTestContent = () => {
     };
 
     try {
-      await submitScore(result).then(() => {
+      await submitScore(result).then(async () => {
         toast({
           title: "Typing Test Completed!",
           description: `WPM: ${wpm}, Accuracy: ${accuracy}%, Time: ${timeElapsed}`,
         });
+        await fetchScores(user.userId);
       });
     } catch (error) {
       toast({

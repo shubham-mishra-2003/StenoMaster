@@ -23,19 +23,14 @@ const AssignmentPracticeContent = () => {
   const [isStarted, setIsStarted] = useState(false);
   const [isCompleted, setIsCompleted] = useState(false);
   const [timeElapsed, setTimeElapsed] = useState(0);
-  const { user, isAuthenticated } = useAuth();
-  const token = localStorage.getItem("StenoMaster-token");
+  const { user } = useAuth();
   const { assignmentID } = useParams();
   const router = useRouter();
-  const [loading, setLoading] = useState(false);
-
-  const { assignments, studentClass, submitScore } = useScore();
-
+  const { assignments, submitScore } = useScore();
   const { colorScheme } = useTheme();
-
   const assignment = assignments.find((a) => a.id == assignmentID);
-
   const mobile = useIsMobile();
+  const { fetchScores } = useScore();
 
   if (mobile) {
     return (
@@ -89,10 +84,12 @@ const AssignmentPracticeContent = () => {
     };
 
     try {
-      await submitScore(score);
-      toast({
-        title: "Assignment submitted successfully.",
-        description: `WPM: ${score.wpm}, Accuracy: ${score.accuracy}`,
+      await submitScore(score).then(() => {
+        toast({
+          title: "Assignment submitted successfully.",
+          description: `WPM: ${score.wpm}, Accuracy: ${score.accuracy}`,
+        });
+        fetchScores(user.userId);
       });
       router.push("/dashboard/student/practice");
     } catch (err) {
@@ -119,18 +116,6 @@ const AssignmentPracticeContent = () => {
     assignment && assignment.correctText.length > 0
       ? Math.min((typedText.length / assignment.correctText.length) * 100, 100)
       : 0;
-
-  if (loading) {
-    return (
-      <div className="min-h-screen flex flex-col p-4 sm:p-6 lg:p-8 bg-gradient-to-br from-slate-50 via-blue-50 to-slate-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
-        <Card className="max-w-7xl mx-auto w-full">
-          <CardContent className="flex flex-col items-center justify-center py-12">
-            <p className="text-muted-foreground">Loading assignment...</p>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
 
   if (!assignment) {
     return (

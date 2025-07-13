@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import AppSidebar from "@/components/AppSidebar";
 import { Button } from "@/components/ui/button";
@@ -11,12 +11,32 @@ import { useTheme } from "@/hooks/ThemeProvider";
 import Logo from "@/components/Logo";
 import { AuthProvider, useAuth } from "@/hooks/useAuth";
 import { usePathname, useRouter } from "next/navigation";
+import { toast } from "@/hooks/use-toast";
+import { useScore } from "@/hooks/useScore";
+import { Card, CardContent } from "@/components/ui/card";
 
 const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
   const { colorScheme } = useTheme();
   const { isAuthenticated, user, logout } = useAuth();
   const pathname = usePathname();
   const router = useRouter();
+  const [fetched, setFetched] = useState({
+    data: false,
+    assignment: false,
+  });
+  const [isLoading, setIsLoading] = useState({
+    dataLoading: false,
+    assignmentsLoading: false,
+  });
+  const {
+    assignments,
+    fetchAssignments,
+    fetchClasses,
+    setAssignments,
+    studentClass,
+    fetchScores,
+    scores,
+  } = useScore();
 
   const isAssignmentPage =
     (pathname &&
@@ -30,8 +50,114 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
     }
   }, [isAuthenticated, user, router]);
 
+  useEffect(() => {
+    if (!isAuthenticated || !user?.userId) {
+      return;
+    }
+    const loadData = async () => {
+      setIsLoading((prev) => ({
+        ...prev,
+        dataLoading: true,
+      }));
+      try {
+        if (user) {
+          await fetchClasses();
+          await fetchScores(user.userId);
+        }
+      } catch (err) {
+        // console.error("Failed to load data:", err);
+      } finally {
+        setIsLoading((prev) => ({
+          ...prev,
+          dataLoading: false,
+        }));
+      }
+    };
+    if (!fetched.data && user.userType == "student") {
+      loadData().then(() => {
+        setFetched((prev) => ({
+          ...prev,
+          data: true,
+        }));
+      });
+    }
+  }, [isAuthenticated, user]);
+
+  useEffect(() => {
+    if (user?.userType == "student" && studentClass.length > 0) {
+      setIsLoading((prev) => ({
+        ...prev,
+        assignmentsLoading: true,
+      }));
+      if (!fetched.assignment) {
+        fetchAssignments(studentClass[0].id).then(() => {
+          setIsLoading((prev) => ({
+            ...prev,
+            assignmentsLoading: false,
+          }));
+          setFetched((prev) => ({
+            ...prev,
+            assignment: true,
+          }));
+        });
+      }
+    } else if (
+      !isLoading &&
+      user?.userType == "student" &&
+      studentClass.length === 0
+    ) {
+      setAssignments([]);
+    }
+  }, [studentClass, user]);
+
+  useEffect(() => {
+    if (!isAuthenticated || !user?.userId) {
+      if (!isLoading) {
+        const timer = setTimeout(() => {
+          toast({
+            title: "Authentication Required",
+            description: "Please log in to view dashboard.",
+            variant: "destructive",
+          });
+        }, 900);
+        return () => clearTimeout(timer);
+      }
+      return;
+    }
+
+    if (!isLoading && assignments.length === 0 && scores.length === 0) {
+      const timer = setTimeout(() => {
+        toast({
+          title: "No Data Available",
+          description:
+            "You have no assignments or scores to display at this time.",
+          variant: "default",
+        });
+      }, 900);
+      return () => clearTimeout(timer);
+    }
+  }, [isAuthenticated, user, assignments, scores]);
+
   if (!isAuthenticated || !user) {
     return null;
+  }
+
+  if (!fetched.assignment && !fetched.data) {
+    return (
+      <div className="flex justify-center items-center h-screen p-20">
+        <Card className="animate-bounce">
+          <CardContent className="flex items-center justify-center p-20 h-full">
+            <p
+              className={`text-lg font-bold ${
+                colorScheme == "dark" ? "text-dark-muted" : "text-light-muted"
+              }`}
+            >
+              Loading...
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    );
   }
 
   return (

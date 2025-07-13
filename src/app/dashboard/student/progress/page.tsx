@@ -3,37 +3,17 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useTheme } from "@/hooks/ThemeProvider";
 import { toast } from "@/hooks/use-toast";
-import { useAuth } from "@/hooks/useAuth";
 import { useScore } from "@/hooks/useScore";
 import { Score } from "@/types";
 import { Clock, Target, TrendingUp, Trophy } from "lucide-react";
 import { useEffect, useState } from "react";
 
 const StudentProgress = () => {
-  const [isLoading, setIsLoading] = useState(true);
   const { colorScheme } = useTheme();
-  const { user, isAuthenticated } = useAuth();
-  const {
-    assignments,
-    scores,
-  } = useScore();
+  const { assignments, scores } = useScore();
 
   useEffect(() => {
-    if (!isAuthenticated || !user?.userId) {
-      if (!isLoading) {
-        const timer = setTimeout(() => {
-          toast({
-            title: "Authentication Required",
-            description: "Please log in to view dashboard.",
-            variant: "destructive",
-          });
-        }, 900);
-        return () => clearTimeout(timer);
-      }
-      return;
-    }
-
-    if (!isLoading && assignments.length === 0 && scores.length === 0) {
+    if (assignments.length === 0 && scores.length === 0) {
       const timer = setTimeout(() => {
         toast({
           title: "No Data Available",
@@ -44,34 +24,33 @@ const StudentProgress = () => {
       }, 900);
       return () => clearTimeout(timer);
     }
-  }, [isAuthenticated, user, isLoading, assignments, scores]);
+  }, [assignments, scores]);
 
-  // Get assignment title by ID
   const getAssignmentTitle = (assignmentId: string): string => {
     const assignment = assignments.find((a) => a.id === assignmentId);
-    if (!assignment) {
-      return "No Assignments";
+    if (assignment) {
+      return assignment.title;
     }
-    return assignment?.title || assignment?.id;
+
+    const score = scores.find((s) => s.assignmentId === assignmentId);
+    return score ? score.assignmentId : assignmentId;
   };
 
-  // Calculate accuracy improvement
-  const calculateImprovement = (): number => {
-    if (scores.length < 2) return 0;
-    const sortedScores = [...scores].sort(
-      (a, b) =>
-        new Date(a.completedAt).getTime() - new Date(b.completedAt).getTime()
-    );
-    const firstFive = sortedScores.slice(0, 5);
-    const lastFive = sortedScores.slice(-5);
-    const firstAvg =
-      firstFive.reduce((sum, s) => sum + s.accuracy, 0) / firstFive.length;
-    const lastAvg =
-      lastFive.reduce((sum, s) => sum + s.accuracy, 0) / lastFive.length;
-    return Math.round(lastAvg - firstAvg);
-  };
+  // const calculateImprovement = (): number => {
+  //   if (scores.length < 2) return 0;
+  //   const sortedScores = [...scores].sort(
+  //     (a, b) =>
+  //       new Date(a.completedAt).getTime() - new Date(b.completedAt).getTime()
+  //   );
+  //   const firstFive = sortedScores.slice(0, 5);
+  //   const lastFive = sortedScores.slice(-5);
+  //   const firstAvg =
+  //     firstFive.reduce((sum, s) => sum + s.accuracy, 0) / firstFive.length;
+  //   const lastAvg =
+  //     lastFive.reduce((sum, s) => sum + s.accuracy, 0) / lastFive.length;
+  //   return Math.round(lastAvg - firstAvg);
+  // };
 
-  // Get best score
   const getBestScore = (): Score | null => {
     if (scores.length === 0) return null;
     return scores.reduce((best, current) =>
@@ -79,7 +58,6 @@ const StudentProgress = () => {
     );
   };
 
-  // Calculate total practice time
   const calculateTotalTime = (): string => {
     if (scores.length === 0) return "0.0";
     const totalSeconds = scores.reduce(
@@ -89,21 +67,7 @@ const StudentProgress = () => {
     return (totalSeconds / 3600).toFixed(1);
   };
 
-  const improvement = calculateImprovement();
   const bestScore = getBestScore();
-
-  // Loading state
-  // if (loading) {
-  //   return (
-  //     <Card>
-  //       <CardContent className="flex flex-col items-center justify-center py-12">
-  //         <p className="text-muted-foreground">Loading progress data...</p>
-  //       </CardContent>
-  //     </Card>
-  //   );
-  // }
-
-  // No data state
   if (scores.length === 0) {
     return (
       <Card>
@@ -130,6 +94,30 @@ const StudentProgress = () => {
     );
   }
 
+  const stats = [
+    {
+      title: "Total Completed",
+      icon: Trophy,
+      value: scores.length,
+      description: `Assignment${scores.length > 1 ? "s" : ""} Completed`,
+      color: "from-blue-500 to-blue-600",
+    },
+    {
+      title: "Best Accuracy",
+      icon: Target,
+      value: bestScore?.accuracy,
+      description: `Assignment${scores.length > 1 ? "s" : ""} Completed`,
+      color: "from-purple-500 to-purple-600",
+    },
+    {
+      title: "Total Completed",
+      icon: Clock,
+      value: `${calculateTotalTime()}h`,
+      description: `Assignment${scores.length > 1 ? "s" : ""} Completed`,
+      color: "from-green-500 to-green-600",
+    },
+  ];
+
   return (
     <div className="space-y-6">
       <div>
@@ -139,93 +127,42 @@ const StudentProgress = () => {
         </p>
       </div>
 
-      {/* Cards */}
       <div className="grid gap-4 md:grid-cols-3">
-        {/* Total Completed */}
-        <Card className="group relative overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-br from-green-500 to-teal-500 opacity-5 group-hover:opacity-10 transition-opacity" />
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle
-              className={`text-xl font-bold ${
-                colorScheme === "dark" ? "text-dark" : "text-light"
-              }`}
-            >
-              Total Completed
-            </CardTitle>
-            <div className="p-2 rounded-lg bg-gradient-to-br from-green-500 to-teal-500 shadow-lg">
-              <Trophy className="h-4 w-4 text-white" />
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div
-              className={`text-3xl font-bold ${
-                colorScheme === "dark" ? "text-dark" : "text-light"
-              }`}
-            >
-              {scores.length}
-            </div>
-            <p className="text-xs font-medium mt-2">
-              Assignment{scores.length !== 1 ? "s" : ""} finished
-            </p>
-          </CardContent>
-        </Card>
-
-        {/* Best Accuracy */}
-        <Card className="group relative overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-br from-blue-500 to-purple-500 opacity-5 group-hover:opacity-10 transition-opacity" />
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle
-              className={`text-xl font-bold ${
-                colorScheme === "dark" ? "text-dark" : "text-light"
-              }`}
-            >
-              Best Accuracy
-            </CardTitle>
-            <div className="p-2 rounded-lg bg-gradient-to-br from-blue-500 to-purple-500 shadow-lg">
-              <Target className="h-4 w-4 text-white" />
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div
-              className={`text-3xl font-bold ${
-                colorScheme === "dark" ? "text-dark" : "text-light"
-              }`}
-            >
-              {bestScore?.accuracy || 0}%
-            </div>
-            <p className="text-xs font-medium mt-2">Personal best score</p>
-          </CardContent>
-        </Card>
-
-        {/* Time Practiced */}
-        <Card className="group relative overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-br from-orange-500 to-pink-500 opacity-5 group-hover:opacity-10 transition-opacity" />
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle
-              className={`text-xl font-bold ${
-                colorScheme === "dark" ? "text-dark" : "text-light"
-              }`}
-            >
-              Time Practiced
-            </CardTitle>
-            <div className="p-2 rounded-lg bg-gradient-to-br from-orange-500 to-pink-500 shadow-lg">
-              <Clock className="h-4 w-4 text-white" />
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div
-              className={`text-3xl font-bold ${
-                colorScheme === "dark" ? "text-dark" : "text-light"
-              }`}
-            >
-              {calculateTotalTime()}h
-            </div>
-            <p className="text-xs font-medium mt-2">Total time spent</p>
-          </CardContent>
-        </Card>
+        {stats.map((stat, index) => {
+          const Icon = stat.icon;
+          return (
+            <Card key={index} className="group">
+              <div
+                className={`absolute group-hover:opacity-10 inset-0 bg-gradient-to-br ${stat.color} opacity-5`}
+              ></div>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative z-10">
+                <CardTitle
+                  className={`text-xs sm:text-sm font-medium ${
+                    colorScheme === "dark" ? "text-dark" : "text-light"
+                  }`}
+                >
+                  {stat.title}
+                </CardTitle>
+                <div
+                  className={`p-2 rounded-lg bg-gradient-to-br ${stat.color} shadow-lg`}
+                >
+                  <Icon className="h-3 w-3 sm:h-4 sm:w-4 text-white" />
+                </div>
+              </CardHeader>
+              <CardContent className="relative z-10">
+                <div
+                  className={`text-lg sm:text-xl lg:text-2xl font-bold ${
+                    colorScheme === "dark" ? "text-dark" : "text-light"
+                  }`}
+                >
+                  {stat.value}
+                </div>
+              </CardContent>
+            </Card>
+          );
+        })}
       </div>
 
-      {/* Recent Scores */}
       <Card>
         <CardHeader>
           <CardTitle>Recent Scores</CardTitle>
