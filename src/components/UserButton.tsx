@@ -2,7 +2,6 @@ import React from "react";
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuItem,
   DropdownMenuTrigger,
 } from "./ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "./ui/avatar";
@@ -10,7 +9,6 @@ import { LogOut, RefreshCcw } from "lucide-react";
 import { useTheme } from "@/hooks/ThemeProvider";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "./ui/button";
-import { Card, CardContent } from "./ui/card";
 
 type FetchedState = {
   data: boolean;

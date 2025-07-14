@@ -3,6 +3,12 @@ import React, { useCallback } from "react";
 import { useTheme } from "@/hooks/ThemeProvider";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog";
 import { Card } from "./ui/card";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "./ui/accordion";
 
 type StudentScoreDetailsProps = {
   studentScores: Score[];
@@ -34,11 +40,11 @@ const StudentScoreDetails = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="h-4/5 flex flex-col">
+      <DialogContent className="h-[90%] flex flex-col">
         <DialogHeader>
           <DialogTitle>Assignments Completed</DialogTitle>
         </DialogHeader>
-        <div className="space-y-2">
+        <div className="flex h-full overflow-auto">
           {studentScores.length == 0 ? (
             <p
               className={`font-bold text-center mt-16 ${
@@ -48,59 +54,62 @@ const StudentScoreDetails = ({
               No Assignments completed yet
             </p>
           ) : (
-            studentScores
-              .sort(
-                (a, b) =>
-                  new Date(b.completedAt).getTime() -
-                  new Date(a.completedAt).getTime()
-              )
-              .slice(0, 5)
-              .map((score) => (
-                <Card
-                  className="flex items-center justify-between p-3"
-                  key={score.id}
-                >
-                  <div>
-                    <p
-                      className={
-                        colorScheme == "dark" ? "text-dark" : "text-light"
-                      }
-                    >
-                      {getAssignmentTitle(score.assignmentId)}
-                    </p>
-                    <p
-                      className={
-                        colorScheme == "dark"
-                          ? "text-dark-muted"
-                          : "text-light-muted"
-                      }
-                    >
-                      Completed{" "}
-                      {new Date(score.completedAt).toLocaleDateString()}
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    <div className="flex space-x-4 text-sm">
-                      <span
-                        className={
-                          colorScheme == "dark" ? "text-dark" : "text-light"
-                        }
+            <Accordion type="single" collapsible className="size-full">
+              {studentScores
+                .sort(
+                  (a, b) =>
+                    new Date(b.completedAt).getTime() -
+                    new Date(a.completedAt).getTime()
+                )
+                .map((score, index) => (
+                  <AccordionItem
+                    className="flex flex-col"
+                    value={score.id}
+                    key={index}
+                  >
+                    <AccordionTrigger className="flex items-center">
+                      <div
+                        className={`flex gap-2 items-center capitalize font-bold ${
+                          colorScheme == "dark"
+                            ? "text-dark"
+                            : "text-light"
+                        }`}
                       >
-                        {score.accuracy}%
-                      </span>
-                      <span
-                        className={
+                        {index + 1}.
+                        <div className="flex flex-col justify-center">
+                          {getAssignmentTitle(score.assignmentId)}
+                          <div className="flex gap-2 items-center text-[12px]">
+                            <p>
+                              Completed at -{" "}
+                              {new Date(score.completedAt).toLocaleDateString()}
+                            </p>
+                            |<p>Accuracy - {score.accuracy}%</p>|
+                            <p>WPM - {score.wpm} WPM</p>
+                          </div>
+                        </div>
+                      </div>
+                    </AccordionTrigger>
+                    <AccordionContent className="flex flex-col gap-1">
+                      <h1
+                        className={`font-bold text-[16px] text-center ${
+                          colorScheme == "dark" ? "text-dark" : "text-light"
+                        }`}
+                      >
+                        Typed Text
+                      </h1>
+                      <div
+                        className={`flex h-[250px] overflow-auto font-bold ${
                           colorScheme == "dark"
                             ? "text-dark-muted"
                             : "text-light-muted"
-                        }
+                        }`}
                       >
-                        {score.wpm} WPM
-                      </span>
-                    </div>
-                  </div>
-                </Card>
-              ))
+                        {score.typedText}
+                      </div>
+                    </AccordionContent>
+                  </AccordionItem>
+                ))}
+            </Accordion>
           )}
         </div>
       </DialogContent>

@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useContext, useState } from "react";
 import { Assignment, Class, Score, User } from "@/types";
 import { toast } from "./use-toast";
 
@@ -10,13 +10,13 @@ interface studentSideProps {
   scores: Score[];
   classes: Class[];
   studentsInClass: User[];
-  fetchClasses: () => Promise<void>;
+  fetchClasses: () => Promise<Class[]>;
   fetchAssignments: (classId?: string) => Promise<void>;
   submitScore: (score: Score) => Promise<void>;
   setAssignments: (assignment: Assignment[]) => void;
   fetchScores: (studentId: string) => Promise<void>;
-  fetchClassesForTeacher: () => Promise<void>;
-  fetchStudentsInClass: (classId: string) => Promise<void>;
+  fetchClassesForTeacher: () => Promise<Class[]>;
+  fetchStudentsInClass: (classId: string) => Promise<User[]>;
 }
 
 const ScoreContext = createContext<studentSideProps | undefined>(undefined);
@@ -33,10 +33,9 @@ export const ScoreProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const getToken = () => localStorage.getItem("StenoMaster-token");
 
-  const fetchClasses = async () => {
+  const fetchClasses = async (): Promise<Class[]> => {
     const token = getToken();
-
-    if (loading || !token) return;
+    if (loading || !token) return [];
     setLoading(true);
     try {
       const response = await fetch("/api/classes", {
@@ -51,7 +50,7 @@ export const ScoreProvider: React.FC<{ children: React.ReactNode }> = ({
       const text = await response.text();
       const result = text
         ? JSON.parse(text)
-        : { status: "error", message: "Empty response from server" };
+        : { status: "error", message: "Empty response" };
 
       if (
         response.ok &&
@@ -59,23 +58,14 @@ export const ScoreProvider: React.FC<{ children: React.ReactNode }> = ({
         Array.isArray(result.data)
       ) {
         setStudentClass(result.data);
+        return result.data;
       } else {
-        toast({
-          title: "Error",
-          description: result.message || "Failed to fetch student classes",
-          variant: "destructive",
-        });
         setStudentClass([]);
+        return [];
       }
     } catch (error) {
-      console.error("Error fetching student classes:", error);
-      toast({
-        title: "Error",
-        description:
-          "An unexpected error occurred while fetching student classes.",
-        variant: "destructive",
-      });
       setStudentClass([]);
+      return [];
     } finally {
       setLoading(false);
     }
@@ -106,13 +96,8 @@ export const ScoreProvider: React.FC<{ children: React.ReactNode }> = ({
         setAssignments([]);
       }
     } catch (error) {
-      console.error("Error fetching assignments:", error);
-      toast({
-        title: "Error",
-        description: "Failed to fetch assignments",
-        variant: "destructive",
-      });
       setAssignments([]);
+      return;
     }
   };
 
@@ -143,23 +128,13 @@ export const ScoreProvider: React.FC<{ children: React.ReactNode }> = ({
         });
       }
     } catch (error) {
-      console.error("Error submitting score:", error);
-      toast({
-        title: "Error",
-        description: "Failed to submit score",
-        variant: "destructive",
-      });
+      return;
     }
   };
 
   const fetchScores = async (studentId: string) => {
     const token = getToken();
     if (!token) {
-      toast({
-        title: "Error",
-        description: "Authentication token missing",
-        variant: "destructive",
-      });
       return;
     }
     try {
@@ -179,46 +154,25 @@ export const ScoreProvider: React.FC<{ children: React.ReactNode }> = ({
         Array.isArray(result.data)
       ) {
         setScores((prevScores) => {
-          // Filter out duplicate scores based on score.id
           const newScores = result.data.filter(
             (newScore: Score) =>
               !prevScores.some((score) => score.id === newScore.id)
           );
-          // Append new scores to existing ones
           return [...prevScores, ...newScores];
         });
-        // console.log(`Scores fetched for student ${studentId}:`, result.data);
       } else {
-        console.error(
-          `Failed to fetch scores for student ${studentId}:`,
-          result.message || "Unknown error"
-        );
-        toast({
-          title: "Error",
-          description: result.message || "Failed to fetch scores",
-          variant: "destructive",
-        });
+        return;
       }
     } catch (error) {
-      console.error(`Error fetching scores for student ${studentId}:`, error);
-      toast({
-        title: "Error",
-        description: "Failed to fetch scores",
-        variant: "destructive",
-      });
+      return;
     }
   };
 
-  const fetchClassesForTeacher = async () => {
+  const fetchClassesForTeacher = async (): Promise<Class[]> => {
     const token = getToken();
     if (!token) {
-      toast({
-        title: "Error",
-        description: "Authentication token missing",
-        variant: "destructive",
-      });
       setClasses([]);
-      return;
+      return [];
     }
     try {
       const response = await fetch("/api/classes", {
@@ -239,40 +193,22 @@ export const ScoreProvider: React.FC<{ children: React.ReactNode }> = ({
         Array.isArray(result.data)
       ) {
         setClasses(result.data);
-        // console.log("Classes fetched successfully:", result.data);
+        return result.data;
       } else {
-        console.error(
-          "Failed to fetch classes:",
-          result.message || "Unknown error"
-        );
-        toast({
-          title: "Error",
-          description: result.message || "Failed to fetch classes",
-          variant: "destructive",
-        });
         setClasses([]);
+        return [];
       }
     } catch (error) {
-      console.error("Error fetching classes for teacher:", error);
-      toast({
-        title: "Error",
-        description: "An unexpected error occurred while fetching classes",
-        variant: "destructive",
-      });
       setClasses([]);
+      return [];
     }
   };
 
-  const fetchStudentsInClass = async (classId: string) => {
+  const fetchStudentsInClass = async (classId: string): Promise<User[]> => {
     const token = getToken();
     if (!token) {
-      toast({
-        title: "Error",
-        description: "Authentication token missing",
-        variant: "destructive",
-      });
       setStudentInClass([]);
-      return;
+      return [];
     }
     try {
       const response = await fetch("/api/classes/fetch-students", {
@@ -294,29 +230,14 @@ export const ScoreProvider: React.FC<{ children: React.ReactNode }> = ({
         Array.isArray(result.data)
       ) {
         setStudentInClass(result.data);
-        // console.log("Students fetched for class", classId, ":", result.data);
+        return result.data;
       } else {
-        console.error(
-          "Failed to fetch students for class",
-          classId,
-          ":",
-          result.message || "Unknown error"
-        );
-        toast({
-          title: "Error",
-          description: result.message || "Failed to fetch students",
-          variant: "destructive",
-        });
         setStudentInClass([]);
+        return [];
       }
     } catch (error) {
-      console.error("Error fetching students for class", classId, ":", error);
-      toast({
-        title: "Error",
-        description: "An unexpected error occurred while fetching students",
-        variant: "destructive",
-      });
       setStudentInClass([]);
+      return [];
     }
   };
 

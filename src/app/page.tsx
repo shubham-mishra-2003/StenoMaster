@@ -127,8 +127,19 @@ const Page = () => {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-lg font-semibold text-gray-500">Loading...</div>
+      <div className="flex justify-center items-center h-screen p-20 bg-black">
+        <Card className="animate-bounce">
+          <CardContent className="flex flex-col gap-2 items-center justify-center p-20 h-full">
+            <Logo />
+            <p
+              className={`text-lg font-bold ${
+                colorScheme === "dark" ? "text-dark-muted" : "text-light-muted"
+              }`}
+            >
+              Loading...
+            </p>
+          </CardContent>
+        </Card>
       </div>
     );
   }
