@@ -17,6 +17,7 @@ interface studentSideProps {
   fetchScores: (studentId: string) => Promise<void>;
   fetchClassesForTeacher: () => Promise<Class[]>;
   fetchStudentsInClass: (classId: string) => Promise<User[]>;
+  deleteStudentScores: (studentId: string) => Promise<void>;
 }
 
 const ScoreContext = createContext<studentSideProps | undefined>(undefined);
@@ -241,6 +242,41 @@ export const ScoreProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   };
 
+  const deleteStudentScores = async (studentId: string) => {
+    const token = localStorage.getItem("StenoMaster-token");
+    if (!token) return;
+    try {
+      const response = await fetch("/api/score/delete", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ studentId }),
+      });
+      const text = await response.text();
+      const result = text
+        ? JSON.parse(text)
+        : { status: "error", message: "Failed to submit score" };
+      if (response.ok && result.status === "success") {
+        console.log("Deleted scores");
+      } else {
+        toast({
+          title: "Error",
+          description: result.message || "Failed to submit score",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error("Failed to delete scores:", error);
+      toast({
+        title: "Error",
+        description: "Something went wrong.",
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <ScoreContext.Provider
       value={{
@@ -256,6 +292,7 @@ export const ScoreProvider: React.FC<{ children: React.ReactNode }> = ({
         fetchScores,
         fetchClassesForTeacher,
         fetchStudentsInClass,
+        deleteStudentScores,
       }}
     >
       {children}

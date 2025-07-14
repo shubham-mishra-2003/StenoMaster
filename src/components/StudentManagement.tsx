@@ -36,7 +36,13 @@ const StudentManagement = ({
   onClose,
 }: StudentManagementProps) => {
   const { assignStudentToClass, removeStudentFromClass } = useClass();
-  const { studentsInClass, fetchStudentsInClass, classes, fetchClassesForTeacher } = useScore();
+  const {
+    studentsInClass,
+    fetchStudentsInClass,
+    classes,
+    fetchClassesForTeacher,
+    deleteStudentScores,
+  } = useScore();
   const { createStudent, deleteAccount } = useAuth();
   const { colorScheme } = useTheme();
   const [newStudent, setNewStudent] = useState({
@@ -51,6 +57,7 @@ const StudentManagement = ({
   };
 
   const handleAddStudent = async () => {
+    setIsLoadingStudents(true);
     if (!newStudent.name.trim() || !newStudent.email.trim()) {
       toast({
         title: "Error",
@@ -59,9 +66,7 @@ const StudentManagement = ({
       });
       return;
     }
-
     const password = newStudent.password || generateRandomPassword();
-
     try {
       const newUser = await createStudent({
         email: newStudent.email,
@@ -71,6 +76,7 @@ const StudentManagement = ({
       await assignStudentToClass(classItem.id, newUser.userId);
       await fetchStudentsInClass(classItem.id);
       await fetchClassesForTeacher();
+      setIsLoadingStudents(false);
       toast({
         title: "Success",
         description: `${newStudent.name} added successfully. Email: ${newStudent.email}, Password: ${password}`,
@@ -88,6 +94,7 @@ const StudentManagement = ({
     try {
       await removeStudentFromClass(classItem.id, studentId);
       await deleteAccount(studentId);
+      await deleteStudentScores(studentId);
       await fetchStudentsInClass(classItem.id);
       await fetchClassesForTeacher();
       toast({
@@ -227,92 +234,71 @@ const StudentManagement = ({
                   {studentsInClass.map((student) => (
                     <div
                       key={student.userId}
-                      className={`flex flex-col p-4 border rounded-xl gap-3 ${
+                      className={`flex justify-between items-center p-4 border rounded-xl gap-3 ${
                         colorScheme == "dark"
                           ? "border-slate-500"
                           : "border-slate-300"
                       }`}
                     >
-                      <div className="flex justify-between gap-2">
+                      <div className="flex gap-1 flex-col">
                         <h4 className="font-medium truncate">
                           {student.fullName}
                         </h4>
-                        <div className="flex items-center justify-between gap-1 flex-col sm:flex-row">
-                          <Select
-                            value={classItem.id}
-                            onValueChange={(newClassId) =>
-                              handleChangeClass(student.userId, newClassId)
-                            }
-                          >
-                            <SelectTrigger
-                              className={`cursor-pointer h-9 border w-full sm:w-56 truncate rounded-xl ${
-                                colorScheme == "dark"
-                                  ? "bg-slate-900/70 hover:bg-black/60 border-slate-700"
-                                  : "bg-slate-200 hover:bg-slate-300 border-slate-300"
-                              }`}
-                            >
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent
-                              className={`scroll-smooth border-0 max-h-60 rounded-xl shadow-2xl ${
-                                colorScheme == "dark"
-                                  ? "bg-slate-900/70 border-slate-700 shadow-slate-500"
-                                  : "bg-slate-200/80 border-slate-300"
-                              }`}
-                            >
-                              {classes.map((cls) => (
-                                <SelectItem
-                                  key={cls.id}
-                                  value={cls.id}
-                                  className={`cursor-pointer border-2 rounded-xl mb-[2px] ${
-                                    colorScheme == "dark"
-                                      ? "bg-slate-700 border-slate-600"
-                                      : "bg-slate-200 border-slate-300"
-                                  }`}
-                                >
-                                  {cls.name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <div className="flex items-center gap-1 justify-between w-full">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              disabled
-                              className={`h-9 flex-1 relative cursor-not-allowed opacity-50 ${
-                                colorScheme == "dark"
-                                  ? "bg-slate-900/70"
-                                  : "bg-slate-200"
-                              }`}
-                            >
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() =>
-                                handleDeleteStudent(student.userId)
-                              }
-                              className={`h-9 flex-1 relative text-destructive cursor-pointer hover:text-white hover:bg-red-500 ${
-                                colorScheme == "dark"
-                                  ? "bg-slate-900/70"
-                                  : "bg-slate-200"
-                              }`}
-                              disabled={isLoadingStudents}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </div>
-                      </div>
-                      <div className="flex gap-1 flex-col justify-center">
                         <p className="text-sm text-muted-foreground">
                           Email: {student.email}
                         </p>
-                        <p className="text-xs text-muted-foreground">
-                          0 assignments completed
-                        </p>
+                      </div>
+                      <div className="flex items-center justify-between gap-1 flex-col sm:flex-row">
+                        <Select
+                          value={classItem.id}
+                          onValueChange={(newClassId) =>
+                            handleChangeClass(student.userId, newClassId)
+                          }
+                        >
+                          <SelectTrigger
+                            className={`cursor-pointer h-9 border w-32 truncate rounded-xl ${
+                              colorScheme == "dark"
+                                ? "bg-slate-900/70 hover:bg-black/60 border-slate-700"
+                                : "bg-slate-200 hover:bg-slate-300 border-slate-300"
+                            }`}
+                          >
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent
+                            className={`scroll-smooth border-0 max-h-60 rounded-xl shadow-2xl ${
+                              colorScheme == "dark"
+                                ? "bg-slate-900/70 border-slate-700 shadow-slate-500"
+                                : "bg-slate-200/80 border-slate-300"
+                            }`}
+                          >
+                            {classes.map((cls) => (
+                              <SelectItem
+                                key={cls.id}
+                                value={cls.id}
+                                className={`cursor-pointer border-2 rounded-xl mb-[2px] ${
+                                  colorScheme == "dark"
+                                    ? "bg-slate-700 border-slate-600"
+                                    : "bg-slate-200 border-slate-300"
+                                }`}
+                              >
+                                {cls.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDeleteStudent(student.userId)}
+                          className={`h-9 flex-1 relative text-destructive cursor-pointer hover:text-white hover:bg-red-500 ${
+                            colorScheme == "dark"
+                              ? "bg-slate-900/70"
+                              : "bg-slate-200"
+                          }`}
+                          disabled={isLoadingStudents}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
                       </div>
                     </div>
                   ))}

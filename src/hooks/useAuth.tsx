@@ -103,7 +103,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
     while (attempt <= maxRetries) {
       try {
-        // console.log(`[useAuth] Validation attempt ${attempt} with token`);
         const response = await fetch("/api/auth/validate", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -112,7 +111,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         });
 
         const text = await response.text();
-        // console.log("[useAuth] Validate response body:", text);
         const result = text
           ? JSON.parse(text)
           : { status: "error", message: "Empty response from server" };
@@ -130,11 +128,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
           );
           return;
         } else {
-          // console.error("[useAuth] Validate error:", result.message);
           throw new Error(result.message || "Failed to validate session");
         }
       } catch (error: any) {
-        // console.error(`[useAuth] Validate attempt ${attempt} failed:`, error);
         if (attempt === maxRetries) {
           setAuthState({
             isAuthenticated: false,

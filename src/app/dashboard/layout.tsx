@@ -3,7 +3,6 @@
 import React, { useEffect, useState } from "react";
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import AppSidebar from "@/components/AppSidebar";
-import { Button } from "@/components/ui/button";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { useTheme } from "@/hooks/ThemeProvider";
@@ -88,7 +87,6 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
 
           setFetched((prev) => ({ ...prev, studentInClass: true }));
           setIsLoading((prev) => ({ ...prev, studentInClass: false }));
-
           if (allStudents.length > 0) {
             setIsLoading((prev) => ({ ...prev, score: true }));
             for (const student of allStudents) {
@@ -97,9 +95,8 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
             setFetched((prev) => ({ ...prev, score: true }));
             setIsLoading((prev) => ({ ...prev, score: false }));
           }
-
           setIsLoading((prev) => ({ ...prev, assignmentsLoading: true }));
-          await fetchAssignments(); // For teacher dashboard overview
+          await fetchAssignments();
           setFetched((prev) => ({ ...prev, assignment: true }));
           setIsLoading((prev) => ({ ...prev, assignmentsLoading: false }));
         }
@@ -125,7 +122,7 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
     ) {
       loadData();
     }
-  }, []);
+  }, [user]);
 
   const showLoader =
     user?.userType === "student"

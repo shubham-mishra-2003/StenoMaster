@@ -20,6 +20,7 @@ import { useTheme } from "@/hooks/ThemeProvider";
 import { useClass } from "@/hooks/useClasses";
 import { useScore } from "@/hooks/useScore";
 import { useAssignment } from "@/hooks/useAssignments";
+import { useAuth } from "@/hooks/useAuth";
 
 const ClassPage = () => {
   const { isLoading, createClass, deleteClass } = useClass();
@@ -28,8 +29,9 @@ const ClassPage = () => {
   const [newClassName, setNewClassName] = useState("");
   const [selectedClass, setSelectedClass] = useState<Class | null>(null);
   const { colorScheme } = useTheme();
-  const { assignments } = useScore();
+  const { assignments, deleteStudentScores } = useScore();
   const { deleteAssignment } = useAssignment();
+  const { deleteAccount } = useAuth();
 
   const handleCreateClass = async () => {
     await createClass(newClassName);
@@ -40,16 +42,26 @@ const ClassPage = () => {
     setIsCreateDialogOpen(false);
   };
 
-  const handleDelete = (classItem: Class) => {
-    deleteClass(classItem.id).then(() => {
-      fetchClassesForTeacher();
+  const handleDelete = async (classItem: Class) => {
+    try {
+      await deleteClass(classItem.id);
+
       const assignmentsToDelete = assignments.filter(
         (a) => a.classId === classItem.id
       );
-      assignmentsToDelete.forEach((a) => {
-        deleteAssignment(a.id);
-      });
-    });
+      await Promise.all(assignmentsToDelete.map((a) => deleteAssignment(a.id)));
+
+      await Promise.all(
+        classItem.students.flatMap((studentId) => [
+          deleteAccount(studentId),
+          deleteStudentScores(studentId),
+        ])
+      );
+
+      fetchClassesForTeacher();
+    } catch (error) {
+      console.error("Error deleting class and its data:", error);
+    }
   };
 
   return (

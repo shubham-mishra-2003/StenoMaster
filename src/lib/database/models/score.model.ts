@@ -65,3 +65,23 @@ export async function getScoresByAssignment(assignmentId: string) {
     throw error;
   }
 }
+
+export async function deleteScoresByStudent(studentId: string) {
+  try {
+    const db = await connectToFirebase();
+    const snapshot = await db
+      .collection("scores")
+      .where("studentId", "==", studentId)
+      .get();
+
+    const batch = db.batch();
+    snapshot.forEach((doc: QueryDocumentSnapshot) => {
+      batch.delete(doc.ref);
+    });
+
+    await batch.commit();
+  } catch (error) {
+    handleError(error);
+    throw error;
+  }
+}

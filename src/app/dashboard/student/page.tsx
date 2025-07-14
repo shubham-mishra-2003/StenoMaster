@@ -115,16 +115,6 @@ const DashboardContent: React.FC = () => {
       </div>
 
       <AssignmentList assignments={availableAssignments} />
-
-      {assignments.length === 0 && scores.length === 0 && (
-        <p
-          className={`text-sm sm:text-base mt-4 ${
-            colorScheme === "dark" ? "text-dark" : "text-light"
-          }`}
-        >
-          No assignments or scores available at this time.
-        </p>
-      )}
     </div>
   );
 };
