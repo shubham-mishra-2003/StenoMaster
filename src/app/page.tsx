@@ -300,19 +300,21 @@ const Page = () => {
       </section>
 
       <footer
-        className={`border-t border-border/50 py-6 sm:py-8 px-4 sm:px-6 lg:px-8 ${
-          colorScheme === "dark"
-            ? "gradient-section-dark"
-            : "gradient-section-light"
-        } backdrop-blur-sm`}
+        className={`border-t border-border/50 py-6 sm:py-8 px-4 sm:px-6 lg:px-8 border-border/50 p-1 bg-gradient-to-r ${
+          colorScheme == "dark"
+            ? "from-blue-950/50 via-purple-950/30 to-indigo-950/50"
+            : "from-blue-50/50 via-purple-50/30 to-indigo-50/50"
+        }`}
       >
-        <div className="max-w-7xl mx-auto text-center">
-          <p
-            className={`${colorScheme === "dark" ? "text-dark" : "text-light"}`}
-          >
-            © 2024 StenoMaster. Built for educational excellence.
+        <span
+          className={`text-center text-lg font-bold w-full copyright-message ${
+            colorScheme == "dark" ? "text-dark-muted" : "text-light-muted"
+          }`}
+        >
+          <p>
+            Copyright © Powered By Connect & Team {new Date().getFullYear()}
           </p>
-        </div>
+        </span>
       </footer>
     </div>
   );

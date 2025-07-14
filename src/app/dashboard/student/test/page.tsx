@@ -23,7 +23,9 @@ import { useScore } from "@/hooks/useScore";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 const TypingTestContent = () => {
-  const [currentText, setCurrentText] = useState(sampleTexts[0]);
+  const [currentText, setCurrentText] = useState(
+    () => sampleTexts[Math.floor(Math.random() * sampleTexts.length)]
+  );
   const [typedText, setTypedText] = useState("");
   const [startTime, setStartTime] = useState<Date | null>(null);
   const [isStarted, setIsStarted] = useState(false);
