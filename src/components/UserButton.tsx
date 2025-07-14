@@ -85,7 +85,6 @@ const UserButton = ({
           disabled={isLoading.refresh}
           onClick={() => {
             setIsLoading((prev) => ({ ...prev, refresh: true }));
-            console.log("Refresh triggered, resetting fetched state");
             onRefresh().then(() => {
               setIsLoading((prev) => ({ ...prev, refresh: false }));
             });

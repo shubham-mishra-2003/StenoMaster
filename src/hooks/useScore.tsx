@@ -187,7 +187,7 @@ export const ScoreProvider: React.FC<{ children: React.ReactNode }> = ({
           // Append new scores to existing ones
           return [...prevScores, ...newScores];
         });
-        console.log(`Scores fetched for student ${studentId}:`, result.data);
+        // console.log(`Scores fetched for student ${studentId}:`, result.data);
       } else {
         console.error(
           `Failed to fetch scores for student ${studentId}:`,
@@ -239,7 +239,7 @@ export const ScoreProvider: React.FC<{ children: React.ReactNode }> = ({
         Array.isArray(result.data)
       ) {
         setClasses(result.data);
-        console.log("Classes fetched successfully:", result.data);
+        // console.log("Classes fetched successfully:", result.data);
       } else {
         console.error(
           "Failed to fetch classes:",
@@ -294,7 +294,7 @@ export const ScoreProvider: React.FC<{ children: React.ReactNode }> = ({
         Array.isArray(result.data)
       ) {
         setStudentInClass(result.data);
-        console.log("Students fetched for class", classId, ":", result.data);
+        // console.log("Students fetched for class", classId, ":", result.data);
       } else {
         console.error(
           "Failed to fetch students for class",
@@ -319,18 +319,6 @@ export const ScoreProvider: React.FC<{ children: React.ReactNode }> = ({
       setStudentInClass([]);
     }
   };
-
-  useEffect(() => {
-    console.log("Classes state updated:", classes);
-  }, [classes]);
-
-  useEffect(() => {
-    console.log("StudentsInClass state updated:", studentsInClass);
-  }, [studentsInClass]);
-
-  useEffect(() => {
-    console.log("Scores state updated:", scores);
-  }, [scores]);
 
   return (
     <ScoreContext.Provider

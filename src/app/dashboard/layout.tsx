@@ -60,48 +60,48 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
     setIsLoading((prev) => ({ ...prev, dataLoading: true }));
     try {
       if (!user) {
-        console.log("No user, aborting loadData");
+        // console.log("No user, aborting loadData");
         return;
       }
 
       if (user.userType === "student") {
-        console.log("Fetching data for student:", user.userId);
+        // console.log("Fetching data for student:", user.userId);
         await fetchClasses();
-        console.log("Student classes fetched:", studentClass);
+        // console.log("Student classes fetched:", studentClass);
         await fetchScores(user.userId);
-        console.log("Scores fetched for student:", scores);
+        // console.log("Scores fetched for student:", scores);
 
         if (studentClass.length > 0) {
           setIsLoading((prev) => ({ ...prev, assignmentsLoading: true }));
           await fetchAssignments(studentClass[0].id);
-          console.log("Assignments fetched for student:", assignments);
+          // console.log("Assignments fetched for student:", assignments);
           setFetched((prev) => ({ ...prev, assignment: true }));
           setIsLoading((prev) => ({ ...prev, assignmentsLoading: false }));
         } else {
-          console.log("No student classes, setting assignments to empty");
+          // console.log("No student classes, setting assignments to empty");
           setAssignments([]);
         }
       } else if (user.userType === "teacher") {
         setIsLoading((prev) => ({ ...prev, teacherClass: true }));
-        console.log("Fetching classes for teacher:", user.userId);
+        // console.log("Fetching classes for teacher:", user.userId);
         await fetchClassesForTeacher();
-        console.log("Teacher classes fetched:", classes);
+        // console.log("Teacher classes fetched:", classes);
         setFetched((prev) => ({ ...prev, teacherClass: true }));
         setIsLoading((prev) => ({ ...prev, teacherClass: false }));
 
         if (classes.length > 0) {
           setIsLoading((prev) => ({ ...prev, studentInClass: true }));
-          console.log(
-            "Fetching students for classes:",
-            classes.map((c) => c.id)
-          );
+          // console.log(
+          //   "Fetching students for classes:",
+          //   classes.map((c) => c.id)
+          // );
           await Promise.all(
             classes.map(async (c) => {
               await fetchStudentsInClass(c.id);
-              console.log(
-                `Students fetched for class ${c.id}:`,
-                studentsInClass
-              );
+              // console.log(
+              //   `Students fetched for class ${c.id}:`,
+              //   studentsInClass
+              // );
             })
           );
           setFetched((prev) => ({ ...prev, studentInClass: true }));
@@ -109,35 +109,35 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
 
           if (studentsInClass.length > 0) {
             setIsLoading((prev) => ({ ...prev, score: true }));
-            console.log(
-              "Fetching scores for students:",
-              studentsInClass.map((s) => s.userId)
-            );
+            // console.log(
+            //   "Fetching scores for students:",
+            //   studentsInClass.map((s) => s.userId)
+            // );
             await Promise.all(
               studentsInClass.map(async (s) => {
                 await fetchScores(s.userId);
-                console.log(`Scores fetched for student ${s.userId}:`, scores);
+                // console.log(`Scores fetched for student ${s.userId}:`, scores);
               })
             );
             setFetched((prev) => ({ ...prev, score: true }));
             setIsLoading((prev) => ({ ...prev, score: false }));
           } else {
-            console.log("No students in classes, skipping score fetch");
+            // console.log("No students in classes, skipping score fetch");
           }
 
           setIsLoading((prev) => ({ ...prev, assignmentsLoading: true }));
-          console.log("Fetching assignments for teacher");
+          // console.log("Fetching assignments for teacher");
           await fetchAssignments(""); // Adjust based on teacher assignment logic
-          console.log("Assignments fetched for teacher:", assignments);
+          // console.log("Assignments fetched for teacher:", assignments);
           setFetched((prev) => ({ ...prev, assignment: true }));
           setIsLoading((prev) => ({ ...prev, assignmentsLoading: false }));
         } else {
-          console.log("No teacher classes, setting assignments to empty");
+          // console.log("No teacher classes, setting assignments to empty");
           setAssignments([]);
         }
       }
     } catch (err) {
-      console.error("Failed to load data:", err);
+      // console.error("Failed to load data:", err);
       toast({
         title: "Error",
         description: "Failed to load data. Please try again.",
@@ -146,19 +146,19 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
     } finally {
       setIsLoading((prev) => ({ ...prev, dataLoading: false }));
       setFetched((prev) => ({ ...prev, data: true }));
-      console.log("loadData completed, fetched state:", fetched);
+      // console.log("loadData completed, fetched state:", fetched);
     }
   };
 
   useEffect(() => {
     if (!isAuthenticated || !user) {
-      console.log("User not authenticated, redirecting to login");
+      // console.log("User not authenticated, redirecting to login");
       router.push("/?showLogin=true");
       return;
     }
 
     if (!fetched.data) {
-      console.log("Initial loadData call");
+      // console.log("Initial loadData call");
       loadData();
     }
   }, [isAuthenticated, user, router, fetched.data]);
@@ -195,13 +195,12 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
   }, [isAuthenticated, user, assignments, scores, isLoading.dataLoading]);
 
   if (!isAuthenticated || !user) {
-    console.log("Rendering null due to unauthenticated user");
+    // console.log("Rendering null due to unauthenticated user");
     return null;
   }
 
   if (user.userType === "student") {
     if (!fetched.assignment && !fetched.data) {
-      console.log("Rendering loading state for student");
       return (
         <div className="flex justify-center items-center h-screen p-20">
           <Card className="animate-bounce">
@@ -227,7 +226,6 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
       !fetched.studentInClass &&
       !fetched.teacherClass
     ) {
-      console.log("Rendering loading state for teacher");
       return (
         <div className="flex justify-center items-center h-screen p-20">
           <Card className="animate-bounce">

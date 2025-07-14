@@ -122,7 +122,6 @@ export const ClassProvider: React.FC<{ children: React.ReactNode }> = ({
         ? JSON.parse(text)
         : { status: "error", message: "Empty response from server" };
 
-      console.log("Fetched classes - ", result);
       if (response.ok && result.status === "success") {
         setClassState((prev) => ({
           ...prev,

@@ -19,7 +19,6 @@ const AssignmentList = ({ assignments }: AssignmentListProps) => {
 
   const handleStartPractice = (assignmentID: string) => {
     router.push(`/dashboard/student/practice/${assignmentID}`);
-    //console.log("Assignment id - ", assignmentID);
   };
 
   if (assignments.length === 0) {
