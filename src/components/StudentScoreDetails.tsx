@@ -1,5 +1,5 @@
 import { Assignment, Score } from "@/types";
-import React from "react";
+import React, { useCallback } from "react";
 import { useTheme } from "@/hooks/ThemeProvider";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog";
 import { Card } from "./ui/card";
@@ -19,13 +19,21 @@ const StudentScoreDetails = ({
 }: StudentScoreDetailsProps) => {
   const { colorScheme } = useTheme();
 
-  const getAssignmentTitle = (assignmentId: string) => {
+  const getAssignmentTitle = (assignmentId: string): string => {
     const assignment = assignments.find((a) => a.id === assignmentId);
-    return assignment?.title || "Unknown Assignment";
+    if (assignment) {
+      return assignment.title;
+    }
+    const score = studentScores.find((s) => s.assignmentId === assignmentId);
+    return score ? score.assignmentId : assignmentId;
   };
 
+  const handleClose = useCallback(() => {
+    onClose();
+  }, [onClose]);
+
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent className="h-4/5 flex flex-col">
         <DialogHeader>
           <DialogTitle>Assignments Completed</DialogTitle>

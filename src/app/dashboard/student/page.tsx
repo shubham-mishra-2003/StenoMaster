@@ -1,81 +1,15 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { BookOpen, Target, Zap, Clock, RefreshCcw } from "lucide-react";
+import { BookOpen, Target, Zap } from "lucide-react";
 import AssignmentList from "@/components/AssignmentList";
 import { useTheme } from "@/hooks/ThemeProvider";
-import { useAuth } from "@/hooks/useAuth";
 import { useScore } from "@/hooks/useScore";
-import { Button } from "@/components/ui/button";
 
 const DashboardContent: React.FC = () => {
   const { colorScheme } = useTheme();
-  const { user, isAuthenticated } = useAuth();
-  const [fetched, setFetched] = useState({
-    data: false,
-    assignment: false,
-  });
-  const [isLoading, setIsLoading] = useState({
-    dataLoading: false,
-    assignmentsLoading: false,
-  });
-  const {
-    assignments,
-    fetchAssignments,
-    fetchClasses,
-    studentClass,
-    fetchScores,
-    scores,
-  } = useScore();
-
-  const fetchDetails = async () => {
-    const loadData = async () => {
-      setIsLoading((prev) => ({
-        ...prev,
-        dataLoading: true,
-      }));
-      try {
-        if (user) {
-          await fetchClasses();
-          await fetchScores(user.userId);
-        }
-      } catch (err) {
-        // console.error("Failed to load data:", err);
-      } finally {
-        setIsLoading((prev) => ({
-          ...prev,
-          dataLoading: false,
-        }));
-      }
-    };
-    if (!fetched.data && user?.userType == "student") {
-      loadData().then(() => {
-        setFetched((prev) => ({
-          ...prev,
-          data: true,
-        }));
-        setIsLoading((prev) => ({
-          ...prev,
-          assignmentsLoading: true,
-        }));
-        if (!fetched.assignment) {
-          fetchAssignments(studentClass[0].id).then(() => {
-            setIsLoading((prev) => ({
-              ...prev,
-              assignmentsLoading: false,
-            }));
-            setFetched((prev) => ({
-              ...prev,
-              assignment: true,
-            }));
-          });
-        } else {
-          return;
-        }
-      });
-    }
-  };
+  const { assignments, scores } = useScore();
 
   const calculateAverageWPM = (): string => {
     if (scores.length === 0) return "0";
@@ -130,29 +64,17 @@ const DashboardContent: React.FC = () => {
   return (
     <div className="space-y-4 sm:space-y-6 lg:space-y-8">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div className="flex justify-between w-full items-center">
-          <div>
-            <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold gradient-text">
-              Student Dashboard
-            </h1>
-            <p
-              className={`text-sm sm:text-base mt-1 ${
-                colorScheme === "dark" ? "text-dark" : "text-light"
-              }`}
-            >
-              Track your progress and practice stenography
-            </p>
-          </div>
-          <Button
-            title="Refresh"
-            className={`cursor-pointer mr-10 ${
-              colorScheme == "dark" ? "bg-slate-800" : "bg-slate-300"
+        <div>
+          <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold gradient-text">
+            Student Dashboard
+          </h1>
+          <p
+            className={`text-sm sm:text-base mt-1 ${
+              colorScheme === "dark" ? "text-dark" : "text-light"
             }`}
-            onClick={fetchDetails}
-            disabled={isLoading.assignmentsLoading && isLoading.dataLoading}
           >
-            <RefreshCcw className="h-6 w-6" />
-          </Button>
+            Track your progress and practice stenography
+          </p>
         </div>
       </div>
 

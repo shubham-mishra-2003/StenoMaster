@@ -1,107 +1,15 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Users, BookOpen, RefreshCcw } from "lucide-react";
+import { Users, BookOpen } from "lucide-react";
 import { useTheme } from "@/hooks/ThemeProvider";
 import StudentsScores from "@/components/StudentsScores";
-import { useAuth } from "@/hooks/useAuth";
-import { Button } from "@/components/ui/button";
 import { useScore } from "@/hooks/useScore";
 
 const TeacherDashboard = () => {
-  const { user } = useAuth();
   const { colorScheme } = useTheme();
-
-  const [fetched, setFetched] = useState({
-    data: false,
-    assignment: false,
-    teacherClass: false,
-    studentInClass: false,
-    score: false,
-  });
-  const [isLoading, setIsLoading] = useState({
-    dataLoading: false,
-    assignmentsLoading: false,
-    teacherClass: false,
-    studentInClass: false,
-    score: false,
-  });
-  const {
-    assignments,
-    fetchAssignments,
-    fetchClasses,
-    setAssignments,
-    studentClass,
-    fetchScores,
-    scores,
-    fetchClassesForTeacher,
-    classes,
-    fetchStudentsInClass,
-    studentsInClass,
-  } = useScore();
-
-  const load = async () => {
-    if (user) {
-      if (user.userType == "student") {
-        await fetchClasses();
-        await fetchScores(user.userId);
-      } else if (user.userType == "teacher") {
-        setIsLoading((prev) => ({ ...prev, teacherClass: true }));
-        console.log("Fetch started");
-        await fetchClassesForTeacher().then(() => {
-          setIsLoading((prev) => ({ ...prev, teacherClass: false }));
-          setFetched((prev) => ({ ...prev, teacherClass: true }));
-          console.log("Fetched classes", classes);
-        });
-        if (fetched.teacherClass && classes.length > 0) {
-          setIsLoading((prev) => ({ ...prev, studentInClass: true }));
-          classes.map(async (c) => {
-            await fetchStudentsInClass(c.id).then(() => {
-              setIsLoading((prev) => ({ ...prev, studentInClass: false }));
-              setFetched((prev) => ({ ...prev, studentInClass: true }));
-            });
-          });
-          console.log("Fetched students", studentsInClass);
-        }
-        if (fetched.studentInClass && studentsInClass.length > 0) {
-          setIsLoading((prev) => ({ ...prev, score: true }));
-          studentsInClass.map(async (s) => {
-            await fetchScores(s.userId).then(() => {
-              setFetched((prev) => ({ ...prev, score: true }));
-              setIsLoading((prev) => ({ ...prev, score: true }));
-            });
-          });
-          console.log("Fetched scores", scores);
-        }
-      }
-      if (user || studentClass.length > 0 || classes) {
-        setIsLoading((prev) => ({
-          ...prev,
-          assignmentsLoading: true,
-        }));
-        if (!fetched.assignment) {
-          if (classes.length > 0 || studentClass.length > 0) {
-            await fetchAssignments(
-              user.userType == "student" ? studentClass[0].id : ""
-            ).then(() => {
-              setIsLoading((prev) => ({
-                ...prev,
-                assignmentsLoading: false,
-              }));
-              setFetched((prev) => ({
-                ...prev,
-                assignment: true,
-              }));
-              console.log("Assignments - ", assignments);
-            });
-          }
-        }
-      } else if (!isLoading && studentClass.length === 0 && !classes) {
-        setAssignments([]);
-      }
-    }
-  };
+  const { assignments, scores, classes, studentsInClass } = useScore();
 
   const stats = [
     {
@@ -126,29 +34,17 @@ const TeacherDashboard = () => {
 
   return (
     <div className="space-y-4 sm:space-y-6 lg:space-y-8">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold gradient-text">
-            Teacher Dashboard
-          </h1>
-          <p
-            className={`text-sm sm:text-base font-semibold mt-1 ${
-              colorScheme == "dark" ? "text-dark-muted" : "text-light-muted"
-            }`}
-          >
-            Manage your classes and track student progress
-          </p>
-        </div>
-        <Button
-          title="Refresh"
-          className={`cursor-pointer mr-10 ${
-            colorScheme == "dark" ? "bg-slate-800" : "bg-slate-300"
+      <div>
+        <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold gradient-text">
+          Teacher Dashboard
+        </h1>
+        <p
+          className={`text-sm sm:text-base font-semibold mt-1 ${
+            colorScheme == "dark" ? "text-dark-muted" : "text-light-muted"
           }`}
-          onClick={load}
-          disabled={isLoading.assignmentsLoading && isLoading.dataLoading}
         >
-          <RefreshCcw className="h-6 w-6" />
-        </Button>
+          Manage your classes and track student progress
+        </p>
       </div>
 
       <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-3 lg:grid-cols-3">

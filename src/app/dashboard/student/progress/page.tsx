@@ -31,7 +31,6 @@ const StudentProgress = () => {
     if (assignment) {
       return assignment.title;
     }
-
     const score = scores.find((s) => s.assignmentId === assignmentId);
     return score ? score.assignmentId : assignmentId;
   };

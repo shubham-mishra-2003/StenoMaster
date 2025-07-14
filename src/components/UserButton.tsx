@@ -6,12 +6,44 @@ import {
   DropdownMenuTrigger,
 } from "./ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "./ui/avatar";
-import { LogOut } from "lucide-react";
+import { LogOut, RefreshCcw } from "lucide-react";
 import { useTheme } from "@/hooks/ThemeProvider";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "./ui/button";
+import { Card, CardContent } from "./ui/card";
 
-const UserButton = () => {
+type FetchedState = {
+  data: boolean;
+  assignment: boolean;
+  teacherClass: boolean;
+  studentInClass: boolean;
+  score: boolean;
+};
+
+type IsLoadingState = {
+  dataLoading: boolean;
+  assignmentsLoading: boolean;
+  teacherClass: boolean;
+  studentInClass: boolean;
+  score: boolean;
+  refresh: boolean;
+};
+
+interface userButtonProps {
+  fetched: FetchedState;
+  setFetched: React.Dispatch<React.SetStateAction<FetchedState>>;
+  isLoading: IsLoadingState;
+  setIsLoading: React.Dispatch<React.SetStateAction<IsLoadingState>>;
+  onRefresh: () => Promise<void>;
+}
+
+const UserButton = ({
+  fetched,
+  isLoading,
+  onRefresh,
+  setFetched,
+  setIsLoading,
+}: userButtonProps) => {
   const { colorScheme } = useTheme();
   const { user, logout } = useAuth();
 
@@ -20,13 +52,13 @@ const UserButton = () => {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button className="rounded-lg p-3 h-14 justify-center cursor-pointer overflow-hidden w-full">
+        <Button className="cursor-pointer flex gap-2 p-2 justify-center items-center">
           <Avatar className="h-8 w-8 bg-gradient-to-br from-blue-500 via-purple-500 to-indigo-500">
             <AvatarFallback className="bg-transparent text-white font-semibold">
               {user?.fullName.charAt(0).toUpperCase()}
             </AvatarFallback>
           </Avatar>
-          <div className="flex flex-col items-start w-full">
+          <div className="flex-col items-start w-full flex">
             <span className="text-sm font-medium text-start truncate capitalize w-full">
               {user?.fullName}
             </span>
@@ -36,19 +68,39 @@ const UserButton = () => {
       </DropdownMenuTrigger>
       <DropdownMenuContent
         align="end"
-        className="w-48 p-0 rounded-2xl shadow-2xl border-0"
+        className="rounded-2xl shadow-2xl border-0 gap-2 flex flex-col p-3"
       >
-        <DropdownMenuItem
+        <Button
           onClick={logout}
-          className={`cursor-pointer p-3 px-4 font-bold text-sm bg-gradient-to-tr border rounded-2xl ${
-            colorScheme == "dark"
-              ? "from-red-900 to-red-900 hover:to-red-500 hover:from-red-800 border-red-800"
-              : "from-red-100 to-red-200 hover:to-red-300 hover:from-red-400 border-red-400"
+          className={`cursor-pointer p-3 px-4 font-bold text-sm ${
+            colorScheme === "dark"
+              ? "bg-slate-900/70 text-red-400 hover:bg-black/60"
+              : "bg-slate-200 text-red-500 hover:bg-slate-300"
           }`}
         >
           <LogOut className="h-4 w-4 mr-2" />
           Logout
-        </DropdownMenuItem>
+        </Button>
+        <Button
+          disabled={isLoading.refresh}
+          onClick={() => {
+            setIsLoading((prev) => ({ ...prev, refresh: true }));
+            console.log("Refresh triggered, resetting fetched state");
+            onRefresh().then(() => {
+              setIsLoading((prev) => ({ ...prev, refresh: false }));
+            });
+          }}
+          className={`cursor-pointer p-3 px-4 font-bold text-sm ${
+            colorScheme === "dark"
+              ? "bg-slate-900/70 hover:bg-black/60"
+              : "bg-slate-200 hover:bg-slate-300"
+          }`}
+        >
+          <RefreshCcw
+            className={`h-6 w-6 ${isLoading.refresh ? "animate-spin" : ""}`}
+          />
+          Refresh
+        </Button>
       </DropdownMenuContent>
     </DropdownMenu>
   );

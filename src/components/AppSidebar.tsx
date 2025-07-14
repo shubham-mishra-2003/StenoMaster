@@ -155,17 +155,6 @@ const AppSidebar = () => {
               </SidebarMenu>
             </SidebarGroupContent>
           </SidebarGroup>
-          <SidebarGroup>
-            <SidebarGroupContent>
-              <p
-                className={
-                  `text-center text-[13px] w-full mb-1 copyright-message ${colorScheme == "dark" ? "text-dark-muted" : "text-light-muted"}`
-                }
-              >
-                Copyright © {new Date().getFullYear()} Made By Connect & Team
-              </p>
-            </SidebarGroupContent>
-          </SidebarGroup>
         </SidebarContent>
 
         <SidebarFooter
@@ -175,11 +164,14 @@ const AppSidebar = () => {
               : "from-blue-50/50 via-purple-50/30 to-indigo-50/50"
           }`}
         >
-          <SidebarMenu>
-            <SidebarMenuItem>
-              <UserButton />
-            </SidebarMenuItem>
-          </SidebarMenu>
+          <span
+            className={`text-center text-sm font-bold w-full mb-1 copyright-message ${
+              colorScheme == "dark" ? "text-dark-muted" : "text-light-muted"
+            }`}
+          >
+            <p>Copyright © {new Date().getFullYear()}</p>
+            <p>Powered By Connect & Team</p>
+          </span>
         </SidebarFooter>
       </Sidebar>
     </>

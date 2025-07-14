@@ -68,6 +68,7 @@ export const ScoreProvider: React.FC<{ children: React.ReactNode }> = ({
         setStudentClass([]);
       }
     } catch (error) {
+      console.error("Error fetching student classes:", error);
       toast({
         title: "Error",
         description:
@@ -105,6 +106,7 @@ export const ScoreProvider: React.FC<{ children: React.ReactNode }> = ({
         setAssignments([]);
       }
     } catch (error) {
+      console.error("Error fetching assignments:", error);
       toast({
         title: "Error",
         description: "Failed to fetch assignments",
@@ -127,7 +129,7 @@ export const ScoreProvider: React.FC<{ children: React.ReactNode }> = ({
       const text = await response.text();
       const result = text
         ? JSON.parse(text)
-        : { status: "error", message: "Failed to fetch assignment" };
+        : { status: "error", message: "Failed to submit score" };
 
       if (response.ok && result.status === "success") {
         toast({
@@ -136,15 +138,15 @@ export const ScoreProvider: React.FC<{ children: React.ReactNode }> = ({
       } else {
         toast({
           title: "Error",
-          description: result.message || "Failed to fetch assignments",
+          description: result.message || "Failed to submit score",
           variant: "destructive",
         });
-        setAssignments([]);
       }
     } catch (error) {
+      console.error("Error submitting score:", error);
       toast({
         title: "Error",
-        description: "Failed to fetch assignments",
+        description: "Failed to submit score",
         variant: "destructive",
       });
     }
@@ -152,6 +154,14 @@ export const ScoreProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const fetchScores = async (studentId: string) => {
     const token = getToken();
+    if (!token) {
+      toast({
+        title: "Error",
+        description: "Authentication token missing",
+        variant: "destructive",
+      });
+      return;
+    }
     try {
       const response = await fetch("/api/score/fetch", {
         method: "POST",
@@ -163,17 +173,34 @@ export const ScoreProvider: React.FC<{ children: React.ReactNode }> = ({
       const result = text
         ? JSON.parse(text)
         : { status: "error", message: "Failed to fetch scores" };
-      if (response.ok && result.status === "success") {
-        setScores(result.data);
+      if (
+        response.ok &&
+        result.status === "success" &&
+        Array.isArray(result.data)
+      ) {
+        setScores((prevScores) => {
+          // Filter out duplicate scores based on score.id
+          const newScores = result.data.filter(
+            (newScore: Score) =>
+              !prevScores.some((score) => score.id === newScore.id)
+          );
+          // Append new scores to existing ones
+          return [...prevScores, ...newScores];
+        });
+        console.log(`Scores fetched for student ${studentId}:`, result.data);
       } else {
+        console.error(
+          `Failed to fetch scores for student ${studentId}:`,
+          result.message || "Unknown error"
+        );
         toast({
           title: "Error",
-          description: result.message || "Failed to fetch assignments",
+          description: result.message || "Failed to fetch scores",
           variant: "destructive",
         });
-        setScores([]);
       }
     } catch (error) {
+      console.error(`Error fetching scores for student ${studentId}:`, error);
       toast({
         title: "Error",
         description: "Failed to fetch scores",
@@ -184,21 +211,40 @@ export const ScoreProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const fetchClassesForTeacher = async () => {
     const token = getToken();
+    if (!token) {
+      toast({
+        title: "Error",
+        description: "Authentication token missing",
+        variant: "destructive",
+      });
+      setClasses([]);
+      return;
+    }
     try {
       const response = await fetch("/api/classes", {
         method: "GET",
         headers: {
           Authorization: `Bearer ${token}`,
         },
+        signal: AbortSignal.timeout(5000),
       });
       const text = await response.text();
       const result = text
         ? JSON.parse(text)
-        : { status: "error", message: "Failed to fetch classes" };
-      if (response.ok && result.status === "success") {
+        : { status: "error", message: "Empty response from server" };
+
+      if (
+        response.ok &&
+        result.status === "success" &&
+        Array.isArray(result.data)
+      ) {
         setClasses(result.data);
-        console.log("Hook class - ", classes);
+        console.log("Classes fetched successfully:", result.data);
       } else {
+        console.error(
+          "Failed to fetch classes:",
+          result.message || "Unknown error"
+        );
         toast({
           title: "Error",
           description: result.message || "Failed to fetch classes",
@@ -207,12 +253,27 @@ export const ScoreProvider: React.FC<{ children: React.ReactNode }> = ({
         setClasses([]);
       }
     } catch (error) {
-      console.log("Error in fetching classed at teacher", error);
+      console.error("Error fetching classes for teacher:", error);
+      toast({
+        title: "Error",
+        description: "An unexpected error occurred while fetching classes",
+        variant: "destructive",
+      });
+      setClasses([]);
     }
   };
 
   const fetchStudentsInClass = async (classId: string) => {
     const token = getToken();
+    if (!token) {
+      toast({
+        title: "Error",
+        description: "Authentication token missing",
+        variant: "destructive",
+      });
+      setStudentInClass([]);
+      return;
+    }
     try {
       const response = await fetch("/api/classes/fetch-students", {
         method: "POST",
@@ -221,25 +282,55 @@ export const ScoreProvider: React.FC<{ children: React.ReactNode }> = ({
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({ classId, token }),
+        signal: AbortSignal.timeout(5000),
       });
       const text = await response.text();
       const result = text
         ? JSON.parse(text)
-        : { status: "error", message: "Failed to fetch classes" };
-      if (response.ok && result.status === "success") {
+        : { status: "error", message: "Empty response from server" };
+      if (
+        response.ok &&
+        result.status === "success" &&
+        Array.isArray(result.data)
+      ) {
         setStudentInClass(result.data);
+        console.log("Students fetched for class", classId, ":", result.data);
       } else {
+        console.error(
+          "Failed to fetch students for class",
+          classId,
+          ":",
+          result.message || "Unknown error"
+        );
         toast({
           title: "Error",
-          description: result.message || "Failed to fetch classes",
+          description: result.message || "Failed to fetch students",
           variant: "destructive",
         });
         setStudentInClass([]);
       }
     } catch (error) {
-      console.log("Error in fetching students from class", error);
+      console.error("Error fetching students for class", classId, ":", error);
+      toast({
+        title: "Error",
+        description: "An unexpected error occurred while fetching students",
+        variant: "destructive",
+      });
+      setStudentInClass([]);
     }
   };
+
+  useEffect(() => {
+    console.log("Classes state updated:", classes);
+  }, [classes]);
+
+  useEffect(() => {
+    console.log("StudentsInClass state updated:", studentsInClass);
+  }, [studentsInClass]);
+
+  useEffect(() => {
+    console.log("Scores state updated:", scores);
+  }, [scores]);
 
   return (
     <ScoreContext.Provider
@@ -266,7 +357,7 @@ export const ScoreProvider: React.FC<{ children: React.ReactNode }> = ({
 export const useScore = () => {
   const context = useContext(ScoreContext);
   if (context === undefined) {
-    throw new Error("useClass must be used within a ClassProvider");
+    throw new Error("useScore must be used within a ScoreProvider");
   }
   return context;
 };
