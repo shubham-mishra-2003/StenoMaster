@@ -169,7 +169,7 @@ const AppSidebar = () => {
               colorScheme == "dark" ? "text-dark-muted" : "text-light-muted"
             }`}
           >
-            <p>Copyright © {new Date().getFullYear()}</p>|
+            <p>Copyright © {new Date().getFullYear()}</p>
             <p>Powered By Connect & Team</p>
           </span>
         </SidebarFooter>
