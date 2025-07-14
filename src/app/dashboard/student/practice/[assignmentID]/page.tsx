@@ -144,13 +144,32 @@ const AssignmentPracticeContent = () => {
             <Clock className="h-5 w-5" />
             {assignment.title}
           </CardTitle>
-          <Button
-            variant="outline"
-            onClick={() => router.push("/dashboard/student/practice")}
-            className="gradient-button"
-          >
-            Back to Assignments
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              onClick={() => router.push("/dashboard/student/practice")}
+              className="gradient-button"
+            >
+              Back to Assignments
+            </Button>
+            {!isStarted ? (
+              <Button
+                onClick={handleStart}
+                className="gradient-button"
+                disabled={!user?.userId}
+              >
+                Start Assignment
+              </Button>
+            ) : (
+              <Button
+                onClick={handleSubmit}
+                className="gradient-button"
+                disabled={typedText.trim().length === 0 || isCompleted}
+              >
+                Submit Assignment
+              </Button>
+            )}
+          </div>
         </div>
       </CardHeader>
       <CardContent>
@@ -167,53 +186,40 @@ const AssignmentPracticeContent = () => {
             </div>
           </div>
           <Progress value={progress} className="w-full" />
-          <div className="grid grid-cols-1 lg:grid-cols-1 gap-6">
-            <div>
-              {assignment.imageUrl && (
-                <>
-                  <h3 className="font-medium mb-2">Assignment Image</h3>
-                  <div className="border rounded-lg p-4 bg-muted">
-                    <Image
-                      height={300}
-                      width={300}
-                      src={assignment.imageUrl}
-                      alt={assignment.title}
-                      className="w-full h-auto rounded"
-                    />
-                  </div>
-                </>
-              )}
-            </div>
-            <div className="space-y-4">
-              <div>
-                <h3 className="font-medium mb-2">Type the text you see</h3>
-                <Textarea
-                  value={typedText}
-                  onChange={(e) => setTypedText(e.target.value)}
-                  placeholder="Start typing here..."
-                  className="min-h-[500px]"
-                  disabled={!isStarted || isCompleted}
-                />
+          <div
+            className={`flex gap-6 h-full ${
+              assignment.imageUrl ? "min-h-full" : "min-h-[500px]"
+            }`}
+          >
+            {assignment.imageUrl && (
+              <div className="flex flex-col gap-2 flex-1">
+                <h3 className="font-medium">Assignment Image</h3>
+                <div
+                  className={`border-2 rounded-xl p-4 ${
+                    colorScheme == "dark"
+                      ? "border-slate-600 shadow-slate-950"
+                      : "border-slate-300 shadow-slate-400"
+                  }`}
+                >
+                  <Image
+                    height={300}
+                    width={300}
+                    src={assignment.imageUrl}
+                    alt={assignment.title}
+                    className="w-full h-auto rounded"
+                  />
+                </div>
               </div>
-              <div className="flex gap-2">
-                {!isStarted ? (
-                  <Button
-                    onClick={handleStart}
-                    className="w-full gradient-button"
-                    disabled={!user?.userId}
-                  >
-                    Start Assignment
-                  </Button>
-                ) : (
-                  <Button
-                    onClick={handleSubmit}
-                    className="w-full gradient-button"
-                    disabled={typedText.trim().length === 0 || isCompleted}
-                  >
-                    Submit Assignment
-                  </Button>
-                )}
-              </div>
+            )}
+            <div className="flex flex-col gap-2 flex-1">
+              <h3 className="font-medium">Type the text you see</h3>
+              <Textarea
+                value={typedText}
+                onChange={(e) => setTypedText(e.target.value)}
+                placeholder="Start typing here..."
+                className="h-full"
+                disabled={!isStarted || isCompleted}
+              />
             </div>
           </div>
         </div>

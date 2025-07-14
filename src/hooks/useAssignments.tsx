@@ -15,7 +15,6 @@ interface AssignmentFormData {
 interface UseAssignmentReturn {
   assignments: Assignment[];
   loading: boolean;
-  fetchAssignments: (classId?: string) => Promise<void>;
   createAssignment: (formData: AssignmentFormData) => Promise<void>;
   updateAssignment: (
     assignmentId: string,
@@ -74,105 +73,105 @@ export const useAssignment = (): UseAssignmentReturn => {
     }
   };
 
-  const fetchAssignments = async (classId?: string) => {
-    setLoading(true);
-    try {
-      const token = localStorage.getItem("StenoMaster-token");
-      if (!token || typeof token !== "string" || token.trim() === "") {
-        console.error("[useAssignment] Invalid token in localStorage");
-        toast({
-          title: "Error",
-          description: "Invalid session. Please log in again.",
-          variant: "destructive",
-        });
-        return;
-      }
+  // const fetchAssignments = async (classId?: string) => {
+  //   setLoading(true);
+  //   try {
+  //     const token = localStorage.getItem("StenoMaster-token");
+  //     if (!token || typeof token !== "string" || token.trim() === "") {
+  //       console.error("[useAssignment] Invalid token in localStorage");
+  //       // toast({
+  //       //   title: "Error",
+  //       //   description: "Invalid session. Please log in again.",
+  //       //   variant: "destructive",
+  //       // });
+  //       return;
+  //     }
 
-      const body = classId ? { token, classId } : { token };
-      const response = await fetch("/api/assignment/fetch", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-        signal: AbortSignal.timeout(5000),
-      });
+  //     const body = classId ? { token, classId } : { token };
+  //     const response = await fetch("/api/assignment/fetch", {
+  //       method: "POST",
+  //       headers: { "Content-Type": "application/json" },
+  //       body: JSON.stringify(body),
+  //       signal: AbortSignal.timeout(5000),
+  //     });
 
-      const text = await response.text();
-      const result = text
-        ? JSON.parse(text)
-        : { status: "error", message: "Empty response from server" };
+  //     const text = await response.text();
+  //     const result = text
+  //       ? JSON.parse(text)
+  //       : { status: "error", message: "Empty response from server" };
 
-      if (response.ok && result.status === "success") {
-        const now = new Date();
-        const formattedAssignments = result.data.map(
-          (assignment: Assignment) => ({
-            ...assignment,
-            createdAt: new Date(assignment.createdAt),
-          })
-        );
+  //     if (response.ok && result.status === "success") {
+  //       const now = new Date();
+  //       const formattedAssignments = result.data.map(
+  //         (assignment: Assignment) => ({
+  //           ...assignment,
+  //           createdAt: new Date(assignment.createdAt),
+  //         })
+  //       );
 
-        for (const assignment of formattedAssignments) {
-          const endDate = moment(
-            assignment.deadline,
-            "DD/MM/YYYY, hh:mm A"
-          ).toDate();
-          if (assignment.isActive && endDate < now) {
-            await toggleAssignmentStatus(assignment.id);
-          }
-        }
+  //       for (const assignment of formattedAssignments) {
+  //         const endDate = moment(
+  //           assignment.deadline,
+  //           "DD/MM/YYYY, hh:mm A"
+  //         ).toDate();
+  //         if (assignment.isActive && endDate < now) {
+  //           await toggleAssignmentStatus(assignment.id);
+  //         }
+  //       }
 
-        const refetchResponse = await fetch("/api/assignment/fetch", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(body),
-          signal: AbortSignal.timeout(5000),
-        });
+  //       const refetchResponse = await fetch("/api/assignment/fetch", {
+  //         method: "POST",
+  //         headers: { "Content-Type": "application/json" },
+  //         body: JSON.stringify(body),
+  //         signal: AbortSignal.timeout(5000),
+  //       });
 
-        const refetchText = await refetchResponse.text();
-        const refetchResult = refetchText
-          ? JSON.parse(refetchText)
-          : { status: "error", message: "Empty response from server" };
+  //       const refetchText = await refetchResponse.text();
+  //       const refetchResult = refetchText
+  //         ? JSON.parse(refetchText)
+  //         : { status: "error", message: "Empty response from server" };
 
-        if (refetchResponse.ok && refetchResult.status === "success") {
-          setAssignments(
-            refetchResult.data.map((assignment: Assignment) => ({
-              ...assignment,
-              createdAt: new Date(assignment.createdAt),
-            }))
-          );
-        } else {
-          console.error(
-            "[useAssignment] Refetch assignments error:",
-            refetchResult.message
-          );
-          toast({
-            title: "Error",
-            description:
-              refetchResult.message || "Failed to refetch assignments",
-            variant: "destructive",
-          });
-        }
-      } else {
-        console.error(
-          "[useAssignment] Fetch assignments error:",
-          result.message
-        );
-        toast({
-          title: "Error",
-          description: result.message || "Failed to fetch assignments",
-          variant: "destructive",
-        });
-      }
-    } catch (error) {
-      console.error("[useAssignment] Fetch assignments error:", error);
-      toast({
-        title: "Error",
-        description: "An unexpected error occurred while fetching assignments.",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
+  //       if (refetchResponse.ok && refetchResult.status === "success") {
+  //         setAssignments(
+  //           refetchResult.data.map((assignment: Assignment) => ({
+  //             ...assignment,
+  //             createdAt: new Date(assignment.createdAt),
+  //           }))
+  //         );
+  //       } else {
+  //         console.error(
+  //           "[useAssignment] Refetch assignments error:",
+  //           refetchResult.message
+  //         );
+  //         toast({
+  //           title: "Error",
+  //           description:
+  //             refetchResult.message || "Failed to refetch assignments",
+  //           variant: "destructive",
+  //         });
+  //       }
+  //     } else {
+  //       console.error(
+  //         "[useAssignment] Fetch assignments error:",
+  //         result.message
+  //       );
+  //       toast({
+  //         title: "Error",
+  //         description: result.message || "Failed to fetch assignments",
+  //         variant: "destructive",
+  //       });
+  //     }
+  //   } catch (error) {
+  //     console.error("[useAssignment] Fetch assignments error:", error);
+  //     toast({
+  //       title: "Error",
+  //       description: "An unexpected error occurred while fetching assignments.",
+  //       variant: "destructive",
+  //     });
+  //   } finally {
+  //     setLoading(false);
+  //   }
+  // };
 
   const createAssignment = async (formData: AssignmentFormData) => {
     setLoading(true);
@@ -180,11 +179,6 @@ export const useAssignment = (): UseAssignmentReturn => {
       const token = localStorage.getItem("StenoMaster-token");
       if (!token || typeof token !== "string" || token.trim() === "") {
         console.error("[useAssignment] Invalid token in localStorage");
-        toast({
-          title: "Error",
-          description: "Invalid session. Please log in again.",
-          variant: "destructive",
-        });
         return;
       }
 
@@ -244,24 +238,15 @@ export const useAssignment = (): UseAssignmentReturn => {
           description: "Assignment created successfully.",
         });
       } else {
-        console.error(
-          "[useAssignment] Create assignment error:",
-          result.message
-        );
-        toast({
-          title: "Error",
-          description: result.message || "Failed to create assignment",
-          variant: "destructive",
-        });
+        return;
+        // toast({
+        //   title: "Error",
+        //   description: result.message || "Failed to create assignment",
+        //   variant: "destructive",
+        // });
       }
     } catch (error) {
       console.error("[useAssignment] Create assignment error:", error);
-      toast({
-        title: "Error",
-        description:
-          "An unexpected error occurred while creating the assignment.",
-        variant: "destructive",
-      });
     } finally {
       setLoading(false);
     }
@@ -276,11 +261,6 @@ export const useAssignment = (): UseAssignmentReturn => {
       const token = localStorage.getItem("StenoMaster-token");
       if (!token || typeof token !== "string" || token.trim() === "") {
         console.error("[useAssignment] Invalid token in localStorage");
-        toast({
-          title: "Error",
-          description: "Invalid session. Please log in again.",
-          variant: "destructive",
-        });
         return;
       }
 
@@ -314,52 +294,45 @@ export const useAssignment = (): UseAssignmentReturn => {
       if (formData.classId) body.classId = formData.classId;
       if (imageUrl) body.imageUrl = imageUrl;
 
-      const response = await fetch("/api/assignment/update", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-        signal: AbortSignal.timeout(5000),
-      });
-
-      const text = await response.text();
-      const result = text
-        ? JSON.parse(text)
-        : { status: "error", message: "Empty response from server" };
-
-      if (response.ok && result.status === "success") {
-        setAssignments((prev) =>
-          prev.map((a) =>
-            a.id === assignmentId
-              ? {
-                  ...result.data,
-                  createdAt: new Date(result.data.createdAt),
-                }
-              : a
-          )
-        );
-        toast({
-          title: "Success",
-          description: "Assignment updated successfully.",
+      if (imageUrl) {
+        const response = await fetch("/api/assignment/update", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+          signal: AbortSignal.timeout(5000),
         });
+
+        const text = await response.text();
+        const result = text
+          ? JSON.parse(text)
+          : { status: "error", message: "Empty response from server" };
+
+        if (response.ok && result.status === "success") {
+          setAssignments((prev) =>
+            prev.map((a) =>
+              a.id === assignmentId
+                ? {
+                    ...result.data,
+                    createdAt: new Date(result.data.createdAt),
+                  }
+                : a
+            )
+          );
+          toast({
+            title: "Success",
+            description: "Assignment updated successfully.",
+          });
+        } else {
+          console.error(
+            "[useAssignment] Update assignment error:",
+            result.message
+          );
+        }
       } else {
-        console.error(
-          "[useAssignment] Update assignment error:",
-          result.message
-        );
-        toast({
-          title: "Error",
-          description: result.message || "Failed to update assignment",
-          variant: "destructive",
-        });
+        return;
       }
     } catch (error) {
       console.error("[useAssignment] Update assignment error:", error);
-      toast({
-        title: "Error",
-        description:
-          "An unexpected error occurred while updating the assignment.",
-        variant: "destructive",
-      });
     } finally {
       setLoading(false);
     }
@@ -371,11 +344,6 @@ export const useAssignment = (): UseAssignmentReturn => {
       const token = localStorage.getItem("StenoMaster-token");
       if (!token || typeof token !== "string" || token.trim() === "") {
         console.error("[useAssignment] Invalid token in localStorage");
-        toast({
-          title: "Error",
-          description: "Invalid session. Please log in again.",
-          variant: "destructive",
-        });
         return;
       }
 
@@ -413,20 +381,9 @@ export const useAssignment = (): UseAssignmentReturn => {
           "[useAssignment] Toggle assignment error:",
           result.message
         );
-        toast({
-          title: "Error",
-          description: result.message || "Failed to toggle assignment status",
-          variant: "destructive",
-        });
       }
     } catch (error) {
       console.error("[useAssignment] Toggle assignment error:", error);
-      toast({
-        title: "Error",
-        description:
-          "An unexpected error occurred while toggling the assignment.",
-        variant: "destructive",
-      });
     } finally {
       setLoading(false);
     }
@@ -438,11 +395,6 @@ export const useAssignment = (): UseAssignmentReturn => {
       const token = localStorage.getItem("StenoMaster-token");
       if (!token || typeof token !== "string" || token.trim() === "") {
         console.error("[useAssignment] Invalid token in localStorage");
-        toast({
-          title: "Error",
-          description: "Invalid session. Please log in again.",
-          variant: "destructive",
-        });
         return;
       }
 
@@ -477,12 +429,6 @@ export const useAssignment = (): UseAssignmentReturn => {
       }
     } catch (error) {
       console.error("[useAssignment] Delete assignment error:", error);
-      toast({
-        title: "Error",
-        description:
-          "An unexpected error occurred while deleting the assignment.",
-        variant: "destructive",
-      });
     } finally {
       setLoading(false);
     }
@@ -491,7 +437,6 @@ export const useAssignment = (): UseAssignmentReturn => {
   return {
     assignments,
     loading,
-    fetchAssignments,
     createAssignment,
     updateAssignment,
     toggleAssignmentStatus,

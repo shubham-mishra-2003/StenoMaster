@@ -46,14 +46,8 @@ export const ClassProvider: React.FC<{ children: React.ReactNode }> = ({
 
       const token = getToken();
       if (!token) {
-        toast({
-          title: "Error",
-          description: "You must be logged in to create a class.",
-          variant: "destructive",
-        });
         return;
       }
-
       setClassState((prev) => ({ ...prev, isLoading: true }));
       try {
         const response = await fetch("/api/classes/create", {
@@ -85,11 +79,6 @@ export const ClassProvider: React.FC<{ children: React.ReactNode }> = ({
         }
       } catch (error) {
         console.error("[useClass] Create class error:", error);
-        toast({
-          title: "Error",
-          description: "An unexpected error occurred while creating the class.",
-          variant: "destructive",
-        });
       } finally {
         setClassState((prev) => ({ ...prev, isLoading: false }));
       }
@@ -100,11 +89,6 @@ export const ClassProvider: React.FC<{ children: React.ReactNode }> = ({
   const fetchClasses = useCallback(async () => {
     const token = getToken();
     if (!token) {
-      toast({
-        title: "Error",
-        description: "You must be logged in to fetch classes.",
-        variant: "destructive",
-      });
       return;
     }
 
@@ -136,11 +120,6 @@ export const ClassProvider: React.FC<{ children: React.ReactNode }> = ({
       }
     } catch (error) {
       console.error("[useClass] Fetch classes error:", error);
-      toast({
-        title: "Error",
-        description: "An unexpected error occurred while fetching classes.",
-        variant: "destructive",
-      });
     } finally {
       setClassState((prev) => ({ ...prev, isLoading: false }));
     }
@@ -149,11 +128,6 @@ export const ClassProvider: React.FC<{ children: React.ReactNode }> = ({
   const fetchStudentClasses = useCallback(async () => {
     const token = getToken();
     if (!token) {
-      toast({
-        title: "Error",
-        description: "You must be logged in to fetch classes.",
-        variant: "destructive",
-      });
       return;
     }
 
@@ -201,11 +175,6 @@ export const ClassProvider: React.FC<{ children: React.ReactNode }> = ({
     async (classId: string) => {
       const token = getToken();
       if (!token) {
-        toast({
-          title: "Error",
-          description: "You must be logged in to delete a class.",
-          variant: "destructive",
-        });
         return;
       }
 
@@ -256,11 +225,6 @@ export const ClassProvider: React.FC<{ children: React.ReactNode }> = ({
     async (classId: string, studentId: string) => {
       const token = getToken();
       if (!token) {
-        toast({
-          title: "Error",
-          description: "You must be logged in to assign a student.",
-          variant: "destructive",
-        });
         return;
       }
 
@@ -308,11 +272,6 @@ export const ClassProvider: React.FC<{ children: React.ReactNode }> = ({
     async (classId: string, studentId: string) => {
       const token = getToken();
       if (!token) {
-        toast({
-          title: "Error",
-          description: "You must be logged in to remove a student.",
-          variant: "destructive",
-        });
         return;
       }
 
@@ -359,11 +318,6 @@ export const ClassProvider: React.FC<{ children: React.ReactNode }> = ({
   const fetchStudentsInClass = useCallback(async (classId: string) => {
     const token = getToken();
     if (!token) {
-      toast({
-        title: "Error",
-        description: "You must be logged in to fetch students.",
-        variant: "destructive",
-      });
       return [];
     }
 

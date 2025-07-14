@@ -39,10 +39,12 @@ const LoginForm = () => {
   });
   const [activeTab, setActiveTab] = useState("student");
   const { colorScheme } = useTheme();
+  const [clicked, setClicked] = useState(false);
 
   const handleStudentLogin = (e: React.FormEvent) => {
     e.preventDefault();
-
+    setClicked(true);
+    console.log("Clicked - ", clicked);
     if (
       !studentCredentials.email.trim() ||
       !studentCredentials.password.trim()
@@ -52,6 +54,7 @@ const LoginForm = () => {
         description: "Please enter both email and password.",
         variant: "destructive",
       });
+      setClicked(false);
       return;
     }
 
@@ -59,12 +62,15 @@ const LoginForm = () => {
       email: studentCredentials.email,
       password: studentCredentials.password,
       userType: "student",
+    }).then(() => {
+      setClicked(false);
+      console.log("Clicked - ", clicked);
     });
   };
 
   const handleTeacherLogin = (e: React.FormEvent) => {
     e.preventDefault();
-
+    setClicked(true);
     if (
       !teacherCredentials.email.trim() ||
       !teacherCredentials.password.trim()
@@ -74,6 +80,7 @@ const LoginForm = () => {
         description: "Please enter both email and password.",
         variant: "destructive",
       });
+      setClicked(false);
       return;
     }
 
@@ -81,12 +88,14 @@ const LoginForm = () => {
       email: teacherCredentials.email,
       password: teacherCredentials.password,
       userType: "teacher",
+    }).then(() => {
+      setClicked(false);
     });
   };
 
   const handleTeacherSignup = (e: React.FormEvent) => {
     e.preventDefault();
-
+    setClicked(true);
     if (
       !teacherSignup.fullName.trim() ||
       !teacherSignup.email.trim() ||
@@ -98,6 +107,7 @@ const LoginForm = () => {
         description: "Please fill in all fields.",
         variant: "destructive",
       });
+      setClicked(false);
       return;
     }
 
@@ -107,6 +117,7 @@ const LoginForm = () => {
         description: "Passwords do not match.",
         variant: "destructive",
       });
+      setClicked(false);
       return;
     }
 
@@ -116,6 +127,7 @@ const LoginForm = () => {
         description: "Password must be at least 6 characters long.",
         variant: "destructive",
       });
+      setClicked(false);
       return;
     }
 
@@ -124,6 +136,8 @@ const LoginForm = () => {
       email: teacherSignup.email,
       password: teacherSignup.password,
       userType: "teacher",
+    }).then(() => {
+      setClicked(false);
     });
   };
 
@@ -194,7 +208,11 @@ const LoginForm = () => {
                   className="bg-background/50 border-muted focus:border-blue-500 transition-colors"
                 />
               </div>
-              <Button type="submit" className="gradient-button w-full">
+              <Button
+                disabled={clicked}
+                type="submit"
+                className="gradient-button w-full"
+              >
                 <LogIn className="h-4 w-4 mr-2" />
                 Sign In as Student
               </Button>
@@ -252,7 +270,11 @@ const LoginForm = () => {
                       className="bg-background/50 border-muted focus:border-blue-500 transition-colors"
                     />
                   </div>
-                  <Button type="submit" className="gradient-button w-full">
+                  <Button
+                    disabled={clicked}
+                    type="submit"
+                    className="gradient-button w-full"
+                  >
                     <LogIn className="h-4 w-4 mr-2" />
                     Sign In as Teacher
                   </Button>
@@ -327,7 +349,11 @@ const LoginForm = () => {
                       className="bg-background/50 border-muted focus:border-blue-500 transition-colors"
                     />
                   </div>
-                  <Button type="submit" className="gradient-button w-full">
+                  <Button
+                    disabled={clicked}
+                    type="submit"
+                    className="gradient-button w-full"
+                  >
                     <UserPlus className="h-4 w-4 mr-2" />
                     Create Teacher Account
                   </Button>

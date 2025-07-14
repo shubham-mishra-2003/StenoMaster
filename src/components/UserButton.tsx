@@ -67,14 +67,18 @@ const UserButton = ({
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent
+        className={`relative flex flex-col gap-1 rounded-2xl overflow-hidden bg-gradient-to-br border-2 backdrop-blur-xl shadow-xl ${
+          colorScheme == "dark"
+            ? "from-gray-900/80 via-gray-800/60 to-gray-700/40 border-slate-700"
+            : "from-white/80 via-white/60 to-white/40 border-slate-200"
+        }`}
         align="end"
-        className="rounded-2xl shadow-2xl border-0 gap-2 flex flex-col p-3"
       >
         <Button
           onClick={logout}
-          className={`cursor-pointer p-3 px-4 font-bold text-sm ${
+          className={`cursor-pointer rounded-xl p-3 px-4 font-bold text-sm ${
             colorScheme === "dark"
-              ? "bg-slate-900/70 text-red-400 hover:bg-black/60"
+              ? "bg-slate-700/70 text-red-400 hover:bg-black/60"
               : "bg-slate-200 text-red-500 hover:bg-slate-300"
           }`}
         >
@@ -89,9 +93,9 @@ const UserButton = ({
               setIsLoading((prev) => ({ ...prev, refresh: false }));
             });
           }}
-          className={`cursor-pointer p-3 px-4 font-bold text-sm ${
+          className={`cursor-pointer rounded-xl p-3 px-4 font-bold text-sm ${
             colorScheme === "dark"
-              ? "bg-slate-900/70 hover:bg-black/60"
+              ? "bg-slate-700/70 hover:bg-black/60"
               : "bg-slate-200 hover:bg-slate-300"
           }`}
         >

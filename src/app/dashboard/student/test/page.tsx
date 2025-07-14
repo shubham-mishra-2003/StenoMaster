@@ -59,11 +59,11 @@ const TypingTestContent = () => {
 
   const handleStart = () => {
     if (!user?.userId) {
-      toast({
-        title: "Authentication Required",
-        description: "Please log in to start the typing test.",
-        variant: "destructive",
-      });
+      // toast({
+      //   title: "Authentication Required",
+      //   description: "Please log in to start the typing test.",
+      //   variant: "destructive",
+      // });
       return;
     }
     setIsStarted(true);
@@ -74,12 +74,12 @@ const TypingTestContent = () => {
 
   const handleComplete = async () => {
     if (!startTime || !user?.userId || isCompleted) {
-      toast({
-        title: "Error",
-        description:
-          "Cannot complete test. Ensure you are logged in and the test has started.",
-        variant: "destructive",
-      });
+      // toast({
+      //   title: "Error",
+      //   description:
+      //     "Cannot complete test. Ensure you are logged in and the test has started.",
+      //   variant: "destructive",
+      // });
       return;
     }
 

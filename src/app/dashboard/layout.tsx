@@ -138,11 +138,11 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
       }
     } catch (err) {
       // console.error("Failed to load data:", err);
-      toast({
-        title: "Error",
-        description: "Failed to load data. Please try again.",
-        variant: "destructive",
-      });
+      // toast({
+      //   title: "Error",
+      //   description: "Failed to load data. Please try again.",
+      //   variant: "destructive",
+      // });
     } finally {
       setIsLoading((prev) => ({ ...prev, dataLoading: false }));
       setFetched((prev) => ({ ...prev, data: true }));

@@ -144,7 +144,7 @@ const Page = () => {
           colorScheme === "dark"
             ? "gradient-section-dark"
             : "gradient-section-light"
-        } backdrop-blur-xl sticky top-0 z-50`}
+        } backdrop-blur-xl fixed w-full top-0 z-50`}
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
@@ -162,7 +162,7 @@ const Page = () => {
         </div>
       </nav>
 
-      <section className="py-12 sm:py-16 lg:py-20 px-4 sm:px-6 lg:px-8">
+      <section className="py-22 sm:py-32 lg:py-32 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto text-center">
           <div className="relative">
             <div className="absolute inset-0 bg-gradient-to-r from-blue-600/20 via-purple-600/20 to-indigo-600/20 blur-3xl"></div>
@@ -307,13 +307,13 @@ const Page = () => {
         }`}
       >
         <span
-          className={`text-center text-lg font-bold w-full copyright-message ${
+          className={`justify-center items-center text-lg sm:text-xl font-bold w-full flex gap-1 flex-col sm:flex-row copyright-message ${
             colorScheme == "dark" ? "text-dark-muted" : "text-light-muted"
           }`}
         >
-          <p>
-            Copyright © Powered By Connect & Team {new Date().getFullYear()}
-          </p>
+          <p>Copyright © {new Date().getFullYear()}</p>
+          <p className="font-normal hidden sm:flex">|</p>
+          <p>Powered By Connect & Team</p>
         </span>
       </footer>
     </div>

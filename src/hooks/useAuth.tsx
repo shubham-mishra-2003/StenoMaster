@@ -90,11 +90,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         // console.log(
         //   "[useAuth] Redirecting to /?showLogin=true from protected route"
         // );
-        toast({
-          title: "Session Error",
-          description: "Invalid session. Please log in again.",
-          variant: "destructive",
-        });
         localStorage.removeItem("StenoMaster-token");
         localStorage.removeItem("StenoMaster-user");
         router.push("/");
@@ -141,14 +136,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       } catch (error: any) {
         // console.error(`[useAuth] Validate attempt ${attempt} failed:`, error);
         if (attempt === maxRetries) {
-          toast({
-            title: "Session Error",
-            description:
-              error.message === "signal timed out"
-                ? "Validation request timed out. Please check your connection and try again."
-                : "An unexpected error occurred while validating session.",
-            variant: "destructive",
-          });
           setAuthState({
             isAuthenticated: false,
             user: null,
@@ -236,12 +223,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         }
       } catch (error) {
         // console.error("[useAuth] Login error:", error);
-        toast({
-          title: "Error",
-          description: "An unexpected error occurred during login.",
-          variant: "destructive",
-        });
         setAuthState((prev) => ({ ...prev, loading: false }));
+        return;
       }
     },
     [router]
@@ -311,11 +294,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
             description: `Welcome to StenoMaster, ${user.fullName}!`,
           });
         } else {
-          toast({
-            title: "Error",
-            description: result.message || "Signup failed",
-            variant: "destructive",
-          });
+          // toast({
+          //   title: "Error",
+          //   description: result.message || "Signup failed",
+          //   variant: "destructive",
+          // });
           setAuthState((prev) => ({ ...prev, loading: false }));
         }
       } catch (error) {
@@ -498,11 +481,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     async (userId: string) => {
       setAuthState((prev) => ({ ...prev, loading: true }));
       if (!authState.isAuthenticated || !authState.user || !authState.token) {
-        toast({
-          title: "Error",
-          description: "You must be logged in to delete an account.",
-          variant: "destructive",
-        });
         setAuthState((prev) => ({ ...prev, loading: false }));
         return;
       }
@@ -629,11 +607,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       }
     } catch (error) {
       // console.error("[useAuth] Fetch student error:", error);
-      toast({
-        title: "Error",
-        description: "An unexpected error occurred while fetching students.",
-        variant: "destructive",
-      });
+      // toast({
+      //   title: "Error",
+      //   description: "An unexpected error occurred while fetching students.",
+      //   variant: "destructive",
+      // });
       setAuthState((prev) => ({ ...prev, loading: false }));
       throw error;
     }
