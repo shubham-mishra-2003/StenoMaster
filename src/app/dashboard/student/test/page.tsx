@@ -41,22 +41,6 @@ const TypingTestContent = () => {
     return;
   }
 
-  useEffect(() => {
-    let interval: NodeJS.Timeout;
-    if (isStarted && startTime && !isCompleted) {
-      interval = setInterval(() => {
-        setTimeElapsed(Math.floor((Date.now() - startTime.getTime()) / 1000));
-      }, 1000);
-    }
-    return () => clearInterval(interval);
-  }, [isStarted, startTime, isCompleted]);
-
-  useEffect(() => {
-    if (typedText.length === currentText.length && isStarted && !isCompleted) {
-      handleComplete();
-    }
-  }, [typedText, currentText, isStarted, isCompleted]);
-
   const handleStart = () => {
     if (!user?.userId) {
       return;
@@ -71,7 +55,7 @@ const TypingTestContent = () => {
     if (!startTime || !user?.userId || isCompleted) {
       return;
     }
-
+    setIsLoading(true);
     setIsCompleted(true);
     const accuracy = calculateAccuracy();
     const wpm = calculateWPM();
@@ -104,17 +88,9 @@ const TypingTestContent = () => {
           error instanceof Error ? error.message : "Failed to save test result",
         variant: "destructive",
       });
+    } finally {
+      setIsLoading(false);
     }
-  };
-
-  const calculateAccuracy = () => {
-    let correct = 0;
-    for (let i = 0; i < Math.min(typedText.length, currentText.length); i++) {
-      if (typedText[i] === currentText[i]) {
-        correct++;
-      }
-    }
-    return Math.round((correct / currentText.length) * 100);
   };
 
   const calculateWPM = () => {
@@ -138,30 +114,92 @@ const TypingTestContent = () => {
     setTypedText(e.target.value);
   };
 
+  function getStatusArray(
+    original: string,
+    typed: string,
+    lookahead = 4
+  ): ("correct" | "wrong" | "pending")[] {
+    const oChars = original.split("");
+    const tChars = typed.split("");
+
+    let oIndex = 0;
+    let tIndex = 0;
+
+    const statusArray: ("correct" | "wrong" | "pending")[] = new Array(
+      oChars.length
+    ).fill("pending");
+
+    while (oIndex < oChars.length) {
+      if (tIndex < tChars.length) {
+        if (oChars[oIndex] === tChars[tIndex]) {
+          statusArray[oIndex] = "correct";
+          oIndex++;
+          tIndex++;
+        } else {
+          let found = false;
+
+          for (let la = 1; la <= lookahead; la++) {
+            // Insertion
+            if (
+              tIndex + la < tChars.length &&
+              tChars[tIndex + la] === oChars[oIndex]
+            ) {
+              for (let k = 0; k < la && oIndex + k < oChars.length; k++) {
+                statusArray[oIndex + k] = "wrong";
+              }
+              tIndex += la;
+              found = true;
+              break;
+            }
+
+            // Deletion
+            if (
+              oIndex + la < oChars.length &&
+              oChars[oIndex + la] === tChars[tIndex]
+            ) {
+              for (let k = 0; k < la && oIndex + k < oChars.length; k++) {
+                statusArray[oIndex + k] = "wrong";
+              }
+              oIndex += la;
+              found = true;
+              break;
+            }
+          }
+
+          if (!found) {
+            statusArray[oIndex] = "wrong";
+            oIndex++;
+            tIndex++;
+          }
+        }
+      } else {
+        statusArray[oIndex] = "pending";
+        oIndex++;
+      }
+    }
+
+    return statusArray;
+  }
+
   const renderText = () => {
+    const statusArray = getStatusArray(currentText, typedText);
+
     return currentText.split("").map((char, index) => {
       let className = "text-lg ";
-      if (index < typedText.length) {
-        if (typedText[index] === char) {
-          className += `${
-            colorScheme === "dark"
-              ? "bg-green-800 text-green-200"
-              : "bg-green-200 text-green-800"
-          }`;
-        } else {
-          className += `${
-            colorScheme === "dark"
-              ? "bg-red-800 text-red-200"
-              : "bg-red-200 text-red-800"
-          }`;
-        }
-      } else if (index === typedText.length) {
-        className += `${
-          colorScheme === "dark" ? "bg-blue-800" : "bg-blue-200"
-        }`;
+      if (statusArray[index] === "correct") {
+        className +=
+          colorScheme === "dark"
+            ? "bg-green-800 text-green-200"
+            : "bg-green-200 text-green-800";
+      } else if (statusArray[index] === "wrong") {
+        className +=
+          colorScheme === "dark"
+            ? "bg-red-800 text-red-200"
+            : "bg-red-200 text-red-800";
       } else {
-        className += `${colorScheme === "dark" ? "text-dark" : "text-light"}`;
+        className += colorScheme === "dark" ? "text-dark" : "text-light";
       }
+
       return (
         <span key={index} className={className}>
           {char}
@@ -170,19 +208,39 @@ const TypingTestContent = () => {
     });
   };
 
+  const calculateAccuracy = () => {
+    const statusArray = getStatusArray(currentText, typedText);
+    const typedPortion = statusArray.filter((s) => s !== "pending");
+    const correct = typedPortion.filter((s) => s === "correct").length;
+
+    return typedPortion.length > 0
+      ? Math.round((correct / typedPortion.length) * 100)
+      : 0;
+  };
+
   const progress = (typedText.length / currentText.length) * 100;
   const currentWPM = timeElapsed > 0 ? calculateWPM() : 0;
   const currentAccuracy = typedText.length > 0 ? calculateAccuracy() : 0;
 
-  if (isLoading) {
-    return (
-      <Card>
-        <CardContent className="flex flex-col items-center justify-center py-12">
-          <p className="text-muted-foreground">Loading typing test...</p>
-        </CardContent>
-      </Card>
-    );
-  }
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (isStarted && startTime && !isCompleted) {
+      interval = setInterval(() => {
+        setTimeElapsed(Math.floor((Date.now() - startTime.getTime()) / 1000));
+      }, 1000);
+    }
+    return () => clearInterval(interval);
+  }, [isStarted, startTime, isCompleted]);
+
+  // if (isLoading) {
+  //   return (
+  //     <Card>
+  //       <CardContent className="flex flex-col items-center justify-center py-12">
+  //         <p className="text-muted-foreground">Loading typing test...</p>
+  //       </CardContent>
+  //     </Card>
+  //   );
+  // }
 
   const router = useRouter();
 
@@ -203,6 +261,7 @@ const TypingTestContent = () => {
                   router.push("/dashboard/student/");
                 }}
                 className="gradient-button"
+                disabled={isLoading}
               >
                 <ArrowBigLeft className="h-4 w-4 mr-2" />
                 Back to dashboard
@@ -211,6 +270,7 @@ const TypingTestContent = () => {
                 variant="outline"
                 onClick={handleReset}
                 className="gradient-button"
+                disabled={isLoading}
               >
                 <RotateCcw className="h-4 w-4 mr-2" />
                 New Test
@@ -219,7 +279,7 @@ const TypingTestContent = () => {
                 <Button
                   onClick={handleStart}
                   className="gradient-button"
-                  disabled={!user?.userId}
+                  disabled={!user?.userId || isLoading}
                 >
                   <Play />
                   Start Test
@@ -227,6 +287,7 @@ const TypingTestContent = () => {
               ) : isCompleted ? (
                 <Button
                   onClick={handleReset}
+                  disabled={isLoading}
                   className="bg-gradient-to-r from-green-500 via-emerald-500 to-teal-500 hover:from-green-600 hover:via-emerald-600 hover:to-teal-600 text-white shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer rounded-2xl"
                 >
                   <ArrowRight />
@@ -236,6 +297,7 @@ const TypingTestContent = () => {
                 <Button
                   variant="outline"
                   onClick={handleReset}
+                  disabled={isLoading}
                   className="bg-gradient-to-r from-red-500/10 to-pink-500/10 hover:from-red-500/20 hover:to-pink-500/20 border-red-200 dark:border-red-800 cursor-pointer rounded-2xl"
                 >
                   <RefreshCw />
@@ -362,6 +424,13 @@ const TypingTestContent = () => {
               disabled={!isStarted || isCompleted}
             />
           </div>
+          <Button
+            className="gradient-button w-full"
+            disabled={isLoading}
+            onClick={handleComplete}
+          >
+            Submit
+          </Button>
         </CardContent>
       </Card>
       {scores.filter((score) => score.assignmentId.startsWith("typing-test"))

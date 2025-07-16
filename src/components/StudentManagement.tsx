@@ -83,7 +83,13 @@ const StudentManagement = ({
         result.status === "success" &&
         Array.isArray(result.data)
       ) {
-        setStudent(result.data);
+        setStudent((prevScores) => {
+          const newStudents = result.data.filter(
+            (newStudent: User) =>
+              !prevScores.some((std) => std.userId === newStudent.userId)
+          );
+          return [...prevScores, ...newStudents];
+        });
         console.log("Fetching students - ", students);
         return result.data;
       } else {
