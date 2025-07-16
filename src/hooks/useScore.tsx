@@ -17,7 +17,6 @@ interface studentSideProps {
   fetchScores: (studentId: string) => Promise<void>;
   fetchClassesForTeacher: () => Promise<Class[]>;
   fetchStudentsInClass: (classId: string) => Promise<User[]>;
-  deleteStudentScores: (studentId: string) => Promise<void>;
 }
 
 const ScoreContext = createContext<studentSideProps | undefined>(undefined);
@@ -100,145 +99,78 @@ export const ScoreProvider: React.FC<{ children: React.ReactNode }> = ({
       setAssignments([]);
       return;
     }
-  };
 
-  const submitScore = async (score: Score) => {
-    const token = getToken();
+    const password = newStudent.password || generateRandomPassword();
 
     try {
-      const response = await fetch("/api/score/create", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...score, token }),
-        signal: AbortSignal.timeout(5000),
+      setIsLoadingStudents(true);
+      const newUser = await createStudent({
+        email: newStudent.email,
+        fullName: newStudent.name,
+        password,
       });
-      const text = await response.text();
-      const result = text
-        ? JSON.parse(text)
-        : { status: "error", message: "Failed to submit score" };
-
-      if (response.ok && result.status === "success") {
-        toast({
-          title: "Scores Saved",
-        });
-      } else {
-        toast({
-          title: "Error",
-          description: result.message || "Failed to submit score",
-          variant: "destructive",
-        });
-      }
+      await assignStudentToClass(classItem.id, newUser.userId);
+      await fetchStudentsInClass(classItem.id);
+      await fetchClassesForTeacher();
+      toast({
+        title: "Success",
+        description: `${newStudent.name} added successfully. Email: ${newStudent.email}, Password: ${password}`,
+      });
+      setNewStudent({ name: "", email: "", password: "" }); // Reset form
     } catch (error) {
-      return;
+      toast({
+        title: "Error",
+        description: "Failed to add student.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoadingStudents(false);
     }
   };
 
-  const fetchScores = async (studentId: string) => {
-    const token = getToken();
-    if (!token) {
-      return;
-    }
+  const handleDeleteStudent = async (studentId: string) => {
     try {
-      const response = await fetch("/api/score/fetch", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ studentId, token }),
-        signal: AbortSignal.timeout(5000),
+      setIsLoadingStudents(true);
+      await removeStudentFromClass(classItem.id, studentId);
+      await deleteAccount(studentId);
+      await fetchStudentsInClass(classItem.id);
+      await fetchClassesForTeacher();
+      toast({
+        title: "Success",
+        description: "Student removed successfully.",
       });
-      const text = await response.text();
-      const result = text
-        ? JSON.parse(text)
-        : { status: "error", message: "Failed to fetch scores" };
-      if (
-        response.ok &&
-        result.status === "success" &&
-        Array.isArray(result.data)
-      ) {
-        setScores((prevScores) => {
-          const newScores = result.data.filter(
-            (newScore: Score) =>
-              !prevScores.some((score) => score.id === newScore.id)
-          );
-          return [...prevScores, ...newScores];
-        });
-      } else {
-        return;
-      }
     } catch (error) {
-      return;
+      console.error("[StudentManagement] Error deleting student:", error);
+      toast({
+        title: "Error",
+        description: "Failed to remove student.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoadingStudents(false);
     }
   };
 
-  const fetchClassesForTeacher = async (): Promise<Class[]> => {
-    const token = getToken();
-    if (!token) {
-      setClasses([]);
-      return [];
-    }
+  const handleChangeClass = async (studentId: string, newClassId: string) => {
     try {
-      const response = await fetch("/api/classes", {
-        method: "GET",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-        signal: AbortSignal.timeout(5000),
+      setIsLoadingStudents(true);
+      await removeStudentFromClass(classItem.id, studentId);
+      await assignStudentToClass(newClassId, studentId);
+      await fetchStudentsInClass(classItem.id);
+      await fetchClassesForTeacher();
+      toast({
+        title: "Success",
+        description: "Student moved to new class successfully.",
       });
-      const text = await response.text();
-      const result = text
-        ? JSON.parse(text)
-        : { status: "error", message: "Empty response from server" };
-
-      if (
-        response.ok &&
-        result.status === "success" &&
-        Array.isArray(result.data)
-      ) {
-        setClasses(result.data);
-        return result.data;
-      } else {
-        setClasses([]);
-        return [];
-      }
     } catch (error) {
-      setClasses([]);
-      return [];
-    }
-  };
-
-  const fetchStudentsInClass = async (classId: string): Promise<User[]> => {
-    const token = getToken();
-    if (!token) {
-      setStudentInClass([]);
-      return [];
-    }
-    try {
-      const response = await fetch("/api/classes/fetch-students", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ classId, token }),
-        signal: AbortSignal.timeout(5000),
+      console.error("[StudentManagement] Error changing class:", error);
+      toast({
+        title: "Error",
+        description: "Failed to move student.",
+        variant: "destructive",
       });
-      const text = await response.text();
-      const result = text
-        ? JSON.parse(text)
-        : { status: "error", message: "Empty response from server" };
-      if (
-        response.ok &&
-        result.status === "success" &&
-        Array.isArray(result.data)
-      ) {
-        setStudentInClass(result.data);
-        return result.data;
-      } else {
-        setStudentInClass([]);
-        return [];
-      }
-    } catch (error) {
-      setStudentInClass([]);
-      return [];
+    } finally {
+      setIsLoadingStudents(false);
     }
   };
 
@@ -292,7 +224,6 @@ export const ScoreProvider: React.FC<{ children: React.ReactNode }> = ({
         fetchScores,
         fetchClassesForTeacher,
         fetchStudentsInClass,
-        deleteStudentScores,
       }}
     >
       {children}
@@ -307,3 +238,5 @@ export const useScore = () => {
   }
   return context;
 };
+
+export default StudentManagement;
