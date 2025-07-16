@@ -1,6 +1,4 @@
-"use client";
-
-import React, { useState } from "react";
+import React, { useState, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { BarChart3, Trophy, Clock, Target } from "lucide-react";
 import { useTheme } from "@/hooks/ThemeProvider";
@@ -36,7 +34,7 @@ const StudentsScores = ({
     const foundClass = classes.find((classItem) =>
       classItem.students.includes(studentId)
     );
-    return foundClass?.name;
+    return foundClass?.name || "No Class";
   };
 
   const calculateAverageAccuracy = (studentScores: Score[]) => {
@@ -50,6 +48,23 @@ const StudentsScores = ({
     const total = studentScores.reduce((sum, score) => sum + score.wpm, 0);
     return Math.round(total / studentScores.length);
   };
+
+  const handleOpenStudentDetails = useCallback(
+    (studentId: string) => {
+      if (!isScoreOpen) {
+        setSelectedStudentId(studentId);
+        setIsScoreOpen(true);
+      } else {
+        console.warn("Score details are already open");
+      }
+    },
+    [isScoreOpen]
+  );
+
+  const handleCloseStudentDetails = useCallback(() => {
+    setIsScoreOpen(false);
+    setSelectedStudentId(null);
+  }, []);
 
   return (
     <div className="space-y-6">
@@ -97,9 +112,9 @@ const StudentsScores = ({
             return (
               <Card
                 key={student.userId}
-                onClick={() => {
-                  setSelectedStudentId(student.userId);
-                  setIsScoreOpen(true);
+                onClick={(e) => {
+                  e.stopPropagation(); // Prevent bubbling to parent elements
+                  handleOpenStudentDetails(student.userId);
                 }}
                 className="cursor-pointer"
               >
@@ -193,18 +208,17 @@ const StudentsScores = ({
                     </div>
                   </div>
                 </CardHeader>
-                <StudentScoreDetails
-                  studentScores={getStudentScores(student.userId)}
-                  assignments={assignments}
-                  isOpen={isScoreOpen && selectedStudentId === student.userId}
-                  onClose={() => {
-                    setIsScoreOpen(false);
-                    setSelectedStudentId(null);
-                  }}
-                />
               </Card>
             );
           })}
+          {selectedStudentId && (
+            <StudentScoreDetails
+              studentScores={getStudentScores(selectedStudentId)}
+              assignments={assignments}
+              isOpen={isScoreOpen}
+              onClose={handleCloseStudentDetails}
+            />
+          )}
         </div>
       )}
     </div>

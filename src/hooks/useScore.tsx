@@ -99,99 +99,27 @@ export const ScoreProvider: React.FC<{ children: React.ReactNode }> = ({
       setAssignments([]);
       return;
     }
-
-    const password = newStudent.password || generateRandomPassword();
-
-    try {
-      setIsLoadingStudents(true);
-      const newUser = await createStudent({
-        email: newStudent.email,
-        fullName: newStudent.name,
-        password,
-      });
-      await assignStudentToClass(classItem.id, newUser.userId);
-      await fetchStudentsInClass(classItem.id);
-      await fetchClassesForTeacher();
-      toast({
-        title: "Success",
-        description: `${newStudent.name} added successfully. Email: ${newStudent.email}, Password: ${password}`,
-      });
-      setNewStudent({ name: "", email: "", password: "" }); // Reset form
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to add student.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoadingStudents(false);
-    }
   };
 
-  const handleDeleteStudent = async (studentId: string) => {
-    try {
-      setIsLoadingStudents(true);
-      await removeStudentFromClass(classItem.id, studentId);
-      await deleteAccount(studentId);
-      await fetchStudentsInClass(classItem.id);
-      await fetchClassesForTeacher();
-      toast({
-        title: "Success",
-        description: "Student removed successfully.",
-      });
-    } catch (error) {
-      console.error("[StudentManagement] Error deleting student:", error);
-      toast({
-        title: "Error",
-        description: "Failed to remove student.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoadingStudents(false);
-    }
-  };
+  const submitScore = async (score: Score) => {
+    const token = getToken();
 
-  const handleChangeClass = async (studentId: string, newClassId: string) => {
     try {
-      setIsLoadingStudents(true);
-      await removeStudentFromClass(classItem.id, studentId);
-      await assignStudentToClass(newClassId, studentId);
-      await fetchStudentsInClass(classItem.id);
-      await fetchClassesForTeacher();
-      toast({
-        title: "Success",
-        description: "Student moved to new class successfully.",
-      });
-    } catch (error) {
-      console.error("[StudentManagement] Error changing class:", error);
-      toast({
-        title: "Error",
-        description: "Failed to move student.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoadingStudents(false);
-    }
-  };
-
-  const deleteStudentScores = async (studentId: string) => {
-    const token = localStorage.getItem("StenoMaster-token");
-    if (!token) return;
-    try {
-      const response = await fetch("/api/score/delete", {
+      const response = await fetch("/api/score/create", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ studentId }),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...score, token }),
+        signal: AbortSignal.timeout(5000),
       });
       const text = await response.text();
       const result = text
         ? JSON.parse(text)
         : { status: "error", message: "Failed to submit score" };
+
       if (response.ok && result.status === "success") {
-        console.log("Deleted scores");
+        toast({
+          title: "Scores Saved",
+        });
       } else {
         toast({
           title: "Error",
@@ -200,12 +128,116 @@ export const ScoreProvider: React.FC<{ children: React.ReactNode }> = ({
         });
       }
     } catch (error) {
-      console.error("Failed to delete scores:", error);
-      toast({
-        title: "Error",
-        description: "Something went wrong.",
-        variant: "destructive",
+      return;
+    }
+  };
+
+  const fetchScores = async (studentId: string) => {
+    const token = getToken();
+    if (!token) {
+      return;
+    }
+    try {
+      const response = await fetch("/api/score/fetch", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ studentId, token }),
+        signal: AbortSignal.timeout(5000),
       });
+      const text = await response.text();
+      const result = text
+        ? JSON.parse(text)
+        : { status: "error", message: "Failed to fetch scores" };
+      if (
+        response.ok &&
+        result.status === "success" &&
+        Array.isArray(result.data)
+      ) {
+        setScores((prevScores) => {
+          const newScores = result.data.filter(
+            (newScore: Score) =>
+              !prevScores.some((score) => score.id === newScore.id)
+          );
+          return [...prevScores, ...newScores];
+        });
+      } else {
+        return;
+      }
+    } catch (error) {
+      return;
+    }
+  };
+
+  const fetchClassesForTeacher = async (): Promise<Class[]> => {
+    const token = getToken();
+    if (!token) {
+      setClasses([]);
+      return [];
+    }
+    try {
+      const response = await fetch("/api/classes", {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        signal: AbortSignal.timeout(5000),
+      });
+      const text = await response.text();
+      const result = text
+        ? JSON.parse(text)
+        : { status: "error", message: "Empty response from server" };
+
+      if (
+        response.ok &&
+        result.status === "success" &&
+        Array.isArray(result.data)
+      ) {
+        setClasses(result.data);
+        return result.data;
+      } else {
+        setClasses([]);
+        return [];
+      }
+    } catch (error) {
+      setClasses([]);
+      return [];
+    }
+  };
+
+  const fetchStudentsInClass = async (classId: string): Promise<User[]> => {
+    const token = getToken();
+    if (!token) {
+      setStudentInClass([]);
+      return [];
+    }
+    try {
+      const response = await fetch("/api/classes/fetch-students", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ classId, token }),
+        signal: AbortSignal.timeout(5000),
+      });
+      const text = await response.text();
+      const result = text
+        ? JSON.parse(text)
+        : { status: "error", message: "Empty response from server" };
+      if (
+        response.ok &&
+        result.status === "success" &&
+        Array.isArray(result.data)
+      ) {
+        setStudentInClass(result.data);
+        return result.data;
+      } else {
+        setStudentInClass([]);
+        return [];
+      }
+    } catch (error) {
+      setStudentInClass([]);
+      return [];
     }
   };
 
@@ -238,5 +270,3 @@ export const useScore = () => {
   }
   return context;
 };
-
-export default StudentManagement;

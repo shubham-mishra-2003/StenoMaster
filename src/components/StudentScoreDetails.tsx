@@ -1,14 +1,20 @@
 import { Assignment, Score } from "@/types";
-import React, { useCallback } from "react";
+import React from "react";
 import { useTheme } from "@/hooks/ThemeProvider";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog";
-import { Card } from "./ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogClose,
+} from "./ui/dialog";
 import {
   Accordion,
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
 } from "./ui/accordion";
+import { X } from "lucide-react";
 
 type StudentScoreDetailsProps = {
   studentScores: Score[];
@@ -34,21 +40,27 @@ const StudentScoreDetails = ({
     return score ? score.assignmentId : assignmentId;
   };
 
-  const handleClose = useCallback(() => {
+  const handleClose = () => {
     onClose();
-  }, [onClose]);
+  };
+
+  const handleOpenChange = (open: boolean) => {
+    if (!open) {
+      handleClose();
+    }
+  };
 
   return (
-    <Dialog open={isOpen} onOpenChange={handleClose}>
+    <Dialog open={isOpen} onOpenChange={handleOpenChange}>
       <DialogContent className="h-[90%] flex flex-col">
         <DialogHeader>
           <DialogTitle>Assignments Completed</DialogTitle>
         </DialogHeader>
         <div className="flex h-full overflow-auto">
-          {studentScores.length == 0 ? (
+          {studentScores.length === 0 ? (
             <p
               className={`font-bold text-center mt-16 ${
-                colorScheme == "dark" ? "text-dark-muted" : "text-light-muted"
+                colorScheme === "dark" ? "text-dark-muted" : "text-light-muted"
               }`}
             >
               No Assignments completed yet
@@ -70,9 +82,7 @@ const StudentScoreDetails = ({
                     <AccordionTrigger className="flex items-center">
                       <div
                         className={`flex gap-2 items-center capitalize font-bold ${
-                          colorScheme == "dark"
-                            ? "text-dark"
-                            : "text-light"
+                          colorScheme === "dark" ? "text-dark" : "text-light"
                         }`}
                       >
                         {index + 1}.
@@ -92,14 +102,14 @@ const StudentScoreDetails = ({
                     <AccordionContent className="flex flex-col gap-1">
                       <h1
                         className={`font-bold text-[16px] text-center ${
-                          colorScheme == "dark" ? "text-dark" : "text-light"
+                          colorScheme === "dark" ? "text-dark" : "text-light"
                         }`}
                       >
                         Typed Text
                       </h1>
                       <div
                         className={`flex h-[250px] overflow-auto font-bold ${
-                          colorScheme == "dark"
+                          colorScheme === "dark"
                             ? "text-dark-muted"
                             : "text-light-muted"
                         }`}
@@ -112,6 +122,16 @@ const StudentScoreDetails = ({
             </Accordion>
           )}
         </div>
+        <DialogClose
+          onClick={(e) => {
+            e.stopPropagation();
+            handleClose();
+          }}
+          className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground"
+        >
+          <X className="h-4 w-4" />
+          <span className="sr-only">Close</span>
+        </DialogClose>
       </DialogContent>
     </Dialog>
   );

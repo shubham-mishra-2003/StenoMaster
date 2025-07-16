@@ -1,5 +1,3 @@
-"use client";
-
 import React, { useState, useEffect } from "react";
 import {
   Dialog,
@@ -38,7 +36,12 @@ const StudentManagement = ({
   onClose,
 }: StudentManagementProps) => {
   const { assignStudentToClass, removeStudentFromClass } = useClass();
-  const { classes, fetchClassesForTeacher } = useScore();
+  const {
+    studentsInClass,
+    fetchStudentsInClass,
+    classes,
+    fetchClassesForTeacher,
+  } = useScore();
   const { createStudent, deleteAccount } = useAuth();
   const { colorScheme } = useTheme();
   const [newStudent, setNewStudent] = useState({
@@ -47,57 +50,10 @@ const StudentManagement = ({
     password: "",
   });
   const [isLoadingStudents, setIsLoadingStudents] = useState(false);
-  const [localStudents, setLocalStudents] = useState<User[]>([]); // Local state for students
 
   const generateRandomPassword = () => {
     return Math.random().toString(36).slice(-8);
   };
-
-  // Fetch students for the specific class
-  const fetchStudentsForClass = async (classId: string) => {
-    const token = localStorage.getItem("StenoMaster-token");
-    if (!token) {
-      setLocalStudents([]);
-      return;
-    }
-    setIsLoadingStudents(true);
-    try {
-      const response = await fetch("/api/classes/fetch-students", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ classId, token }),
-        signal: AbortSignal.timeout(5000),
-      });
-      const text = await response.text();
-      const result = text
-        ? JSON.parse(text)
-        : { status: "error", message: "Empty response from server" };
-      if (
-        response.ok &&
-        result.status === "success" &&
-        Array.isArray(result.data)
-      ) {
-        setLocalStudents(result.data);
-      } else {
-        setLocalStudents([]);
-      }
-    } catch (error) {
-      console.error("[StudentManagement] Error fetching students:", error);
-      setLocalStudents([]);
-    } finally {
-      setIsLoadingStudents(false);
-    }
-  };
-
-  // Fetch students when the dialog opens or classItem changes
-  useEffect(() => {
-    if (isOpen && classItem?.id) {
-      fetchStudentsForClass(classItem.id);
-    }
-  }, [isOpen, classItem?.id]);
 
   const handleAddStudent = async () => {
     if (!newStudent.name.trim() || !newStudent.email.trim()) {
@@ -118,15 +74,13 @@ const StudentManagement = ({
         password,
       });
       await assignStudentToClass(classItem.id, newUser.userId);
-      await fetchStudentsForClass(classItem.id); // Refresh local students
+      await fetchStudentsInClass(classItem.id);
       await fetchClassesForTeacher();
       toast({
         title: "Success",
         description: `${newStudent.name} added successfully. Email: ${newStudent.email}, Password: ${password}`,
       });
-      setNewStudent({ name: "", email: "", password: "" }); // Reset form
     } catch (error) {
-      console.error("[StudentManagement] Error adding student:", error);
       toast({
         title: "Error",
         description: "Failed to add student.",
@@ -139,7 +93,7 @@ const StudentManagement = ({
     try {
       await removeStudentFromClass(classItem.id, studentId);
       await deleteAccount(studentId);
-      await fetchStudentsForClass(classItem.id); // Refresh local students
+      await fetchStudentsInClass(classItem.id);
       await fetchClassesForTeacher();
       toast({
         title: "Success",
@@ -159,7 +113,7 @@ const StudentManagement = ({
     try {
       await removeStudentFromClass(classItem.id, studentId);
       await assignStudentToClass(newClassId, studentId);
-      await fetchStudentsForClass(classItem.id); // Refresh local students
+      await fetchStudentsInClass(classItem.id);
       await fetchClassesForTeacher();
       toast({
         title: "Success",
@@ -185,7 +139,7 @@ const StudentManagement = ({
           <Card>
             <CardHeader>
               <CardTitle
-                className={colorScheme === "dark" ? "text-dark" : "text-light"}
+                className={colorScheme == "dark" ? "text-dark" : "text-light"}
               >
                 Add New Student
               </CardTitle>
@@ -252,20 +206,20 @@ const StudentManagement = ({
           <Card>
             <CardHeader>
               <CardTitle
-                className={colorScheme === "dark" ? "text-dark" : "text-light"}
+                className={colorScheme == "dark" ? "text-dark" : "text-light"}
               >
-                Current Students ({localStudents.length})
+                Current Students ({studentsInClass.length})
               </CardTitle>
             </CardHeader>
             <CardContent>
               {isLoadingStudents ? (
                 <div className="text-center py-8">Loading students...</div>
-              ) : localStudents.length === 0 ? (
+              ) : studentsInClass.length === 0 ? (
                 <div className="text-center py-8">
                   <User2 className="h-12 w-12 text-white mx-auto mb-4" />
                   <p
                     className={
-                      colorScheme === "dark"
+                      colorScheme == "dark"
                         ? "text-dark-muted"
                         : "text-light-muted"
                     }
@@ -275,11 +229,11 @@ const StudentManagement = ({
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {localStudents.map((student) => (
+                  {studentsInClass.map((student) => (
                     <div
                       key={student.userId}
                       className={`flex flex-col p-4 border rounded-xl gap-3 ${
-                        colorScheme === "dark"
+                        colorScheme == "dark"
                           ? "border-slate-500"
                           : "border-slate-300"
                       }`}
@@ -297,7 +251,7 @@ const StudentManagement = ({
                           >
                             <SelectTrigger
                               className={`cursor-pointer h-9 border w-full sm:w-56 truncate rounded-xl ${
-                                colorScheme === "dark"
+                                colorScheme == "dark"
                                   ? "bg-slate-900/70 hover:bg-black/60 border-slate-700"
                                   : "bg-slate-200 hover:bg-slate-300 border-slate-300"
                               }`}
@@ -306,7 +260,7 @@ const StudentManagement = ({
                             </SelectTrigger>
                             <SelectContent
                               className={`scroll-smooth border-0 max-h-60 rounded-xl shadow-2xl ${
-                                colorScheme === "dark"
+                                colorScheme == "dark"
                                   ? "bg-slate-900/70 border-slate-700 shadow-slate-500"
                                   : "bg-slate-200/80 border-slate-300"
                               }`}
@@ -316,7 +270,7 @@ const StudentManagement = ({
                                   key={cls.id}
                                   value={cls.id}
                                   className={`cursor-pointer border-2 rounded-xl mb-[2px] ${
-                                    colorScheme === "dark"
+                                    colorScheme == "dark"
                                       ? "bg-slate-700 border-slate-600"
                                       : "bg-slate-200 border-slate-300"
                                   }`}
@@ -332,7 +286,7 @@ const StudentManagement = ({
                               size="sm"
                               disabled
                               className={`h-9 flex-1 relative cursor-not-allowed opacity-50 ${
-                                colorScheme === "dark"
+                                colorScheme == "dark"
                                   ? "bg-slate-900/70"
                                   : "bg-slate-200"
                               }`}
@@ -346,7 +300,7 @@ const StudentManagement = ({
                                 handleDeleteStudent(student.userId)
                               }
                               className={`h-9 flex-1 relative text-destructive cursor-pointer hover:text-white hover:bg-red-500 ${
-                                colorScheme === "dark"
+                                colorScheme == "dark"
                                   ? "bg-slate-900/70"
                                   : "bg-slate-200"
                               }`}
