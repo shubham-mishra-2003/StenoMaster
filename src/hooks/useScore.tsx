@@ -72,6 +72,7 @@ export const ScoreProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   };
 
+  // fetch assignment
   const fetchAssignments = async (classId?: string) => {
     const token = getToken();
     try {
