@@ -59,7 +59,7 @@ const StudentScoreDetails = ({
         <div className="flex h-full overflow-auto">
           {studentScores.length === 0 ? (
             <p
-              className={`font-bold text-center mt-16 ${
+              className={`font-bold text-center w-full mt-16 ${
                 colorScheme === "dark" ? "text-dark-muted" : "text-light-muted"
               }`}
             >

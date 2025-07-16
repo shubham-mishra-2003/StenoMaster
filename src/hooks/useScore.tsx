@@ -17,6 +17,7 @@ interface studentSideProps {
   fetchScores: (studentId: string) => Promise<void>;
   fetchClassesForTeacher: () => Promise<Class[]>;
   fetchStudentsInClass: (classId: string) => Promise<User[]>;
+  deleteStudentScores: (studentId: string) => Promise<void>;
 }
 
 const ScoreContext = createContext<studentSideProps | undefined>(undefined);
@@ -210,6 +211,7 @@ export const ScoreProvider: React.FC<{ children: React.ReactNode }> = ({
       setStudentInClass([]);
       return [];
     }
+
     try {
       const response = await fetch("/api/classes/fetch-students", {
         method: "POST",
@@ -220,24 +222,68 @@ export const ScoreProvider: React.FC<{ children: React.ReactNode }> = ({
         body: JSON.stringify({ classId, token }),
         signal: AbortSignal.timeout(5000),
       });
+
       const text = await response.text();
       const result = text
         ? JSON.parse(text)
         : { status: "error", message: "Empty response from server" };
+
       if (
         response.ok &&
         result.status === "success" &&
         Array.isArray(result.data)
       ) {
-        setStudentInClass(result.data);
+        setStudentInClass((prevScores) => {
+          const newStudents = result.data.filter(
+            (newStudent: User) =>
+              !prevScores.some((std) => std.userId === newStudent.userId)
+          );
+          return [...prevScores, ...newStudents];
+        });
         return result.data;
       } else {
-        setStudentInClass([]);
         return [];
       }
     } catch (error) {
-      setStudentInClass([]);
       return [];
+    }
+  };
+
+  const deleteStudentScores = async (studentId: string) => {
+    const token = localStorage.getItem("StenoMaster-token");
+    if (!token) return;
+
+    try {
+      const response = await fetch("/api/score/delete", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ studentId }),
+      });
+
+      const text = await response.text();
+      const result = text
+        ? JSON.parse(text)
+        : { status: "error", message: "Empty response from server" };
+
+      if (response.ok && result.status === "success") {
+        console.log(`✅ Scores deleted for student: ${studentId}`);
+      } else {
+        toast({
+          title: "Error",
+          description: result.message || "Failed to delete scores",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error("❌ Failed to delete scores:", error);
+      toast({
+        title: "Error",
+        description: "Something went wrong while deleting scores.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -256,6 +302,7 @@ export const ScoreProvider: React.FC<{ children: React.ReactNode }> = ({
         fetchScores,
         fetchClassesForTeacher,
         fetchStudentsInClass,
+        deleteStudentScores,
       }}
     >
       {children}

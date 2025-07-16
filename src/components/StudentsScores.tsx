@@ -15,7 +15,6 @@ type StudentsScoresProps = {
 
 const StudentsScores = ({
   allScores,
-  studentClasses,
   assignments,
   classes,
   students,

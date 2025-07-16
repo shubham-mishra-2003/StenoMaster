@@ -122,7 +122,7 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
     ) {
       loadData();
     }
-  }, [user]);
+  }, []);
 
   const showLoader =
     user?.userType === "student"
@@ -133,8 +133,8 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
 
   if (!isAuthenticated || !user || showLoader) {
     return (
-      <div className="flex justify-center items-center h-screen p-20">
-        <Card className="animate-bounce">
+      <div className="flex justify-center items-center h-screen p-20 bg-black">
+        <Card className="animate-bounce bg-slate-800">
           <CardContent className="flex flex-col gap-2 items-center justify-center p-20 h-full">
             <Logo />
             <p

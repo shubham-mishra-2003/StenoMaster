@@ -36,35 +36,85 @@ const StudentManagement = ({
   onClose,
 }: StudentManagementProps) => {
   const { assignStudentToClass, removeStudentFromClass } = useClass();
-  const {
-    studentsInClass,
-    fetchStudentsInClass,
-    classes,
-    fetchClassesForTeacher,
-  } = useScore();
+  const { classes, fetchClassesForTeacher, fetchStudentsInClass } = useScore();
   const { createStudent, deleteAccount } = useAuth();
   const { colorScheme } = useTheme();
+  const [students, setStudent] = useState<User[]>([]);
   const [newStudent, setNewStudent] = useState({
     name: "",
     email: "",
     password: "",
   });
-  const [isLoadingStudents, setIsLoadingStudents] = useState(false);
+  const [isLoading, setIsLoading] = useState({
+    fetchStudents: false,
+    addingStudent: false,
+    removingStudent: false,
+    classChange: false,
+  });
+  const getToken = () => localStorage.getItem("StenoMaster-token");
 
   const generateRandomPassword = () => {
     return Math.random().toString(36).slice(-8);
   };
 
+  const fetchStudentInClass = async (classId: string) => {
+    const token = getToken();
+    if (!token) {
+      setStudent([]);
+      return [];
+    }
+    setIsLoading((prev) => ({ ...prev, fetchStudents: true }));
+    try {
+      const response = await fetch("/api/classes/fetch-students", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ classId, token }),
+        signal: AbortSignal.timeout(5000),
+      });
+      const text = await response.text();
+      const result = text
+        ? JSON.parse(text)
+        : { status: "error", message: "Empty response from server" };
+      if (
+        response.ok &&
+        result.status === "success" &&
+        Array.isArray(result.data)
+      ) {
+        setStudent(result.data);
+        console.log("Fetching students - ", students);
+        return result.data;
+      } else {
+        setStudent([]);
+        return [];
+      }
+    } catch (error) {
+      setStudent([]);
+      return [];
+    } finally {
+      setIsLoading((prev) => ({ ...prev, fetchStudents: false }));
+    }
+  };
+
+  useEffect(() => {
+    if (isOpen) {
+      fetchStudentInClass(classItem.id);
+    }
+  }, []);
+
   const handleAddStudent = async () => {
+    setIsLoading((prev) => ({ ...prev, addingStudent: true }));
     if (!newStudent.name.trim() || !newStudent.email.trim()) {
       toast({
         title: "Error",
         description: "Please enter student name and email.",
         variant: "destructive",
       });
+      setIsLoading((prev) => ({ ...prev, addingStudent: false }));
       return;
     }
-
     const password = newStudent.password || generateRandomPassword();
 
     try {
@@ -74,8 +124,15 @@ const StudentManagement = ({
         password,
       });
       await assignStudentToClass(classItem.id, newUser.userId);
-      await fetchStudentsInClass(classItem.id);
-      await fetchClassesForTeacher();
+      await fetchStudentInClass(classItem.id);
+      const teacherClasses: Class[] = await fetchClassesForTeacher();
+      if (teacherClasses.length > 0) {
+        const allStudents: User[] = [];
+        for (const c of teacherClasses) {
+          const students = await fetchStudentsInClass(c.id);
+          allStudents.push(...students);
+        }
+      }
       toast({
         title: "Success",
         description: `${newStudent.name} added successfully. Email: ${newStudent.email}, Password: ${password}`,
@@ -86,15 +143,24 @@ const StudentManagement = ({
         description: "Failed to add student.",
         variant: "destructive",
       });
+    } finally {
+      setNewStudent((prev) => ({
+        ...prev,
+        email: "",
+        name: "",
+        password: "",
+      }));
+      setIsLoading((prev) => ({ ...prev, addingStudent: false }));
     }
   };
 
   const handleDeleteStudent = async (studentId: string) => {
+    setIsLoading((prev) => ({ ...prev, removingStudent: true }));
     try {
       await removeStudentFromClass(classItem.id, studentId);
       await deleteAccount(studentId);
-      await fetchStudentsInClass(classItem.id);
       await fetchClassesForTeacher();
+      await fetchStudentInClass(classItem.id);
       toast({
         title: "Success",
         description: "Student removed successfully.",
@@ -106,14 +172,17 @@ const StudentManagement = ({
         description: "Failed to remove student.",
         variant: "destructive",
       });
+    } finally {
+      setIsLoading((prev) => ({ ...prev, removingStudent: false }));
     }
   };
 
   const handleChangeClass = async (studentId: string, newClassId: string) => {
+    setIsLoading((prev) => ({ ...prev, classChange: true }));
     try {
       await removeStudentFromClass(classItem.id, studentId);
       await assignStudentToClass(newClassId, studentId);
-      await fetchStudentsInClass(classItem.id);
+      await fetchStudentInClass(classItem.id);
       await fetchClassesForTeacher();
       toast({
         title: "Success",
@@ -126,8 +195,16 @@ const StudentManagement = ({
         description: "Failed to move student.",
         variant: "destructive",
       });
+    } finally {
+      setIsLoading((prev) => ({ ...prev, classChange: false }));
     }
   };
+
+  const isLoadingStudents =
+    isLoading.addingStudent ||
+    isLoading.classChange ||
+    isLoading.fetchStudents ||
+    isLoading.removingStudent;
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -208,13 +285,13 @@ const StudentManagement = ({
               <CardTitle
                 className={colorScheme == "dark" ? "text-dark" : "text-light"}
               >
-                Current Students ({studentsInClass.length})
+                Current Students ({students.length})
               </CardTitle>
             </CardHeader>
             <CardContent>
               {isLoadingStudents ? (
                 <div className="text-center py-8">Loading students...</div>
-              ) : studentsInClass.length === 0 ? (
+              ) : students.length === 0 ? (
                 <div className="text-center py-8">
                   <User2 className="h-12 w-12 text-white mx-auto mb-4" />
                   <p
@@ -229,7 +306,7 @@ const StudentManagement = ({
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {studentsInClass.map((student) => (
+                  {students.map((student) => (
                     <div
                       key={student.userId}
                       className={`flex flex-col p-4 border rounded-xl gap-3 ${

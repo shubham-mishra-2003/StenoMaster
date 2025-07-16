@@ -9,6 +9,7 @@ import { LogOut, RefreshCcw } from "lucide-react";
 import { useTheme } from "@/hooks/ThemeProvider";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "./ui/button";
+import { useRouter } from "next/navigation";
 
 type FetchedState = {
   data: boolean;
@@ -44,6 +45,7 @@ const UserButton = ({
 }: userButtonProps) => {
   const { colorScheme } = useTheme();
   const { user, logout } = useAuth();
+  const router = useRouter();
 
   if (!user || !user.fullName) return null;
 
@@ -73,7 +75,10 @@ const UserButton = ({
         align="end"
       >
         <Button
-          onClick={logout}
+          onClick={() => {
+            logout();
+            router.push("/?showLogin=true");
+          }}
           className={`cursor-pointer rounded-xl p-3 px-4 font-bold text-sm ${
             colorScheme === "dark"
               ? "bg-slate-700/70 text-red-400 hover:bg-black/60"

@@ -13,7 +13,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { Class } from "@/types";
+import { Class, User } from "@/types";
 import { Plus, Users, Trash2 } from "lucide-react";
 import StudentManagement from "@/components/StudentManagement";
 import { useTheme } from "@/hooks/ThemeProvider";
@@ -23,46 +23,69 @@ import { useAssignment } from "@/hooks/useAssignments";
 import { useAuth } from "@/hooks/useAuth";
 
 const ClassPage = () => {
-  const { isLoading, createClass, deleteClass } = useClass();
+  const { createClass, deleteClass } = useClass();
   const { classes, fetchClassesForTeacher } = useScore();
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [newClassName, setNewClassName] = useState("");
   const [selectedClass, setSelectedClass] = useState<Class | null>(null);
   const { colorScheme } = useTheme();
-  const { assignments, deleteStudentScores } = useScore();
+  const { assignments, deleteStudentScores, fetchStudentsInClass } = useScore();
   const { deleteAssignment } = useAssignment();
   const { deleteAccount } = useAuth();
+  const [classLoading, setClassLoading] = useState({
+    create: false,
+    delete: false,
+  });
 
   const handleCreateClass = async () => {
-    await createClass(newClassName);
-    setNewClassName("");
-    setTimeout(() => {
-      fetchClassesForTeacher();
-    }, 2000);
-    setIsCreateDialogOpen(false);
+    setClassLoading((prev) => ({ ...prev, create: true }));
+    try {
+      setTimeout(() => {
+        setIsCreateDialogOpen(false);
+      }, 1000);
+      await createClass(newClassName);
+      setNewClassName("");
+      await fetchClassesForTeacher();
+    } finally {
+      setClassLoading((prev) => ({ ...prev, create: false }));
+    }
   };
 
   const handleDelete = async (classItem: Class) => {
+    setClassLoading((prev) => ({ ...prev, delete: true }));
     try {
       await deleteClass(classItem.id);
-
       const assignmentsToDelete = assignments.filter(
         (a) => a.classId === classItem.id
       );
       await Promise.all(assignmentsToDelete.map((a) => deleteAssignment(a.id)));
-
       await Promise.all(
         classItem.students.flatMap((studentId) => [
-          deleteAccount(studentId),
           deleteStudentScores(studentId),
+          deleteAccount(studentId),
         ])
       );
-
       fetchClassesForTeacher();
     } catch (error) {
       console.error("Error deleting class and its data:", error);
+    } finally {
+      setClassLoading((prev) => ({ ...prev, delete: false }));
     }
   };
+
+  const handleClose = async () => {
+    const teacherClasses: Class[] = await fetchClassesForTeacher();
+    if (teacherClasses.length > 0) {
+      const allStudents: User[] = [];
+      for (const c of teacherClasses) {
+        const students = await fetchStudentsInClass(c.id);
+        allStudents.push(...students);
+      }
+    }
+    setSelectedClass(null);
+  };
+
+  const isLoading = classLoading.create || classLoading.delete;
 
   return (
     <div className="space-y-4 sm:space-y-6 lg:space-y-8">
@@ -139,7 +162,17 @@ const ClassPage = () => {
       </div>
 
       {isLoading ? (
-        <div className="text-center py-8">Loading classes...</div>
+        <Card className="animate-bounce">
+          <CardContent className="flex flex-col gap-2 items-center justify-center p-20 h-full">
+            <p
+              className={`text-lg font-bold ${
+                colorScheme === "dark" ? "text-dark-muted" : "text-light-muted"
+              }`}
+            >
+              Loading Classes...
+            </p>
+          </CardContent>
+        </Card>
       ) : (
         <div className="grid gap-4 sm:gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
           {classes.map((classItem) => (
@@ -223,7 +256,7 @@ const ClassPage = () => {
         <StudentManagement
           classItem={selectedClass}
           isOpen={!!selectedClass}
-          onClose={() => setSelectedClass(null)}
+          onClose={handleClose}
         />
       )}
     </div>
