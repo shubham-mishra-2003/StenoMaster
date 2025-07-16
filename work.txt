@@ -1,3 +1,0 @@
-1. put user button on header
-2. Improve auth form's state
-3. 
