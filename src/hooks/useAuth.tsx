@@ -602,12 +602,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         throw new Error(result.message || "Failed to fetch students");
       }
     } catch (error) {
-      // console.error("[useAuth] Fetch student error:", error);
-      // toast({
-      //   title: "Error",
-      //   description: "An unexpected error occurred while fetching students.",
-      //   variant: "destructive",
-      // });
       setAuthState((prev) => ({ ...prev, loading: false }));
       throw error;
     }

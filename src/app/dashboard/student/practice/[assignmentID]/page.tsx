@@ -31,6 +31,7 @@ const AssignmentPracticeContent = () => {
   const assignment = assignments.find((a) => a.id == assignmentID);
   const mobile = useIsMobile();
   const { fetchScores } = useScore();
+  const [isLoading, setIsLoading] = useState(false);
 
   if (mobile) {
     return (
@@ -64,6 +65,7 @@ const AssignmentPracticeContent = () => {
       return;
     }
 
+    setIsLoading(true);
     setIsStarted(false);
     setIsCompleted(true);
     const timeElapsed = (new Date().getTime() - startTime.getTime()) / 1000;
@@ -84,13 +86,12 @@ const AssignmentPracticeContent = () => {
     };
 
     try {
-      await submitScore(score).then(() => {
-        toast({
-          title: "Assignment submitted successfully.",
-          description: `WPM: ${score.wpm}, Accuracy: ${score.accuracy}`,
-        });
-        fetchScores(user.userId);
+      await submitScore(score);
+      toast({
+        title: "Assignment submitted successfully.",
+        description: `WPM: ${score.wpm}, Accuracy: ${score.accuracy}`,
       });
+      await fetchScores(user.userId);
       router.push("/dashboard/student/practice");
     } catch (err) {
       console.error("[PracticeAssignment] Error submitting score:", err);
@@ -99,17 +100,86 @@ const AssignmentPracticeContent = () => {
         description: "Failed to submit score. Please try again.",
         variant: "destructive",
       });
+    } finally {
+      setIsLoading(false);
     }
   };
 
+  function getStatusArray(
+    original: string,
+    typed: string,
+    lookahead = 4
+  ): ("correct" | "wrong" | "pending")[] {
+    const oChars = original.split("");
+    const tChars = typed.split("");
+
+    let oIndex = 0;
+    let tIndex = 0;
+
+    const statusArray: ("correct" | "wrong" | "pending")[] = new Array(
+      oChars.length
+    ).fill("pending");
+
+    while (oIndex < oChars.length) {
+      if (tIndex < tChars.length) {
+        if (oChars[oIndex] === tChars[tIndex]) {
+          statusArray[oIndex] = "correct";
+          oIndex++;
+          tIndex++;
+        } else {
+          let found = false;
+
+          for (let la = 1; la <= lookahead; la++) {
+            // Insertion
+            if (
+              tIndex + la < tChars.length &&
+              tChars[tIndex + la] === oChars[oIndex]
+            ) {
+              for (let k = 0; k < la && oIndex + k < oChars.length; k++) {
+                statusArray[oIndex + k] = "wrong";
+              }
+              tIndex += la;
+              found = true;
+              break;
+            }
+
+            // Deletion
+            if (
+              oIndex + la < oChars.length &&
+              oChars[oIndex + la] === tChars[tIndex]
+            ) {
+              for (let k = 0; k < la && oIndex + k < oChars.length; k++) {
+                statusArray[oIndex + k] = "wrong";
+              }
+              oIndex += la;
+              found = true;
+              break;
+            }
+          }
+
+          if (!found) {
+            statusArray[oIndex] = "wrong";
+            oIndex++;
+            tIndex++;
+          }
+        }
+      } else {
+        statusArray[oIndex] = "pending";
+        oIndex++;
+      }
+    }
+
+    return statusArray;
+  }
+
   const calculateAccuracy = (typed: string, correct: string) => {
-    const typedChars = typed.split("");
-    const correctChars = correct.split("");
-    const correctCount = typedChars.reduce(
-      (count, char, i) => (char === correctChars[i] ? count + 1 : count),
-      0
-    );
-    return Math.round((correctCount / Math.max(correctChars.length, 1)) * 100);
+    const statusArray = getStatusArray(correct, typed);
+    const typedPortion = statusArray.filter((s) => s !== "pending");
+    const correctCount = typedPortion.filter((s) => s === "correct").length;
+
+    return typedPortion.length > 0
+      ? Math.round((correctCount / typedPortion.length) * 100)
+      : 0;
   };
 
   const progress =

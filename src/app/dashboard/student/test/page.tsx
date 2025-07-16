@@ -74,13 +74,13 @@ const TypingTestContent = () => {
     };
 
     try {
-      await submitScore(result).then(async () => {
-        toast({
-          title: "Typing Test Completed!",
-          description: `WPM: ${wpm}, Accuracy: ${accuracy}%, Time: ${timeElapsed}`,
-        });
-        await fetchScores(user.userId);
+      await submitScore(result);
+      toast({
+        title: "Typing Test Completed!",
+        description: `WPM: ${wpm}, Accuracy: ${accuracy}%, Time: ${timeElapsed}`,
       });
+      await fetchScores(user.userId);
+      setTypedText("");
     } catch (error) {
       toast({
         title: "Error",

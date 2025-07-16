@@ -79,7 +79,7 @@ export const ScoreProvider: React.FC<{ children: React.ReactNode }> = ({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ token, classId }),
-        signal: AbortSignal.timeout(5000),
+        signal: AbortSignal.timeout(15000),
       });
       const text = await response.text();
       const result = text
@@ -110,7 +110,7 @@ export const ScoreProvider: React.FC<{ children: React.ReactNode }> = ({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ...score, token }),
-        signal: AbortSignal.timeout(5000),
+        signal: AbortSignal.timeout(15000),
       });
       const text = await response.text();
       const result = text
@@ -143,7 +143,7 @@ export const ScoreProvider: React.FC<{ children: React.ReactNode }> = ({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ studentId, token }),
-        signal: AbortSignal.timeout(5000),
+        signal: AbortSignal.timeout(15000),
       });
       const text = await response.text();
       const result = text
@@ -181,7 +181,7 @@ export const ScoreProvider: React.FC<{ children: React.ReactNode }> = ({
         headers: {
           Authorization: `Bearer ${token}`,
         },
-        signal: AbortSignal.timeout(5000),
+        signal: AbortSignal.timeout(15000),
       });
       const text = await response.text();
       const result = text
@@ -220,7 +220,7 @@ export const ScoreProvider: React.FC<{ children: React.ReactNode }> = ({
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({ classId, token }),
-        signal: AbortSignal.timeout(5000),
+        signal: AbortSignal.timeout(15000),
       });
 
       const text = await response.text();

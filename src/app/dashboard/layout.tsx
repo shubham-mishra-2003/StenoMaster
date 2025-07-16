@@ -16,7 +16,7 @@ import { User, Class } from "@/types";
 
 const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
   const { colorScheme } = useTheme();
-  const { isAuthenticated, user } = useAuth();
+  const { isAuthenticated, user, validate } = useAuth();
   const pathname = usePathname();
   const router = useRouter();
 
@@ -51,8 +51,8 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
     pathname.startsWith("/dashboard/student/test");
 
   const loadData = async () => {
-    if (!user) return;
-
+    if (!user || !isAuthenticated) return;
+    validate();
     setIsLoading((prev) => ({ ...prev, dataLoading: true }));
 
     try {
@@ -124,30 +124,34 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
     }
   }, []);
 
-  const showLoader =
-    user?.userType === "student"
-      ? isLoading.assignmentsLoading || isLoading.dataLoading
-      : isLoading.teacherClass ||
-        isLoading.studentInClass ||
-        isLoading.assignmentsLoading;
+  if (!isLoading.refresh) {
+    const showLoader =
+      user?.userType === "student"
+        ? isLoading.assignmentsLoading || isLoading.dataLoading
+        : isLoading.teacherClass ||
+          isLoading.studentInClass ||
+          isLoading.assignmentsLoading;
 
-  if (!isAuthenticated || !user || showLoader) {
-    return (
-      <div className="flex justify-center items-center h-screen p-20 bg-black">
-        <Card className="animate-bounce bg-slate-800">
-          <CardContent className="flex flex-col gap-2 items-center justify-center p-20 h-full">
-            <Logo />
-            <p
-              className={`text-lg font-bold ${
-                colorScheme === "dark" ? "text-dark-muted" : "text-light-muted"
-              }`}
-            >
-              Loading...
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-    );
+    if (!isAuthenticated || !user || showLoader) {
+      return (
+        <div className="flex justify-center items-center h-screen p-20 bg-black">
+          <Card className="animate-bounce bg-slate-800">
+            <CardContent className="flex flex-col gap-2 items-center justify-center p-20 h-full">
+              <Logo />
+              <p
+                className={`text-lg font-bold ${
+                  colorScheme === "dark"
+                    ? "text-dark-muted"
+                    : "text-light-muted"
+                }`}
+              >
+                Loading...
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+      );
+    }
   }
 
   return (
