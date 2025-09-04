@@ -104,12 +104,13 @@ export const ScoreProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const submitScore = async (score: Score) => {
     const token = getToken();
+    const payload = { ...score, token };
 
     try {
       const response = await fetch("/api/score/create", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...score, token }),
+        body: JSON.stringify(payload),
         signal: AbortSignal.timeout(15000),
       });
       const text = await response.text();
@@ -118,9 +119,7 @@ export const ScoreProvider: React.FC<{ children: React.ReactNode }> = ({
         : { status: "error", message: "Failed to submit score" };
 
       if (response.ok && result.status === "success") {
-        toast({
-          title: "Scores Saved",
-        });
+        toast({ title: "Scores Saved" });
       } else {
         toast({
           title: "Error",
@@ -129,6 +128,7 @@ export const ScoreProvider: React.FC<{ children: React.ReactNode }> = ({
         });
       }
     } catch (error) {
+      console.error("SubmitScore Error:", error);
       return;
     }
   };

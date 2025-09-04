@@ -1,19 +1,24 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useTheme } from "@/hooks/ThemeProvider";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "@/hooks/use-toast";
-import { Score } from "@/types";
+import { Mistake, Score } from "@/types";
 import { Clock, Target } from "lucide-react";
 import Image from "next/image";
 import { Progress } from "@/components/ui/progress";
 import { Textarea } from "@/components/ui/textarea";
 import { useScore } from "@/hooks/useScore";
 import { useIsMobile } from "@/hooks/use-mobile";
+import {
+  calculateAccuracyWord,
+  calculateProgress,
+  getWordMistakes,
+} from "../../../../../lib/scoreUtils";
 
 const AssignmentPracticeContent = () => {
   const params = useParams();
@@ -32,6 +37,22 @@ const AssignmentPracticeContent = () => {
   const mobile = useIsMobile();
   const { fetchScores } = useScore();
   const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    let interval: NodeJS.Timeout | null = null;
+    if (isStarted && startTime) {
+      interval = setInterval(() => {
+        const elapsed = Math.floor((Date.now() - startTime.getTime()) / 1000);
+        setTimeElapsed(elapsed);
+      }, 1000);
+    }
+    if (isCompleted && interval) {
+      clearInterval(interval);
+    }
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [isStarted, startTime, isCompleted]);
 
   if (mobile) {
     return (
@@ -52,6 +73,7 @@ const AssignmentPracticeContent = () => {
   const handleStart = () => {
     setIsStarted(true);
     setStartTime(new Date());
+    setTimeElapsed(0);
   };
 
   const handleSubmit = async () => {
@@ -68,11 +90,17 @@ const AssignmentPracticeContent = () => {
     setIsLoading(true);
     setIsStarted(false);
     setIsCompleted(true);
-    const timeElapsed = (new Date().getTime() - startTime.getTime()) / 1000;
+    const timeElapsed = (Date.now() - startTime.getTime()) / 1000;
     setTimeElapsed(timeElapsed);
+
     const words = typedText.trim().split(/\s+/).length;
     const wpm = Math.round((words / timeElapsed) * 60);
-    const accuracy = calculateAccuracy(typedText, assignment.correctText);
+    const accuracy = calculateAccuracyWord(typedText, assignment.correctText);
+
+    const mistakes: Mistake[] = getWordMistakes(
+      assignment.correctText,
+      typedText
+    );
 
     const score: Score = {
       id: `score-${Date.now()}`,
@@ -83,13 +111,14 @@ const AssignmentPracticeContent = () => {
       wpm,
       timeElapsed,
       completedAt: new Date(),
+      mistakes,
     };
 
     try {
       await submitScore(score);
       toast({
         title: "Assignment submitted successfully.",
-        description: `WPM: ${score.wpm}, Accuracy: ${score.accuracy}`,
+        description: `WPM: ${score.wpm}, Accuracy: ${score.accuracy}%`,
       });
       await fetchScores(user.userId);
       router.push("/dashboard/student/practice");
@@ -105,87 +134,12 @@ const AssignmentPracticeContent = () => {
     }
   };
 
-  function getStatusArray(
-    original: string,
-    typed: string,
-    lookahead = 4
-  ): ("correct" | "wrong" | "pending")[] {
-    const oChars = original.split("");
-    const tChars = typed.split("");
+  // const progress =
+  //   assignment && assignment.correctText.length > 0
+  //     ? Math.min((typedText.length / assignment.correctText.length) * 100, 100)
+  //     : 0;
 
-    let oIndex = 0;
-    let tIndex = 0;
-
-    const statusArray: ("correct" | "wrong" | "pending")[] = new Array(
-      oChars.length
-    ).fill("pending");
-
-    while (oIndex < oChars.length) {
-      if (tIndex < tChars.length) {
-        if (oChars[oIndex] === tChars[tIndex]) {
-          statusArray[oIndex] = "correct";
-          oIndex++;
-          tIndex++;
-        } else {
-          let found = false;
-
-          for (let la = 1; la <= lookahead; la++) {
-            // Insertion
-            if (
-              tIndex + la < tChars.length &&
-              tChars[tIndex + la] === oChars[oIndex]
-            ) {
-              for (let k = 0; k < la && oIndex + k < oChars.length; k++) {
-                statusArray[oIndex + k] = "wrong";
-              }
-              tIndex += la;
-              found = true;
-              break;
-            }
-
-            // Deletion
-            if (
-              oIndex + la < oChars.length &&
-              oChars[oIndex + la] === tChars[tIndex]
-            ) {
-              for (let k = 0; k < la && oIndex + k < oChars.length; k++) {
-                statusArray[oIndex + k] = "wrong";
-              }
-              oIndex += la;
-              found = true;
-              break;
-            }
-          }
-
-          if (!found) {
-            statusArray[oIndex] = "wrong";
-            oIndex++;
-            tIndex++;
-          }
-        }
-      } else {
-        statusArray[oIndex] = "pending";
-        oIndex++;
-      }
-    }
-
-    return statusArray;
-  }
-
-  const calculateAccuracy = (typed: string, correct: string) => {
-    const statusArray = getStatusArray(correct, typed);
-    const typedPortion = statusArray.filter((s) => s !== "pending");
-    const correctCount = typedPortion.filter((s) => s === "correct").length;
-
-    return typedPortion.length > 0
-      ? Math.round((correctCount / typedPortion.length) * 100)
-      : 0;
-  };
-
-  const progress =
-    assignment && assignment.correctText.length > 0
-      ? Math.min((typedText.length / assignment.correctText.length) * 100, 100)
-      : 0;
+  const progress = calculateProgress(typedText, assignment?.correctText || "");
 
   if (!assignment) {
     return (

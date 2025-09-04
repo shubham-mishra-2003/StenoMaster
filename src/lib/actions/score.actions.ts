@@ -1,4 +1,3 @@
-// lib/actions/score.actions.ts
 "use server";
 
 import { connectToDatabase } from "../database/mongoose";
@@ -19,8 +18,9 @@ export async function createScore(scoreData: Score, token: string) {
       throw new Error("Only students can submit scores");
     }
     const newScore = await createScoreDoc({
-      ...scoreData,
+      ...scoreData,      
       completedAt: new Date(scoreData.completedAt),
+      mistakes: scoreData.mistakes ?? []
     });
     return newScore;
   } catch (error) {

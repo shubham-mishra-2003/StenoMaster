@@ -1,20 +1,30 @@
-// lib/database/models/score.model.ts
 import {
   DocumentSnapshot,
   QueryDocumentSnapshot,
+  Timestamp,
 } from "firebase-admin/firestore";
 import { connectToFirebase } from "../firebase";
 import { handleError } from "@/lib/utils";
-import { Score } from "@/types";
+import { Mistake, Score } from "@/types";
 
 export async function createScoreDoc(scoreData: Score) {
   try {
     const db = await connectToFirebase();
     const scoreRef = db.collection("scores").doc(scoreData.id);
-    await scoreRef.set({
+
+    const payload = {
       ...scoreData,
-      completedAt: scoreData.completedAt.toISOString(),
-    });
+      completedAt: Timestamp.fromDate(scoreData.completedAt),
+      mistakes:
+        scoreData.mistakes?.map((m) => ({
+          expected: m.expected ?? "",
+          actual: m.actual ?? "",
+          position: m.position ?? -1,
+        })) ?? [],
+    };
+
+    await scoreRef.set(payload);
+
     const doc: DocumentSnapshot = await scoreRef.get();
     if (!doc.exists) {
       throw new Error("Failed to create score");
@@ -37,7 +47,8 @@ export async function getScoresByStudent(studentId: string) {
       (doc: QueryDocumentSnapshot) =>
         ({
           ...doc.data(),
-          completedAt: new Date(doc.data().completedAt),
+          completedAt: (doc.data().completedAt as Timestamp).toDate(),
+          mistakes: (doc.data().mistakes ?? []) as Mistake[],
         } as Score)
     );
   } catch (error) {
@@ -57,7 +68,8 @@ export async function getScoresByAssignment(assignmentId: string) {
       (doc: QueryDocumentSnapshot) =>
         ({
           ...doc.data(),
-          completedAt: new Date(doc.data().completedAt),
+          completedAt: (doc.data().completedAt as Timestamp).toDate(),
+          mistakes: (doc.data().mistakes ?? []) as Mistake[],
         } as Score)
     );
   } catch (error) {

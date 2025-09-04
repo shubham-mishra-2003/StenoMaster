@@ -36,6 +36,12 @@ export interface Assignment {
   isActive: boolean;
 }
 
+export interface Mistake {
+  expected: string;
+  actual: string;
+  position: number;
+}
+
 export interface Score {
   id: string;
   studentId: string;
@@ -45,8 +51,8 @@ export interface Score {
   wpm: number;
   timeElapsed: number;
   completedAt: Date;
+  mistakes: Mistake[];
 }
-
 export interface StudentAssignment {
   id: string;
   assignmentId: string;
@@ -59,7 +65,6 @@ export interface AuthState {
   isAuthenticated: boolean;
   user: User | null;
 }
-
 
 export interface Class {
   id: string;

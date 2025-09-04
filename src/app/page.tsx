@@ -70,7 +70,7 @@ const Page = () => {
   const [isLoading, setIsLoading] = useState(true);
 
   const router = useRouter();
-  const { isAuthenticated, user, loading } = useAuth();
+  const { isAuthenticated, user, loading, firstLoadDone } = useAuth();
 
   const features = [
     {
@@ -122,10 +122,10 @@ const Page = () => {
         router.push(`/dashboard/${user.userType}`);
       }
     }
-    setIsLoading(false);
+    setIsLoading(!firstLoadDone);
   }, [isAuthenticated, user, router]);
 
-  if (isLoading) {
+  if (!isLoading) {
     return (
       <div className="flex justify-center items-center h-screen p-20 bg-black">
         <Card className="animate-bounce">

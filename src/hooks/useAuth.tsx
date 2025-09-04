@@ -23,6 +23,7 @@ interface User {
 
 interface AuthState {
   isAuthenticated: boolean;
+  firstLoadDone: boolean;
   user: User | null;
   token: string | null;
   loading: boolean;
@@ -61,6 +62,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 }) => {
   const [authState, setAuthState] = useState<AuthState>({
     isAuthenticated: false,
+    firstLoadDone: false,
     user: null,
     token: null,
     loading: false,
@@ -121,6 +123,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
             user: result.data.user,
             token,
             loading: false,
+            firstLoadDone: true,
           });
           localStorage.setItem(
             "StenoMaster-user",
@@ -137,6 +140,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
             user: null,
             token: null,
             loading: false,
+            firstLoadDone: true,
           });
           localStorage.removeItem("StenoMaster-token");
           localStorage.removeItem("StenoMaster-user");
@@ -194,7 +198,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
         if (response.ok && result.status === "success") {
           const { user, token } = result.data;
-          setAuthState({ isAuthenticated: true, user, token, loading: false });
+          setAuthState({
+            isAuthenticated: true,
+            user,
+            token,
+            loading: false,
+            firstLoadDone: true,
+          });
           localStorage.setItem("StenoMaster-token", token);
           localStorage.setItem("StenoMaster-user", JSON.stringify(user));
           // console.log("[useAuth] Login successful, user:", user);
@@ -273,7 +283,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
         if (response.ok && result.status === "success") {
           const { user, token } = result.data;
-          setAuthState({ isAuthenticated: true, user, token, loading: false });
+          setAuthState({
+            isAuthenticated: true,
+            user,
+            token,
+            loading: false,
+            firstLoadDone: true,
+          });
           localStorage.setItem("StenoMaster-token", token);
           localStorage.setItem("StenoMaster-user", JSON.stringify(user));
           // console.log("[useAuth] Signup successful, user:", user);
@@ -412,6 +428,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         user: null,
         token: null,
         loading: false,
+        firstLoadDone: true,
       });
       localStorage.removeItem("StenoMaster-token");
       localStorage.removeItem("StenoMaster-user");
@@ -443,6 +460,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
           user: null,
           token: null,
           loading: false,
+          firstLoadDone: true,
         });
         localStorage.removeItem("StenoMaster-token");
         localStorage.removeItem("StenoMaster-user");
@@ -519,6 +537,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
               user: null,
               token: null,
               loading: false,
+              firstLoadDone: true,
             });
             localStorage.removeItem("StenoMaster-token");
             localStorage.removeItem("StenoMaster-user");

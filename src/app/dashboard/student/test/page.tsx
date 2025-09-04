@@ -21,6 +21,12 @@ import { sampleTexts } from "./sample-texts";
 import { useRouter } from "next/navigation";
 import { useScore } from "@/hooks/useScore";
 import { useIsMobile } from "@/hooks/use-mobile";
+import {
+  calculateAccuracyChar,
+  calculateProgress,
+  getStatusArray,
+  getWordMistakes,
+} from "@/lib/scoreUtils";
 
 const TypingTestContent = () => {
   const [currentText, setCurrentText] = useState(
@@ -36,15 +42,12 @@ const TypingTestContent = () => {
   const { user } = useAuth();
   const { colorScheme } = useTheme();
   const { scores, submitScore, fetchScores } = useScore();
+  const router = useRouter();
 
-  if (!user) {
-    return;
-  }
+  if (!user) return;
 
   const handleStart = () => {
-    if (!user?.userId) {
-      return;
-    }
+    if (!user?.userId) return;
     setIsStarted(true);
     setStartTime(new Date());
     setTimeElapsed(0);
@@ -52,13 +55,13 @@ const TypingTestContent = () => {
   };
 
   const handleComplete = async () => {
-    if (!startTime || !user?.userId || isCompleted) {
-      return;
-    }
+    if (!startTime || !user?.userId || isCompleted) return;
     setIsLoading(true);
     setIsCompleted(true);
-    const accuracy = calculateAccuracy();
+
+    const accuracy = calculateAccuracyChar(currentText, typedText);
     const wpm = calculateWPM();
+    const mistakes = getWordMistakes(currentText, typedText);
     const word = currentText.split(/\s+/);
     const scoreId = word.slice(0, 4).join(" ");
 
@@ -71,6 +74,7 @@ const TypingTestContent = () => {
       wpm,
       timeElapsed,
       completedAt: new Date(),
+      mistakes,
     };
 
     try {
@@ -114,73 +118,6 @@ const TypingTestContent = () => {
     setTypedText(e.target.value);
   };
 
-  function getStatusArray(
-    original: string,
-    typed: string,
-    lookahead = 4
-  ): ("correct" | "wrong" | "pending")[] {
-    const oChars = original.split("");
-    const tChars = typed.split("");
-
-    let oIndex = 0;
-    let tIndex = 0;
-
-    const statusArray: ("correct" | "wrong" | "pending")[] = new Array(
-      oChars.length
-    ).fill("pending");
-
-    while (oIndex < oChars.length) {
-      if (tIndex < tChars.length) {
-        if (oChars[oIndex] === tChars[tIndex]) {
-          statusArray[oIndex] = "correct";
-          oIndex++;
-          tIndex++;
-        } else {
-          let found = false;
-
-          for (let la = 1; la <= lookahead; la++) {
-            // Insertion
-            if (
-              tIndex + la < tChars.length &&
-              tChars[tIndex + la] === oChars[oIndex]
-            ) {
-              for (let k = 0; k < la && oIndex + k < oChars.length; k++) {
-                statusArray[oIndex + k] = "wrong";
-              }
-              tIndex += la;
-              found = true;
-              break;
-            }
-
-            // Deletion
-            if (
-              oIndex + la < oChars.length &&
-              oChars[oIndex + la] === tChars[tIndex]
-            ) {
-              for (let k = 0; k < la && oIndex + k < oChars.length; k++) {
-                statusArray[oIndex + k] = "wrong";
-              }
-              oIndex += la;
-              found = true;
-              break;
-            }
-          }
-
-          if (!found) {
-            statusArray[oIndex] = "wrong";
-            oIndex++;
-            tIndex++;
-          }
-        }
-      } else {
-        statusArray[oIndex] = "pending";
-        oIndex++;
-      }
-    }
-
-    return statusArray;
-  }
-
   const renderText = () => {
     const statusArray = getStatusArray(currentText, typedText);
 
@@ -208,19 +145,11 @@ const TypingTestContent = () => {
     });
   };
 
-  const calculateAccuracy = () => {
-    const statusArray = getStatusArray(currentText, typedText);
-    const typedPortion = statusArray.filter((s) => s !== "pending");
-    const correct = typedPortion.filter((s) => s === "correct").length;
+  const currentAccuracy = typedText.length
+    ? calculateAccuracyChar(currentText, typedText)
+    : 0;
 
-    return typedPortion.length > 0
-      ? Math.round((correct / typedPortion.length) * 100)
-      : 0;
-  };
-
-  const progress = (typedText.length / currentText.length) * 100;
-  const currentWPM = timeElapsed > 0 ? calculateWPM() : 0;
-  const currentAccuracy = typedText.length > 0 ? calculateAccuracy() : 0;
+  const progress = calculateProgress(typedText, currentText);
 
   useEffect(() => {
     let interval: NodeJS.Timeout;
@@ -232,17 +161,18 @@ const TypingTestContent = () => {
     return () => clearInterval(interval);
   }, [isStarted, startTime, isCompleted]);
 
-  // if (isLoading) {
-  //   return (
-  //     <Card>
-  //       <CardContent className="flex flex-col items-center justify-center py-12">
-  //         <p className="text-muted-foreground">Loading typing test...</p>
-  //       </CardContent>
-  //     </Card>
-  //   );
-  // }
-
-  const router = useRouter();
+  const mobile = useIsMobile();
+  if (mobile) {
+    return (
+      <Card>
+        <CardContent className="flex flex-col items-center justify-center py-12">
+          <p className="text-muted-foreground">
+            Tests are assignments can not be performed on mobile phones
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -348,7 +278,7 @@ const TypingTestContent = () => {
                     colorScheme === "dark" ? "text-dark" : "text-light"
                   }`}
                 >
-                  {currentWPM}
+                  {/* {currentWPM} */}
                 </p>
               </div>
             </div>

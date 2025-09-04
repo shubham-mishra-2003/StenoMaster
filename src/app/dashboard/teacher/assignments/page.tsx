@@ -253,7 +253,7 @@ const AssignmentPage = () => {
                 <Label htmlFor="correct-text">Correct Text</Label>
                 <Textarea
                   id="correct-text"
-                  placeholder=" permanecerá en la memoria de la humanidad por generaciones."
+                  placeholder="Enter correct text."
                   value={newAssignment.correctText}
                   onChange={(e) =>
                     setNewAssignment((prev) => ({

@@ -23,9 +23,12 @@ export async function POST(request: NextRequest) {
       !studentId ||
       !assignmentId ||
       !typedText ||
-      !accuracy ||
-      !wpm ||
-      !timeElapsed ||
+      accuracy === undefined ||
+      accuracy === null ||
+      wpm === undefined ||
+      wpm === null ||
+      timeElapsed === undefined ||
+      timeElapsed === null ||
       !completedAt
     ) {
       return NextResponse.json(
@@ -44,6 +47,7 @@ export async function POST(request: NextRequest) {
         wpm,
         timeElapsed,
         completedAt: new Date(completedAt),
+        mistakes: body.mistakes || [],
       },
       token
     );
