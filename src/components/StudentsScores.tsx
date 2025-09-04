@@ -4,6 +4,7 @@ import { BarChart3, Trophy, Clock, Target } from "lucide-react";
 import { useTheme } from "@/hooks/ThemeProvider";
 import { Assignment, Class, Score, User } from "@/types";
 import StudentScoreDetails from "./StudentScoreDetails";
+import { useRouter } from "next/navigation";
 
 type StudentsScoresProps = {
   allScores: Score[];
@@ -24,6 +25,7 @@ const StudentsScores = ({
     null
   );
   const { colorScheme } = useTheme();
+  const router = useRouter();
 
   const getStudentScores = (studentId: string) => {
     return allScores.filter((s) => s.studentId === studentId);
@@ -47,23 +49,6 @@ const StudentsScores = ({
     const total = studentScores.reduce((sum, score) => sum + score.wpm, 0);
     return Math.round(total / studentScores.length);
   };
-
-  const handleOpenStudentDetails = useCallback(
-    (studentId: string) => {
-      if (!isScoreOpen) {
-        setSelectedStudentId(studentId);
-        setIsScoreOpen(true);
-      } else {
-        console.warn("Score details are already open");
-      }
-    },
-    [isScoreOpen]
-  );
-
-  const handleCloseStudentDetails = useCallback(() => {
-    setIsScoreOpen(false);
-    setSelectedStudentId(null);
-  }, []);
 
   return (
     <div className="space-y-6">
@@ -112,8 +97,10 @@ const StudentsScores = ({
               <Card
                 key={student.userId}
                 onClick={(e) => {
-                  e.stopPropagation(); // Prevent bubbling to parent elements
-                  handleOpenStudentDetails(student.userId);
+                  // e.stopPropagation(); // Prevent bubbling to parent elements
+                  // handleOpenStudentDetails(student.userId);
+
+                  router.push(`/dashboard/teacher/score/${student.userId}`);
                 }}
                 className="cursor-pointer"
               >
@@ -210,14 +197,14 @@ const StudentsScores = ({
               </Card>
             );
           })}
-          {selectedStudentId && (
+          {/* {selectedStudentId && (
             <StudentScoreDetails
               studentScores={getStudentScores(selectedStudentId)}
               assignments={assignments}
               isOpen={isScoreOpen}
               onClose={handleCloseStudentDetails}
             />
-          )}
+          )} */}
         </div>
       )}
     </div>

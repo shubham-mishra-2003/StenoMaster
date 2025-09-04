@@ -13,6 +13,8 @@ import { useScore } from "@/hooks/useScore";
 import { Card, CardContent } from "@/components/ui/card";
 import UserButton from "@/components/UserButton";
 import { User, Class } from "@/types";
+import { Button } from "@/components/ui/button";
+import { ArrowLeft } from "lucide-react";
 
 const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
   const { colorScheme } = useTheme();
@@ -192,8 +194,8 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
                 </div>
               </div>
             </nav>
-            <main className="flex-1 p-2 sm:p-4 lg:p-9 overflow-auto">
-              <div className="max-w-7xl mx-auto">{children}</div>
+            <main className="flex-1 p-2 sm:p-4 lg:p-8 overflow-auto size-full">
+              {children}
             </main>
           </SidebarInset>
         </div>
