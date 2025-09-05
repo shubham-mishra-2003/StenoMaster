@@ -36,21 +36,6 @@ const StudentProgress = () => {
     return score ? score.assignmentId : assignmentId;
   };
 
-  // const calculateImprovement = (): number => {
-  //   if (scores.length < 2) return 0;
-  //   const sortedScores = [...scores].sort(
-  //     (a, b) =>
-  //       new Date(a.completedAt).getTime() - new Date(b.completedAt).getTime()
-  //   );
-  //   const firstFive = sortedScores.slice(0, 5);
-  //   const lastFive = sortedScores.slice(-5);
-  //   const firstAvg =
-  //     firstFive.reduce((sum, s) => sum + s.accuracy, 0) / firstFive.length;
-  //   const lastAvg =
-  //     lastFive.reduce((sum, s) => sum + s.accuracy, 0) / lastFive.length;
-  //   return Math.round(lastAvg - firstAvg);
-  // };
-
   const getBestScore = (): Score | null => {
     if (scores.length === 0) return null;
     return scores.reduce((best, current) =>

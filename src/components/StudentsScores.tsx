@@ -3,7 +3,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { BarChart3, Trophy, Clock, Target } from "lucide-react";
 import { useTheme } from "@/hooks/ThemeProvider";
 import { Assignment, Class, Score, User } from "@/types";
-import StudentScoreDetails from "./StudentScoreDetails";
 import { useRouter } from "next/navigation";
 
 type StudentsScoresProps = {
