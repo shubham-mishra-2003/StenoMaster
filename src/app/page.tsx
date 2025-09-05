@@ -24,6 +24,7 @@ import { useTheme } from "@/hooks/ThemeProvider";
 import Logo from "@/components/Logo";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
+import Image from "next/image";
 
 function LoginDialogContent({
   isLoginOpen,
@@ -121,16 +122,23 @@ const Page = () => {
       if (user) {
         router.push(`/dashboard/${user.userType}`);
       }
+      setIsLoading(!firstLoadDone);
+    } else {
+      setIsLoading(false);
     }
-    setIsLoading(!firstLoadDone);
   }, [isAuthenticated, user, router]);
 
-  if (!isLoading) {
+  if (isLoading) {
     return (
       <div className="flex justify-center items-center h-screen p-20 bg-black">
         <Card className="animate-bounce">
           <CardContent className="flex flex-col gap-2 items-center justify-center p-20 h-full">
-            <Logo />
+            <div className="flex items-center space-x-3 justify-center">
+              <Image src="/logo.png" alt="logo" height={30} width={30} />
+              <h1 className="text-xl sm:text-2xl font-bold gradient-text">
+                StenoMaster
+              </h1>
+            </div>
             <p
               className={`text-lg font-bold ${
                 colorScheme === "dark" ? "text-dark-muted" : "text-light-muted"
@@ -159,7 +167,12 @@ const Page = () => {
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
-            <Logo />
+            <div className="flex items-center space-x-3 justify-center">
+              <Image src="/logo.png" alt="logo" height={50} width={50} />
+              <h1 className="text-xl sm:text-2xl font-bold gradient-text">
+                StenoMaster
+              </h1>
+            </div>
             <div className="flex items-center space-x-4">
               <ThemeToggle />
               <Suspense fallback={<Button disabled>Loading...</Button>}>

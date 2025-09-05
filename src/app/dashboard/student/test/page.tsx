@@ -29,9 +29,15 @@ import {
 } from "@/lib/scoreUtils";
 
 const TypingTestContent = () => {
-  const [currentText, setCurrentText] = useState(
-    () => sampleTexts[Math.floor(Math.random() * sampleTexts.length)]
-  );
+  // const [currentText, setCurrentText] = useState(
+  //   () => sampleTexts[Math.floor(Math.random() * sampleTexts.length)]
+  // );
+  const [currentTextIndex, setCurrentTextIndex] = useState(0);
+  const [currentText, setCurrentText] = useState(() => {
+    const randomIndex = Math.floor(Math.random() * sampleTexts.length);
+    setCurrentTextIndex(randomIndex);
+    return sampleTexts[randomIndex];
+  });
   const [typedText, setTypedText] = useState("");
   const [startTime, setStartTime] = useState<Date | null>(null);
   const [isStarted, setIsStarted] = useState(false);
@@ -62,13 +68,12 @@ const TypingTestContent = () => {
     const accuracy = calculateAccuracyChar(currentText, typedText);
     const wpm = calculateWPM();
     const mistakes = getWordMistakes(currentText, typedText);
-    const word = currentText.split(/\s+/);
-    const scoreId = word.slice(0, 4).join(" ");
+    const assignmentId = `typing-test-text-${currentTextIndex}`;
 
     const result: Score = {
       id: `test-${Date.now()}`,
       studentId: user.userId,
-      assignmentId: `typing-test-${scoreId}`,
+      assignmentId,
       typedText,
       accuracy,
       wpm,
@@ -110,7 +115,10 @@ const TypingTestContent = () => {
     setIsCompleted(false);
     setStartTime(null);
     setTimeElapsed(0);
-    setCurrentText(sampleTexts[Math.floor(Math.random() * sampleTexts.length)]);
+    // setCurrentText(sampleTexts[Math.floor(Math.random() * sampleTexts.length)]);
+    const randomIndex = Math.floor(Math.random() * sampleTexts.length);
+    setCurrentTextIndex(randomIndex);
+    setCurrentText(sampleTexts[randomIndex]);
   };
 
   const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -185,17 +193,6 @@ const TypingTestContent = () => {
               Typing Speed Test
             </CardTitle>
             <div className="flex justify-center items-center gap-2 w-fit">
-              <Button
-                variant="outline"
-                onClick={() => {
-                  router.push("/dashboard/student/");
-                }}
-                className="gradient-button"
-                disabled={isLoading}
-              >
-                <ArrowBigLeft className="h-4 w-4 mr-2" />
-                Back to dashboard
-              </Button>
               <Button
                 variant="outline"
                 onClick={handleReset}

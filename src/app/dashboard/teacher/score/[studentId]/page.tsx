@@ -111,7 +111,7 @@ const page = () => {
         </Card>
       ) : (
         <Card className="flex h-full overflow-auto">
-          <CardContent className="flex flex-col gap-4 size-full p-4 overflow-auto">
+          <CardContent className="flex flex-col size-full p-4 overflow-auto">
             {studentScores
               .sort(
                 (a, b) =>
@@ -128,7 +128,7 @@ const page = () => {
                   }`}
                   onClick={() => setSelectedScore(score)}
                 >
-                  <h1 className="font-bold flex items-center truncate text-sm sm:text-xl lg:text-2xl w-full">
+                  <h1 className="font-bold flex items-center truncate text-sm sm:text-lg lg:text-xl w-full">
                     {index + 1}. {getAssignmentTitle(score.assignmentId)}
                   </h1>
                   <div
