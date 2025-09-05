@@ -1,5 +1,6 @@
 "use client";
 
+import StudentScoreDetails from "@/components/StudentScoreDetails";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useTheme } from "@/hooks/ThemeProvider";
 import { toast } from "@/hooks/use-toast";
@@ -117,6 +118,8 @@ const StudentProgress = () => {
     },
   ];
 
+  const [selectedScore, setSelectedScore] = useState<Score | null>(null);
+
   return (
     <div className="space-y-6">
       <div>
@@ -180,11 +183,14 @@ const StudentProgress = () => {
                 return (
                   <div
                     key={score.id}
-                    className={`flex items-center justify-between p-3 rounded-lg border backdrop-blur-sm ${
-                      colorScheme === "dark"
-                        ? "bg-gradient-to-r from-gray-800/30 to-blue-950/30 border-gray-500"
-                        : "bg-gradient-to-r from-blue-50/10 to-blue-500/10 border-blue-500/60"
+                    className={`flex items-center cursor-pointer justify-between p-3 rounded-lg border backdrop-blur-sm ${
+                      colorScheme == "dark"
+                        ? "from-gray-900/80 via-gray-800/60 to-gray-700/40 border-slate-700 hover:bg-slate-800"
+                        : "from-white/80 via-white/60 to-white/40 border-slate-200 hover:bg-slate-100"
                     }`}
+                    onClick={() => {
+                      setSelectedScore(score);
+                    }}
                   >
                     <div>
                       <p
@@ -264,6 +270,14 @@ const StudentProgress = () => {
           </div>
         </CardContent>
       </Card>
+      {selectedScore && (
+        <StudentScoreDetails
+          assignments={assignments}
+          score={selectedScore}
+          isOpen={!!selectedScore}
+          onClose={() => setSelectedScore(null)}
+        />
+      )}
     </div>
   );
 };

@@ -20,10 +20,6 @@ const StudentsScores = ({
   classes,
   students,
 }: StudentsScoresProps) => {
-  const [isScoreOpen, setIsScoreOpen] = useState(false);
-  const [selectedStudentId, setSelectedStudentId] = useState<string | null>(
-    null
-  );
   const { colorScheme } = useTheme();
   const router = useRouter();
 
@@ -96,10 +92,7 @@ const StudentsScores = ({
             return (
               <Card
                 key={student.userId}
-                onClick={(e) => {
-                  // e.stopPropagation(); // Prevent bubbling to parent elements
-                  // handleOpenStudentDetails(student.userId);
-
+                onClick={() => {
                   router.push(`/dashboard/teacher/score/${student.userId}`);
                 }}
                 className="cursor-pointer"
@@ -197,14 +190,6 @@ const StudentsScores = ({
               </Card>
             );
           })}
-          {/* {selectedStudentId && (
-            <StudentScoreDetails
-              studentScores={getStudentScores(selectedStudentId)}
-              assignments={assignments}
-              isOpen={isScoreOpen}
-              onClose={handleCloseStudentDetails}
-            />
-          )} */}
         </div>
       )}
     </div>
