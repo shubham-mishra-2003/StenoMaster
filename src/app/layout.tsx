@@ -7,7 +7,6 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { ClassProvider } from "@/hooks/useClasses";
 import { ScoreProvider } from "@/hooks/useScore";
-import DisableRightClick from "@/components/DisableRightClick";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -48,7 +47,6 @@ export default function RootLayout({
             </ClassProvider>
           </AuthProvider>
         </ThemeProvider>
-        <DisableRightClick />
       </body>
     </html>
   );
