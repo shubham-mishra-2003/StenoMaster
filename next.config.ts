@@ -10,11 +10,6 @@ const nextConfig: NextConfig = {
       },
     ],
   },
-  devIndicators: {
-    allowedDevOrigins: [
-      "https://3000-firebase-stenomaster-1757135644702.cluster-mwsteha33jfdowtvzffztbjcj6.cloudworkstations.dev",
-    ],
-  },
 };
 
 export default nextConfig;
