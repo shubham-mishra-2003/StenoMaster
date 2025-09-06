@@ -4,6 +4,7 @@ import { BarChart3, Trophy, Clock, Target } from "lucide-react";
 import { useTheme } from "@/hooks/ThemeProvider";
 import { Assignment, Class, Score, User } from "@/types";
 import { useRouter } from "next/navigation";
+import { Input } from "./ui/input";
 
 type StudentsScoresProps = {
   allScores: Score[];
@@ -21,6 +22,7 @@ const StudentsScores = ({
 }: StudentsScoresProps) => {
   const { colorScheme } = useTheme();
   const router = useRouter();
+  const [searchQuery, setSearchQuery] = useState("");
 
   const getStudentScores = (studentId: string) => {
     return allScores.filter((s) => s.studentId === studentId);
@@ -44,21 +46,34 @@ const StudentsScores = ({
     const total = studentScores.reduce((sum, score) => sum + score.wpm, 0);
     return Math.round(total / studentScores.length);
   };
+  
+  const filteredStudents = students.filter((student) =>
+    (student.fullName || '').toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="gradient-text text-2xl font-bold">Student Scores</h2>
-        <p
-          className={
-            colorScheme === "dark" ? "text-dark-muted" : "text-light-muted"
-          }
-        >
-          Track student progress and performance
-        </p>
+      <div className="flex justify-between items-center">
+        <div>
+          <h2 className="gradient-text text-2xl font-bold">Student Scores</h2>
+          <p
+            className={
+              colorScheme === "dark" ? "text-dark-muted" : "text-light-muted"
+            }
+          >
+            Track student progress and performance
+          </p>
+        </div>
+        <Input
+          type="text"
+          placeholder="Search by student name..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="max-w-sm"
+        />
       </div>
 
-      {students.length === 0 ? (
+      {filteredStudents.length === 0 ? (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12">
             <div className="w-16 h-16 bg-gradient-to-br from-blue-500 via-purple-500 to-indigo-500 rounded-full flex items-center justify-center mb-4 shadow-lg">
@@ -69,7 +84,7 @@ const StudentsScores = ({
                 colorScheme === "dark" ? "text-dark-muted" : "text-light-muted"
               }`}
             >
-              No students yet
+              No students found
             </h3>
             <p
               className={
@@ -78,13 +93,13 @@ const StudentsScores = ({
                   : "text-light-muted text-center"
               }
             >
-              Add students to your classes to track their progress
+              No students match your search query.
             </p>
           </CardContent>
         </Card>
       ) : (
         <div className="grid gap-3">
-          {students.map((student) => {
+          {filteredStudents.map((student) => {
             const studentScores = getStudentScores(student.userId);
             const avgAccuracy = calculateAverageAccuracy(studentScores);
             const avgWPM = calculateAverageWPM(studentScores);

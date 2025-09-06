@@ -45,6 +45,7 @@ const StudentManagement = ({
     email: "",
     password: "",
   });
+  const [searchQuery, setSearchQuery] = useState("");
   const [isLoading, setIsLoading] = useState({
     fetchStudents: false,
     addingStudent: false,
@@ -83,14 +84,7 @@ const StudentManagement = ({
         result.status === "success" &&
         Array.isArray(result.data)
       ) {
-        setStudent((prevScores) => {
-          const newStudents = result.data.filter(
-            (newStudent: User) =>
-              !prevScores.some((std) => std.userId === newStudent.userId)
-          );
-          return [...prevScores, ...newStudents];
-        });
-        console.log("Fetching students - ", students);
+        setStudent(result.data);
         return result.data;
       } else {
         setStudent([]);
@@ -108,7 +102,7 @@ const StudentManagement = ({
     if (isOpen) {
       fetchStudentInClass(classItem.id);
     }
-  }, []);
+  }, [isOpen, classItem.id]);
 
   const handleAddStudent = async () => {
     setIsLoading((prev) => ({ ...prev, addingStudent: true }));
@@ -131,14 +125,6 @@ const StudentManagement = ({
       });
       await assignStudentToClass(classItem.id, newUser.userId);
       await fetchStudentInClass(classItem.id);
-      const teacherClasses: Class[] = await fetchClassesForTeacher();
-      if (teacherClasses.length > 0) {
-        const allStudents: User[] = [];
-        for (const c of teacherClasses) {
-          const students = await fetchStudentsInClass(c.id);
-          allStudents.push(...students);
-        }
-      }
       toast({
         title: "Success",
         description: `${newStudent.name} added successfully. Email: ${newStudent.email}, Password: ${password}`,
@@ -150,12 +136,7 @@ const StudentManagement = ({
         variant: "destructive",
       });
     } finally {
-      setNewStudent((prev) => ({
-        ...prev,
-        email: "",
-        name: "",
-        password: "",
-      }));
+      setNewStudent({ name: "", email: "", password: "" });
       setIsLoading((prev) => ({ ...prev, addingStudent: false }));
     }
   };
@@ -165,7 +146,6 @@ const StudentManagement = ({
     try {
       await removeStudentFromClass(classItem.id, studentId);
       await deleteAccount(studentId);
-      await fetchClassesForTeacher();
       await fetchStudentInClass(classItem.id);
       toast({
         title: "Success",
@@ -205,6 +185,10 @@ const StudentManagement = ({
       setIsLoading((prev) => ({ ...prev, classChange: false }));
     }
   };
+  
+  const filteredStudents = students.filter((student) =>
+    student.fullName.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   const isLoadingStudents =
     isLoading.addingStudent ||
@@ -236,10 +220,7 @@ const StudentManagement = ({
                     placeholder="Enter student name"
                     value={newStudent.name}
                     onChange={(e) =>
-                      setNewStudent((prev) => ({
-                        ...prev,
-                        name: e.target.value,
-                      }))
+                      setNewStudent((prev) => ({ ...prev, name: e.target.value }))
                     }
                     className="w-full text-sm sm:text-base"
                   />
@@ -251,10 +232,7 @@ const StudentManagement = ({
                     placeholder="Enter email"
                     value={newStudent.email}
                     onChange={(e) =>
-                      setNewStudent((prev) => ({
-                        ...prev,
-                        email: e.target.value,
-                      }))
+                      setNewStudent((prev) => ({ ...prev, email: e.target.value }))
                     }
                     className="w-full text-sm sm:text-base"
                   />
@@ -267,10 +245,7 @@ const StudentManagement = ({
                     type="password"
                     value={newStudent.password}
                     onChange={(e) =>
-                      setNewStudent((prev) => ({
-                        ...prev,
-                        password: e.target.value,
-                      }))
+                      setNewStudent((prev) => ({ ...prev, password: e.target.value }))
                     }
                     className="w-full text-sm sm:text-base"
                   />
@@ -287,17 +262,24 @@ const StudentManagement = ({
             </CardContent>
           </Card>
           <Card>
-            <CardHeader>
-              <CardTitle
-                className={colorScheme == "dark" ? "text-dark" : "text-light"}
-              >
-                Current Students ({students.length})
-              </CardTitle>
+            <CardHeader className="flex-row items-center justify-between">
+                <CardTitle
+                    className={colorScheme == "dark" ? "text-dark" : "text-light"}
+                >
+                    Current Students ({filteredStudents.length})
+                </CardTitle>
+                <Input
+                    type="text"
+                    placeholder="Search by student name..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="max-w-sm"
+                />
             </CardHeader>
             <CardContent>
               {isLoadingStudents ? (
                 <div className="text-center py-8">Loading students...</div>
-              ) : students.length === 0 ? (
+              ) : filteredStudents.length === 0 ? (
                 <div className="text-center py-8">
                   <User2 className="h-12 w-12 text-white mx-auto mb-4" />
                   <p
@@ -307,12 +289,12 @@ const StudentManagement = ({
                         : "text-light-muted"
                     }
                   >
-                    No students in this class yet
+                    No students found.
                   </p>
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {students.map((student) => (
+                  {filteredStudents.map((student) => (
                     <div
                       key={student.userId}
                       className={`flex flex-col p-4 border rounded-xl gap-3 ${
